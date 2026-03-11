@@ -215,6 +215,23 @@ C:\ClaudeWork\
 
 ---
 
+## MÓDULO 6 — SharePoint Copy Staging → Clientes EK (sharepoint_copy.py v2.1) ✅ VALIDADO 2026-03-11
+
+**Script:** `WMS_Automatizacion\sharepoint_copy.py`
+**Flujo:** OneDrive Stagin IN-OUT (origen) → OneDrive `Datos para Dashboard - Clientes EK` (destino local sync) → SharePoint automático
+**Respaldo API:** `sharepoint_copy_API_v1.py` — versión Office365 REST API, pendiente App Registration IT (AADSTS53003)
+**Integrado en:** `run_todos.py` como Módulo 6 (modo daily)
+**Anti-duplicado:** verifica existencia del archivo antes de copiar (`Path.exists()`)
+**Modo daily:** archivos del día actual | **Modo backfill:** todos del mes sin duplicar (ejecución manual)
+**Destino dinámico:** `{CLIENTE}/Inventario/{AÑO}/{MM Mes}` — carpeta creada automáticamente
+**Formato mes:** `03 Marzo` (número + nombre, igual que 2025) — estandarizado toda la carpeta Clientes EK
+**Nombre destino:** prefijo `YYYY-MM-DD_` al copiar — permite ordenar descendente en SharePoint (más reciente arriba)
+**Clientes Quilicura:** ABINBEV, DAIKIN, DERCO, MASCOTAS LATINAS, POCHTECA
+**PUDAHUEL:** vacío por ahora — agregar en CLIENTES cuando se habilite
+**Origen:** `Datos para Dashboard - Stagin IN- OUT\Quilicura\{CLIENTE}\`
+**Destino:** `Datos para Dashboard - Clientes EK\{CLIENTE}\Inventario\{AÑO}\{MM Mes}\`
+**Power BI:** prefijo YYYY-MM-DD_ NO afecta Query M — `Text.PositionOfAny(...Occurrence.Last)` sigue encontrando timestamp al final del nombre original
+
 ## Infraestructura y bloqueos
 
 **Bloqueos activos:**
