@@ -7,6 +7,11 @@
 *.key
 *.pem
 *.cert
+*.pfx
+*.p12
+
+# Solicitudes IT (pueden contener datos corporativos sensibles)
+Solicitudes_IT/
 
 # Logs (pueden contener datos sensibles)
 logs/

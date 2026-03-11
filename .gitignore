@@ -1,8 +1,42 @@
-# Credenciales — NUNCA subir
+# ══════════════════════════════════════════════════════════════════
+# .gitignore — Egakat SPA / ClaudeWork
+# Regla general: código sube, datos NO suben
+# ══════════════════════════════════════════════════════════════════
+
+# ── Credenciales — NUNCA subir ────────────────────────────────────
 .env
 *.env
+*.key
+*.pem
+*.cert
+*.pfx
+*.p12
 
-# Python
+# ── Datos de empresa — NUNCA subir ───────────────────────────────
+*.xlsx
+*.xls
+*.csv
+*.pdf
+Solicitudes_IT/
+AI_Agent/powerbi_output/
+otros_proyectos/
+
+# ── Documentos corporativos ───────────────────────────────────────
+Documentos/
+NPS_Encuesta/*.docx
+NPS_Encuesta/*.pptx
+
+# ── Excepción: documentación técnica AI_Agent SÍ sube ────────────
+!AI_Agent/Guia_AI_Agent_Egakat.docx
+!AI_Agent/generar_guia_agente.py
+
+# ── Backups generados por generador.py ───────────────────────────
+_*_backup_*.py
+
+# ── Estado interno ────────────────────────────────────────────────
+VDR_Comparador/vdr_ultimo_procesado.txt
+
+# ── Python ───────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
@@ -10,19 +44,18 @@ __pycache__/
 .venv/
 ai-agent-env/
 
-# Logs
+# ── Logs ─────────────────────────────────────────────────────────
 logs/
 *.log
 
-# Debug
+# ── Debug e instaladores ──────────────────────────────────────────
 _debug_historico/
-
-# Instaladores
 _instaladores/
 
-# Archivos temporales
+# ── Temporales ───────────────────────────────────────────────────
 *.tmp
 *.bak
+~$*
 
-# VS Code
+# ── VS Code ───────────────────────────────────────────────────────
 .vscode/settings.json
