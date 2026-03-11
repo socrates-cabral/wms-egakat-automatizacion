@@ -1,5 +1,5 @@
 # Memoria del proyecto — WMS Egakat Automatización
-Última actualización: 2026-03-09
+Última actualización: 2026-03-11
 
 ## Contexto del usuario
 - **Nombre:** Sócrates Cabral
@@ -189,6 +189,29 @@ C:\ClaudeWork\
 | 7 | Script Staging IN/OUT | ✅ Completo v2.3 validado |
 | 8 | Power BI dashboards | 🔮 Futuro |
 | 9 | VDR Comparador Derco Parts | ✅ Completo v1.0 — tarea + Power Automate activos 2026-03-09 |
+| 10 | NPS+CSAT LimeSurvey → OneDrive | ✅ Completo v1.0 — tareas + Power Automate activos 2026-03-10 |
+
+---
+
+## MÓDULO 5 — NPS Encuesta LimeSurvey (nps_descarga.py v1.0) ✅ VALIDADO 2026-03-10
+
+**Carpeta:** `NPS_Encuesta\`
+**URL LimeSurvey:** desde `.env` → `LIMESURVEY_URL`, `LIMESURVEY_USER`, `LIMESURVEY_PASSWORD`
+**Salida:** `C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\Reportes NPS\`
+**Alertas:** subcarpeta `/Alertas/` — archivo vacío si no hay respuestas nuevas
+
+**Tareas programadas:**
+- `NPS Egakat - Primera descarga` → 28/03/2026 10:00 única vez
+- `NPS Egakat - CSAT Mensual` → día 11 cada mes 10:00
+- `NPS Egakat - NPS Trimestral` → día 16 mar/jun/sep/dic 10:00
+
+**Power Automate:**
+- `NPS Egakat - Alerta Sin Respuestas` — trigger /Alertas/ → correo urgente
+- `NPS Egakat - Nuevo Reporte Disponible` — trigger /Reportes NPS/ → correo con link
+
+**Pendientes NPS:**
+- Franco Pérez (franco.perez@egakat.cl): tokens individuales + skip logic CSAT en LimeSurvey
+- Power BI dashboard NPS — cuando lleguen respuestas 28/03/2026
 
 ---
 
@@ -205,10 +228,15 @@ C:\ClaudeWork\
 **Power Automate Cloud (activos):**
 - Flow 1: `WMS Egakat - Notificación Reportes Subidos` — trigger SharePoint, llegan 3 correos separados (fix con OAuth2 pendiente)
 - Flow 2: `VDR Comparador - Notificacion Reportes` — trigger OneDrive /Reportes VDR → Delay 2min → correo con Excel adjunto ✅
+- Flow 3: `NPS Egakat - Alerta Sin Respuestas` — trigger /Alertas/ → correo urgente ✅
+- Flow 4: `NPS Egakat - Nuevo Reporte Disponible` — trigger /Reportes NPS/ → correo con link ✅
 
 **Programador de tareas Windows:**
 - `WMS Egakat - Descarga diaria` → `python.exe C:\ClaudeWork\run_todos.py` (puente) a las 8AM L-V
 - `VDR Comparador - EGA KAT` → `python.exe C:\ClaudeWork\vdr_comparador.py` (puente) cada hora L-V 08:00–19:00
+- `NPS Egakat - Primera descarga` → `nps_descarga.py` — 28/03/2026 10:00 única vez
+- `NPS Egakat - CSAT Mensual` → `nps_descarga.py` — día 11 cada mes 10:00
+- `NPS Egakat - NPS Trimestral` → `nps_descarga.py` — día 16 mar/jun/sep/dic 10:00
 - **Ejecutable:** ruta completa `C:\Users\Socrates Cabral\AppData\Local\Python\pythoncore-3.14-64\python.exe`
 - **LogonType:** `Password` — corre sin sesión activa
 - **WakeToRun:** `True` — reactiva laptop desde Sleep a las 8AM
@@ -238,6 +266,6 @@ C:\ClaudeWork\
 
 ## Dependencias
 ```
-py -m pip install playwright python-dotenv openpyxl Office365-REST-Python-Client python-docx python-pptx
+py -m pip install playwright python-dotenv openpyxl Office365-REST-Python-Client python-docx python-pptx anthropic requests pywin32
 py -m playwright install chromium
 ```
