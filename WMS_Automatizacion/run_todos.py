@@ -1,7 +1,9 @@
 """
-run_todos.py — v1.1
+run_todos.py — v1.2
 Orquestador WMS Egakat: ejecuta los 3 módulos en secuencia y envía notificación por correo.
 Uso: py run_todos.py
+Cambios v1.2:
+  - Alerta por correo cuando uno o más módulos fallan
 Cambios v1.1:
   - Log captura salida completa de cada script (útil para diagnóstico en Claude.ai)
   - Emojis reemplazados por texto ASCII en el log (evita corrupción en consola del Task Scheduler)
@@ -11,6 +13,8 @@ Cambios v1.1:
 import subprocess
 import sys
 import os
+import smtplib
+from email.mime.text import MIMEText
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -24,12 +28,39 @@ SCRIPTS = [
     ("Modulo 1 - Stock WMS Semanal",        "wms_descarga.py"),
     ("Modulo 2 - Staging IN/OUT",            "staging_descarga.py"),
     ("Modulo 3 - Consulta de Posiciones",    "posiciones_descarga.py"),
+    ("Modulo 6 - SharePoint Copy Clientes",  "sharepoint_copy.py"),
 ]
 
 # ─── Log file ────────────────────────────────────────────────────────
 LOGDIR  = os.path.join(os.path.dirname(BASE), "logs")  # C:\ClaudeWork\logs
 os.makedirs(LOGDIR, exist_ok=True)
 LOGFILE = os.path.join(LOGDIR, f"wms_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+
+
+EMAIL_FROM = os.getenv("SHAREPOINT_USER", "")
+EMAIL_PASS = os.getenv("SHAREPOINT_PASSWORD", "")
+SMTP_HOST  = "smtp.office365.com"
+SMTP_PORT  = 587
+
+
+def enviar_alerta(asunto, cuerpo):
+    """Envía correo de alerta via Office 365. Fallo silencioso — no interrumpe el proceso."""
+    if not EMAIL_FROM or not EMAIL_PASS:
+        log("  [ALERTA] No se puede enviar correo: SHAREPOINT_USER o SHAREPOINT_PASSWORD no definidos en .env")
+        return
+    try:
+        msg = MIMEText(cuerpo, "plain", "utf-8")
+        msg["Subject"] = asunto
+        msg["From"]    = EMAIL_FROM
+        msg["To"]      = EMAIL_FROM
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
+            smtp.ehlo()
+            smtp.starttls()
+            smtp.login(EMAIL_FROM, EMAIL_PASS)
+            smtp.sendmail(EMAIL_FROM, EMAIL_FROM, msg.as_string())
+        log("  [ALERTA] Correo de alerta enviado.")
+    except Exception as e:
+        log(f"  [ALERTA] No se pudo enviar correo: {e}")
 
 
 def log(msg):
@@ -97,6 +128,22 @@ def main():
     dur_total = int((datetime.now() - inicio_total).total_seconds())
     log(f"\n  Total: {len(resultados)} modulos | Errores: {errores} | Duracion: {dur_total // 60}m {dur_total % 60}s")
     log("=" * 60)
+
+    if errores > 0:
+        fallidos = [n for n, ok, _ in resultados if not ok]
+        cuerpo = (
+            f"La descarga automática WMS del {inicio_total.strftime('%d/%m/%Y')} "
+            f"finalizó con {errores} error(es).\n\n"
+            f"Módulos fallidos:\n"
+            + "\n".join(f"  - {n}" for n in fallidos)
+            + f"\n\nLog completo:\n  {LOGFILE}\n\n"
+            f"Hora de inicio: {inicio_total.strftime('%H:%M:%S')} | "
+            f"Duración total: {dur_total // 60}m {dur_total % 60}s"
+        )
+        enviar_alerta(
+            f"[WMS Egakat] Fallo en descarga {inicio_total.strftime('%d/%m/%Y')}",
+            cuerpo,
+        )
 
 
 if __name__ == "__main__":
