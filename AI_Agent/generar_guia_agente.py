@@ -110,13 +110,13 @@ r.bold = True; r.font.size = Pt(26); set_color(r, 31, 73, 125)
 
 t2 = doc.add_paragraph()
 t2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-r2 = t2.add_run("Guía de Interacción — AI Safe Agent + Claude Code")
+r2 = t2.add_run("Guía de Interacción — Claude.ai + Claude Code + Agentes")
 r2.bold = True; r2.font.size = Pt(18); set_color(r2, 68, 114, 196)
 
 doc.add_paragraph()
 t3 = doc.add_paragraph()
 t3.alignment = WD_ALIGN_PARAGRAPH.CENTER
-r3 = t3.add_run("Cómo trabajar con los agentes, Claude Code y ask_ai de forma coordinada")
+r3 = t3.add_run("Cómo trabajar con Claude.ai, Claude Code, los agentes y ask_ai de forma coordinada")
 r3.font.size = Pt(12); r3.italic = True; set_color(r3, 80, 80, 80)
 
 doc.add_paragraph()
@@ -124,35 +124,136 @@ meta = doc.add_paragraph()
 meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
 meta.add_run(
     f"Sócrates Cabral  |  Control de Gestión y Mejora Continua  |  Egakat SPA\n"
-    f"Versión 2.0  —  {datetime.date.today().strftime('%d/%m/%Y')}"
+    f"Versión 3.0  —  {datetime.date.today().strftime('%d/%m/%Y')}"
 )
 doc.add_page_break()
 
 # ── 1. VISIÓN GENERAL ─────────────────────────────────────────────────────────
-add_heading(doc, "1. Visión general del sistema", 1)
+add_heading(doc, "1. Visión general del sistema — las 4 capas", 1)
 doc.add_paragraph(
-    "El laboratorio de IA logístico de Egakat SPA está compuesto por tres capas que trabajan "
-    "de forma coordinada. No son herramientas separadas — son una sola arquitectura:"
+    "El laboratorio de IA logístico de Egakat SPA tiene CUATRO capas que trabajan en secuencia. "
+    "No son herramientas separadas — son una sola arquitectura coordinada. "
+    "Cada capa tiene un rol distinto y un momento específico de uso:"
 )
 doc.add_paragraph()
 add_tabla(doc,
-    ["Capa", "Herramienta", "Rol", "Cuándo aparece"],
+    ["Capa", "Herramienta", "Rol", "Cuándo usarla"],
     [
-        ["1 — Orquestador", "Claude Code\n(VS Code)", "El cerebro. Lee el proyecto, decide qué agente llamar, ejecuta código, interpreta resultados.", "Siempre que abres VS Code y trabajas con Claude"],
-        ["2 — Agentes", "extractor / m365 /\nanalista / generador /\npower_bi", "Especialistas. Cada uno hace una tarea concreta y devuelve el resultado a Claude Code.", "Claude Code los llama automáticamente según la tarea"],
-        ["3 — CLI rápido", "ask_ai", "Asistente de terminal. Consultas rápidas sin abrir VS Code.", "Tú lo llamas desde terminal cuando necesitas algo puntual"],
+        ["0 — Diseño",
+         "Claude.ai\n(navegador web)",
+         "El arquitecto. Piensa, planifica y diseña sin tocar código. "
+         "No tiene acceso al proyecto — trabaja solo con lo que tú le describes.",
+         "Al INICIAR un proyecto o tarea nueva. Antes de escribir una sola línea de código."],
+        ["1 — Orquestador",
+         "Claude Code\n(VS Code)",
+         "El cerebro de ejecución. Lee el proyecto completo, decide qué agente llamar, "
+         "ejecuta código, interpreta resultados y te entrega el output final.",
+         "Para implementar, debugear y construir. Trabaja sobre el código real."],
+        ["2 — Agentes",
+         "extractor / m365 /\nanalista / generador /\npower_bi",
+         "Los especialistas. Cada uno ejecuta una tarea concreta: extraer datos, "
+         "analizar, generar scripts, interactuar con OneDrive o crear DAX.",
+         "Claude Code los llama automáticamente. También puedes llamarlos tú desde terminal."],
+        ["3 — CLI rápido",
+         "ask_ai",
+         "El asistente de terminal. Consultas puntuales sin abrir VS Code ni una sesión completa.",
+         "Cuando necesitas una respuesta rápida sobre un archivo o pregunta específica."],
     ],
-    col_widths=[3.5, 4, 7, 4.5]
+    col_widths=[3, 3.5, 8, 4.5]
 )
 doc.add_paragraph()
 add_caja(doc, "Regla de oro:",
-    "Tú describes lo que necesitas. Claude Code decide qué agentes usar y en qué orden. "
-    "Los agentes ejecutan. Tú recibes el resultado.")
+    "Piensa con Claude.ai  →  Ejecuta con Claude Code  →  Consulta rápida con ask_ai")
 doc.add_paragraph()
 doc.add_page_break()
 
-# ── 2. CÓMO INTERACTÚA CLAUDE CODE CON LOS AGENTES ───────────────────────────
-add_heading(doc, "2. Cómo Claude Code orquesta los agentes", 1)
+# ── 2. CLAUDE.AI — EL ARQUITECTO ─────────────────────────────────────────────
+add_heading(doc, "2. Claude.ai — el arquitecto del sistema", 1)
+doc.add_paragraph(
+    "Claude.ai (claude.ai en el navegador) es la capa más estratégica del laboratorio. "
+    "Es donde nace cada proyecto. No ejecuta código ni tiene acceso a tus archivos, "
+    "pero tiene algo que las otras herramientas no tienen: conversación profunda y continua "
+    "para pensar problemas complejos sin límite de contexto técnico."
+)
+doc.add_paragraph()
+
+add_heading(doc, "Qué puede hacer Claude.ai que las otras capas no pueden", 2, color=(68,114,196))
+add_tabla(doc,
+    ["Capacidad", "Claude.ai", "Claude Code", "ask_ai"],
+    [
+        ["Diseñar arquitectura de un proyecto",            "✅ Ideal",    "⚠️ Puede",   "❌ No"],
+        ["Conversar en profundidad sin código",            "✅ Ideal",    "⚠️ Puede",   "❌ No"],
+        ["Revisar lógica de negocio en lenguaje natural",  "✅ Ideal",    "⚠️ Puede",   "❌ No"],
+        ["Acceder a archivos del proyecto",                "❌ No",       "✅ Sí",       "✅ Sí"],
+        ["Llamar a los agentes automáticamente",           "❌ No",       "✅ Sí",       "❌ No"],
+        ["Ejecutar código y ver resultados",               "❌ No",       "✅ Sí",       "✅ Parcial"],
+        ["Respuesta rápida desde terminal",                "❌ No",       "❌ No",       "✅ Ideal"],
+        ["Mantener contexto entre sesiones (memoria)",     "⚠️ Limitado", "✅ MEMORY.md","❌ No"],
+    ],
+    col_widths=[7.5, 3, 3.5, 3]
+)
+doc.add_paragraph()
+
+add_heading(doc, "Cómo usar Claude.ai en tu flujo diario", 2, color=(68,114,196))
+doc.add_paragraph(
+    "Claude.ai es tu interlocutor para todo lo que requiere pensar antes de hacer. "
+    "Úsalo para estas situaciones:"
+)
+add_tabla(doc,
+    ["Situación", "Qué le dices a Claude.ai", "Output esperado"],
+    [
+        ["Proyecto nuevo",
+         '"Necesito automatizar la descarga de X desde el portal Y. '
+         'Ya tengo scripts similares para WMS. ¿Cómo estructuro el nuevo?"',
+         "Estructura del script: funciones, flujo, manejo de errores, convenciones"],
+        ["Decisión de arquitectura",
+         '"¿Conviene un agente separado para devoluciones o lo integro en wms_descarga.py?"',
+         "Análisis de pros/contras con recomendación concreta"],
+        ["Revisar lógica de negocio",
+         '"El cálculo de % bloqueado debe excluir pallets en tránsito. ¿Cómo lo modelo en DAX?"',
+         "Fórmula DAX con explicación de contexto de filtro"],
+        ["Preparar una reunión",
+         '"Necesito explicarle a gerencia el impacto del sistema de automatización. '
+         'Ayúdame a estructurar los puntos clave."',
+         "Estructura de presentación con argumentos y datos"],
+        ["Diagnosticar un problema complejo",
+         '"El script de staging falla solo los lunes. Estos son los logs: [pega logs]"',
+         "Hipótesis de causa raíz y pasos de diagnóstico"],
+    ],
+    col_widths=[4, 7, 8]
+)
+doc.add_paragraph()
+
+add_heading(doc, "El puente Claude.ai → Claude Code", 2, color=(68,114,196))
+doc.add_paragraph(
+    "Claude.ai no guarda tu proyecto. Cuando terminas el diseño en Claude.ai "
+    "y pasas a Claude Code para implementar, el puente eres TÚ: copias el plan "
+    "o la estructura y se lo das a Claude Code para que lo ejecute."
+)
+for paso in [
+    ("En Claude.ai:", "Diseñas la estructura del script de devoluciones. Claude.ai te da el esquema completo."),
+    ("Copias el plan:", "Tomas la estructura que Claude.ai propuso."),
+    ("En Claude Code:", '"Implementa este script siguiendo esta estructura: [pegas el plan]". '
+                        'Claude Code llama a generador.py y lo construye.'),
+    ("Resultado:", "Script completo, con convenciones Egakat, listo en minutos."),
+]:
+    p = doc.add_paragraph()
+    p.paragraph_format.left_indent = Cm(0.5)
+    r1 = p.add_run(f"{paso[0]}  ")
+    r1.bold = True; r1.font.color.rgb = RGBColor(31, 73, 125)
+    p.add_run(paso[1])
+
+doc.add_paragraph()
+add_caja(doc, "Importante:",
+    "Claude.ai NO tiene acceso a C:\\ClaudeWork\\. Si le muestras código, debes pegarlo tú. "
+    "Por eso el filtro de seguridad (ask_ai y los agentes) sanitiza antes de enviar — "
+    "pero con Claude.ai en el navegador, TÚ eres el filtro. Nunca pegues el contenido "
+    "de tu .env directamente en Claude.ai.")
+doc.add_paragraph()
+doc.add_page_break()
+
+# ── 3. CÓMO INTERACTÚA CLAUDE CODE CON LOS AGENTES ───────────────────────────
+add_heading(doc, "3. Cómo Claude Code orquesta los agentes", 1)
 doc.add_paragraph(
     "Claude Code tiene acceso completo al proyecto en C:\\ClaudeWork\\. Cuando le describes "
     "una tarea, internamente decide qué agentes necesita invocar, los llama en el orden correcto "
@@ -208,7 +309,7 @@ doc.add_paragraph()
 doc.add_page_break()
 
 # ── 3. CÓMO INTERACTÚA ask_ai CON CLAUDE CODE ────────────────────────────────
-add_heading(doc, "3. ask_ai vs Claude Code — cuándo usar cada uno", 1)
+add_heading(doc, "4. ask_ai vs Claude Code — cuándo usar cada uno", 1)
 doc.add_paragraph(
     "ask_ai y Claude Code NO son lo mismo. Son herramientas complementarias para momentos distintos:"
 )
@@ -236,7 +337,7 @@ doc.add_paragraph()
 doc.add_page_break()
 
 # ── 4. TU ROL COMO USUARIO ────────────────────────────────────────────────────
-add_heading(doc, "4. Tu rol como usuario — qué debes hacer tú", 1)
+add_heading(doc, "5. Tu rol como usuario — qué debes hacer tú", 1)
 doc.add_paragraph(
     "El sistema está diseñado para que tú hagas lo mínimo posible. Tu rol es describir, "
     "revisar y aprobar. Los agentes y Claude Code hacen el trabajo técnico."
@@ -258,7 +359,7 @@ doc.add_paragraph()
 doc.add_page_break()
 
 # ── 5. FLUJO ANTE UN PROYECTO NUEVO ──────────────────────────────────────────
-add_heading(doc, "5. Cómo iniciar ante un proyecto o tarea nueva", 1)
+add_heading(doc, "6. Cómo iniciar ante un proyecto o tarea nueva", 1)
 
 add_heading(doc, "Fase 1 — Diseño (Claude.ai en navegador)", 2, color=(68,114,196))
 doc.add_paragraph("Antes de escribir código, describe el requerimiento en Claude.ai:")
@@ -295,7 +396,7 @@ doc.add_paragraph()
 doc.add_page_break()
 
 # ── 6. FLUJO AUTOMÁTICO vs MANUAL ────────────────────────────────────────────
-add_heading(doc, "6. Qué es automático y qué requiere tu intervención", 1)
+add_heading(doc, "7. Qué es automático y qué requiere tu intervención", 1)
 add_tabla(doc,
     ["Acción", "Automático", "Requiere tu intervención"],
     [
@@ -314,7 +415,7 @@ doc.add_paragraph()
 doc.add_page_break()
 
 # ── 7. COMANDOS DE TODOS LOS AGENTES ─────────────────────────────────────────
-add_heading(doc, "7. Referencia rápida — todos los comandos", 1)
+add_heading(doc, "8. Referencia rápida — todos los comandos", 1)
 
 add_heading(doc, "ask_ai — Consultas rápidas", 2, color=(68,114,196))
 add_tabla(doc,
@@ -403,7 +504,7 @@ doc.add_paragraph()
 doc.add_page_break()
 
 # ── 8. AHORRO DE TOKENS ───────────────────────────────────────────────────────
-add_heading(doc, "8. Ahorro de tokens — tus archivos reales", 1)
+add_heading(doc, "9. Ahorro de tokens — tus archivos reales", 1)
 add_tabla(doc,
     ["Archivo", "Tamaño", "Tokens completo", "Tokens agente", "Ahorro"],
     [
@@ -425,7 +526,7 @@ doc.add_paragraph()
 doc.add_page_break()
 
 # ── 9. SEGURIDAD ──────────────────────────────────────────────────────────────
-add_heading(doc, "9. Seguridad — filtro automático de credenciales", 1)
+add_heading(doc, "10. Seguridad — filtro automático de credenciales", 1)
 doc.add_paragraph(
     "Todos los agentes aplican sanitización antes de enviar a Claude. "
     "El filtro redacta el VALOR pero mantiene el nombre de la variable — "
@@ -445,7 +546,7 @@ doc.add_paragraph()
 doc.add_page_break()
 
 # ── 10. ESTADO DEL LABORATORIO ────────────────────────────────────────────────
-add_heading(doc, "10. Estado actual del laboratorio", 1)
+add_heading(doc, "11. Estado actual del laboratorio", 1)
 add_tabla(doc,
     ["Componente", "Archivo", "Estado", "Fecha"],
     [
