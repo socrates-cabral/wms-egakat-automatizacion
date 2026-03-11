@@ -57,5 +57,8 @@ _instaladores/
 *.bak
 ~$*
 
+# ── Administración — scripts de permisos (no subir a GitHub) ──────
+_admin/
+
 # ── VS Code ───────────────────────────────────────────────────────
 .vscode/settings.json
