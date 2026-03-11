@@ -1,0 +1,29 @@
+# .claudeignore — archivos que Claude Code NUNCA debe leer
+# Similar a .gitignore
+
+# Credenciales y secretos
+.env
+*.env
+*.key
+*.pem
+*.cert
+
+# Logs (pueden contener datos sensibles)
+logs/
+*.log
+
+# Debug historico
+_debug_historico/
+
+# Instaladores
+_instaladores/
+
+# Archivos de estado interno
+VDR_Comparador/vdr_ultimo_procesado.txt
+
+# Cache y temporales
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+ai-agent-env/

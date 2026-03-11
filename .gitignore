@@ -1,0 +1,28 @@
+# Credenciales — NUNCA subir
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+ai-agent-env/
+
+# Logs
+logs/
+*.log
+
+# Debug
+_debug_historico/
+
+# Instaladores
+_instaladores/
+
+# Archivos temporales
+*.tmp
+*.bak
+
+# VS Code
+.vscode/settings.json

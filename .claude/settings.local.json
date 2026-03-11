@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(\"C:\\\\ClaudeWork\\\\.env\":*)",
+      "Bash(powershell -Command \"Get-ScheduledTask | Where-Object TaskName -match ''WMS|VDR'' | Select-Object TaskName\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:/ClaudeWork/NPS_Encuesta/crear_tareas_nps.ps1\" 2>&1)",
+      "Bash(schtasks /query /fo LIST /tn \"NPS Egakat - Primera descarga\" 2>&1 && schtasks /query /fo LIST /tn \"NPS Egakat - CSAT Mensual\" 2>&1 && schtasks /query /fo LIST /tn \"NPS Egakat - NPS Trimestral\" 2>&1)",
+      "Bash(powershell -Command \"Get-ScheduledTask | Where-Object {$_.TaskName -like 'NPS Egakat*'} | Select-Object TaskName, State, @{N='NextRun';E={\\(Get-ScheduledTaskInfo $_.TaskName\\).NextRunTime}} | Format-Table -AutoSize\" 2>&1)",
+      "Bash(powershell -Command \"Get-ScheduledTask -TaskName 'NPS Egakat*' | Select-Object TaskName, State | Format-Table -AutoSize\" 2>&1)"
+    ]
+  }
+}
