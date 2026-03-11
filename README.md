@@ -1,2 +1,2 @@
-# ClaudeWork-
+# ClaudeWork
 Automatización de operaciones logísticas
