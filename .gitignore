@@ -62,3 +62,16 @@ _admin/
 
 # ── VS Code ───────────────────────────────────────────────────────
 .vscode/settings.json
+
+# IDE
+.vscode/
+.idea/
+
+# Python build
+dist/
+build/
+*.egg-info/
+
+# Mac / Windows basura
+.DS_Store
+Thumbs.db
