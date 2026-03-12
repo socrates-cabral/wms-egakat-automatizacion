@@ -1,6 +1,8 @@
 """
-staging_descarga.py — v2.3
+staging_descarga.py — v2.4
 Módulo 3: Descarga automática Reportes Personalizados → Consulta Stock con Staging In y Out
+Cambios v2.4:
+  - Reintentos automáticos en descarga CSV (hasta 3 intentos, timeout crece por intento)
 """
 
 import os
@@ -85,6 +87,9 @@ def ir_a_reportes(page, deposito):
     page.wait_for_timeout(1_500)
     log(f"  → Reportes Personalizados — Depósito: {deposito}")
 
+
+MAX_REINTENTOS       = 3
+TIMEOUT_DESCARGA_CSV = 60_000   # 60s base — se multiplica por intento (60s, 120s, 180s)
 
 COLUMNAS_ESPERADAS = 20
 # Clientes con estructura extendida conocida (no se reportan como error)
@@ -172,11 +177,20 @@ def descargar_cliente(page, context, empresa_wms, carpeta_destino):
 
         ruta_final = os.path.join(carpeta_destino, nombre_archivo)
 
-        response = page.request.get(url_csv)
-        with open(ruta_final, "wb") as f:
-            f.write(response.body())
+        for intento in range(1, MAX_REINTENTOS + 1):
+            try:
+                if intento > 1:
+                    log(f"     🔄 Reintento {intento}/{MAX_REINTENTOS} (timeout {TIMEOUT_DESCARGA_CSV * intento // 1000}s)...")
+                response = page.request.get(url_csv, timeout=TIMEOUT_DESCARGA_CSV * intento)
+                with open(ruta_final, "wb") as f:
+                    f.write(response.body())
+                break
+            except Exception as e_retry:
+                if intento == MAX_REINTENTOS:
+                    raise
+                log(f"     ⚠ Intento {intento} falló ({type(e_retry).__name__}) — reintentando...")
 
-        log(f"     ✅ Guardado: {ruta_final} ({len(response.body())} bytes)")
+        log(f"     ✅ Guardado: {ruta_final} ({os.path.getsize(ruta_final)} bytes)")
         validar_estructura_csv(ruta_final, empresa_wms)
 
         # Cerrar popup si quedó abierto

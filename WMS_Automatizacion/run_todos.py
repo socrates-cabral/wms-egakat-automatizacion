@@ -1,7 +1,10 @@
 """
-run_todos.py — v1.2
+run_todos.py — v1.4
 Orquestador WMS Egakat: ejecuta los 3 módulos en secuencia y envía notificación por correo.
 Uso: py run_todos.py
+Cambios v1.2:
+  - Integrado Modulo 8 - Recepciones Recibidas (recepciones_descarga.py)
+  - Integrado Modulo 7 - Pedidos Preparados (preparacion_descarga.py)
 Cambios v1.2:
   - Alerta por correo cuando uno o más módulos fallan
 Cambios v1.1:
@@ -29,6 +32,8 @@ SCRIPTS = [
     ("Modulo 2 - Staging IN/OUT",            "staging_descarga.py"),
     ("Modulo 3 - Consulta de Posiciones",    "posiciones_descarga.py"),
     ("Modulo 6 - SharePoint Copy Clientes",  "sharepoint_copy.py"),
+    ("Modulo 7 - Pedidos Preparados",        "preparacion_descarga.py"),
+    ("Modulo 8 - Recepciones Recibidas",     "recepciones_descarga.py"),
 ]
 
 # ─── Log file ────────────────────────────────────────────────────────

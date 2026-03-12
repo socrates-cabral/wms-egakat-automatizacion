@@ -33,7 +33,9 @@ C:\ClaudeWork\
 | `WMS_Automatizacion\wms_descarga.py` | Stock WMS Semanal — 3 centros → OneDrive | v2.4 | ✅ Activo y en producción |
 | `WMS_Automatizacion\posiciones_descarga.py` | Consulta de Posiciones — 8 reportes → OneDrive | v1.2 | ✅ Validado completo 2026-03-08 |
 | `WMS_Automatizacion\staging_descarga.py` | Staging IN/OUT — 16 clientes, 3 sesiones → OneDrive | v2.3 | ✅ Validado 2026-03-08 |
-| `WMS_Automatizacion\run_todos.py` | Orquestador — ejecuta los 3 módulos + log | v1.1 | ✅ En producción |
+| `WMS_Automatizacion\preparacion_descarga.py` | Pedidos Preparados — 5 clientes Quilicura → OneDrive Clientes EK | v1.4 | ✅ Produccion |
+| `WMS_Automatizacion\recepciones_descarga.py` | Recepciones Recibidas — 5 clientes Quilicura → OneDrive Clientes EK | v1.1 | ✅ Produccion |
+| `WMS_Automatizacion\run_todos.py` | Orquestador — ejecuta los 4 módulos + alerta email en fallo | v1.3 | ✅ En producción |
 | `VDR_Comparador\vdr_comparador.py` | Comparador Base VDR Derco Parts — detecta cambios VDR SAP/FISICO → Excel OneDrive | v1.0 | ✅ Validado 2026-03-09 |
 
 ---
@@ -231,6 +233,32 @@ C:\ClaudeWork\
 **Origen:** `Datos para Dashboard - Stagin IN- OUT\Quilicura\{CLIENTE}\`
 **Destino:** `Datos para Dashboard - Clientes EK\{CLIENTE}\Inventario\{AÑO}\{MM Mes}\`
 **Power BI:** prefijo YYYY-MM-DD_ NO afecta Query M — `Text.PositionOfAny(...Occurrence.Last)` sigue encontrando timestamp al final del nombre original
+
+## MÓDULO 7 — Pedidos Preparados (preparacion_descarga.py v1.0) ⏳ Validacion pendiente 2026-03-11
+
+**URL:** `https://egakatwms.cl/sglwms_EGA_prod/pedidospreparadoswp.aspx`
+**Login:** sesión QUILICURA (un solo login para los 5 clientes)
+**fecha_desde:** día 1 del mes de fecha_hasta | **fecha_hasta:** datetime.now() - 1 día
+
+**Selectores confirmados (debug 2026-03-11):**
+- Depósito: `select[name='vSUCCOD']` → label "QUILICURA"
+- Empresa: `select[name='vCOD_EMP']` → label nombre empresa
+- Fecha Desde: `input[name='vFDESDE']` | Fecha Hasta: `input[name='vFHASTA']` (DD/MM/YYYY)
+- Estado: `select[name='vESTADO']` → label "Preparados"
+- Combo Excel: `select[name='vCOMBOEXCEL']` → label "Excel General"
+- Vista detalle: `select[name='vDETALLEOCABECERA']` → label "Mostrar Detalle de Picking" (CRÍTICO — sin esto faltan 7 columnas)
+- Isla de Control: `select[name='vFILTROIC']` → dejar en "Todas" (no tocar)
+- Botón Aplicar: `input[name='APLICAR2']` → NO hacer clic (exportar directo desde BUTTON7)
+- Botón Excel: `input[name='BUTTON7']` (NO BUTTON7 de PDF — ese es `BTNIMPRIMITPDF`)
+- Popup JS "2000+ registros": `page.on("dialog", lambda d: d.dismiss())` → descartar
+
+**Flujo por cliente:** goto URL → select sucursal → select empresa → select estado → fill fechas + Tab → select vDETALLEOCABECERA → select combo excel → expect_download + click BUTTON7 (SIN clic APLICAR2)
+**Timeout descarga:** 300.000ms (5 min) — DERCO puede ser muy pesado
+
+**Clientes:** CERVECERIA ABI → ABINBEV | DAIKIN → DAIKIN | DERCO → DERCO | MASCOTAS LATINAS → MASCOTAS LATINAS | POCHTECA → POCHTECA
+**Destino:** `Datos para Dashboard - Clientes EK\{CLIENTE}\Preparación\{AÑO}\{MM Mes}\Pedidos Preparados.xlsx`
+**Sobrescribe el archivo** — siempre contiene el acumulado del mes
+**Integrado:** `run_todos.py` v1.3 como Módulo 7 (último en ejecutarse)
 
 ## Infraestructura y bloqueos
 
