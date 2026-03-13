@@ -1,5 +1,5 @@
 # Memoria del proyecto — WMS Egakat Automatización
-Última actualización: 2026-03-11
+Última actualización: 2026-03-13
 
 ## Contexto del usuario
 - **Nombre:** Sócrates Cabral
@@ -37,6 +37,11 @@ C:\ClaudeWork\
 | `WMS_Automatizacion\recepciones_descarga.py` | Recepciones Recibidas — 5 clientes Quilicura → OneDrive Clientes EK | v1.1 | ✅ Produccion |
 | `WMS_Automatizacion\run_todos.py` | Orquestador — ejecuta los 4 módulos + alerta email en fallo | v1.3 | ✅ En producción |
 | `VDR_Comparador\vdr_comparador.py` | Comparador Base VDR Derco Parts — detecta cambios VDR SAP/FISICO → Excel OneDrive | v1.0 | ✅ Validado 2026-03-09 |
+| `asistente_omni.py` | Asistente conversacional QWEN3-OMNI (texto + audio) con historial, tokens y exportación WAV | v1.0 | ✅ Creado 2026-03-13 |
+| `qwen_omni.py` | Script demo QWEN3-Omni-Flash con streaming audio + texto, exporta WAV `respuesta_omni.wav` | v1.0 | ✅ Creado 2026-03-13 |
+
+**Notas:**
+- Carpeta `audio/` creada para los archivos WAV generados por `asistente_omni.py`.
 
 ---
 

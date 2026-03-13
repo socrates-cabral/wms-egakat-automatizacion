@@ -1,11 +1,15 @@
 """
-staging_descarga.py — v2.4
+staging_descarga.py — v2.5
 Módulo 3: Descarga automática Reportes Personalizados → Consulta Stock con Staging In y Out
+Cambios v2.5:
+  - Detección de reporte fallido por nombre: SCABRAL{timestamp}.csv sin prefijo = WMS no generó el reporte
+  - Si nombre fallido O archivo 0 bytes: reintenta desde el click (re-consulta WMS completa)
 Cambios v2.4:
   - Reintentos automáticos en descarga CSV (hasta 3 intentos, timeout crece por intento)
 """
 
 import os
+import re
 import sys
 from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
@@ -129,6 +133,11 @@ def validar_estructura_csv(ruta_archivo, empresa_wms):
         log(f"     ⚠ No se pudo validar estructura: {e}")
 
 
+def es_reporte_fallido(nombre_archivo):
+    """SCABRAL{timestamp}.csv sin prefijo = WMS no generó el reporte (falla silenciosa)."""
+    return bool(re.match(r'^SCABRAL\d+\.csv$', nombre_archivo, re.IGNORECASE))
+
+
 def descargar_cliente(page, context, empresa_wms, carpeta_destino):
     log(f"\n  ▶ {empresa_wms}")
     try:
@@ -148,50 +157,80 @@ def descargar_cliente(page, context, empresa_wms, carpeta_destino):
 
         os.makedirs(carpeta_destino, exist_ok=True)
 
-        # ── Interceptar URL del CSV via request listener ─────────────
-        csv_urls = []
-        def capturar_url(request):
-            if ".csv" in request.url.lower() or "VISTA_CONSULTA" in request.url or "VISTASTOCK" in request.url:
-                csv_urls.append(request.url)
-        context.on("request", capturar_url)
-
-        page.click("input[name='SEARCHBUTTON']", force=True)
-
-        # Esperar hasta 15s a que aparezca la URL
-        for _ in range(150):
-            if csv_urls:
-                break
-            page.wait_for_timeout(100)
-
-        context.remove_listener("request", capturar_url)
-
-        if not csv_urls:
-            raise Exception("No se capturó URL del CSV")
-
-        url_csv = csv_urls[-1]
-        log(f"     URL: {url_csv}")
-
-        nombre_archivo = url_csv.split("/")[-1].split("?")[0]
-        if not nombre_archivo.lower().endswith(".csv"):
-            nombre_archivo += ".csv"
-
-        ruta_final = os.path.join(carpeta_destino, nombre_archivo)
+        ruta_final = None
 
         for intento in range(1, MAX_REINTENTOS + 1):
+            if intento > 1:
+                log(f"     🔄 Reintento {intento}/{MAX_REINTENTOS} — re-consultando WMS...")
+                page.wait_for_timeout(2_000)
+
+            # ── Interceptar URL del CSV via request listener ─────────────
+            csv_urls = []
+            def capturar_url(request):
+                if ".csv" in request.url.lower() or "VISTA_CONSULTA" in request.url or "VISTASTOCK" in request.url:
+                    csv_urls.append(request.url)
+            context.on("request", capturar_url)
+
+            page.click("input[name='SEARCHBUTTON']", force=True)
+
+            # Esperar hasta 15s a que aparezca la URL
+            for _ in range(150):
+                if csv_urls:
+                    break
+                page.wait_for_timeout(100)
+
+            context.remove_listener("request", capturar_url)
+
+            if not csv_urls:
+                if intento == MAX_REINTENTOS:
+                    raise Exception("No se capturó URL del CSV")
+                log(f"     ⚠ No se capturó URL en intento {intento}")
+                continue
+
+            url_csv = csv_urls[-1]
+            log(f"     URL: {url_csv}")
+
+            nombre_archivo = url_csv.split("/")[-1].split("?")[0]
+            if not nombre_archivo.lower().endswith(".csv"):
+                nombre_archivo += ".csv"
+
+            # ── Detectar nombre fallido: SCABRAL{timestamp}.csv sin prefijo ──
+            if es_reporte_fallido(nombre_archivo):
+                if intento < MAX_REINTENTOS:
+                    log(f"     ⚠ Nombre inválido ({nombre_archivo}) — WMS no generó el reporte, reintentando...")
+                    continue
+                else:
+                    log(f"     ⚠ Nombre inválido tras {MAX_REINTENTOS} intentos — WMS puede tener falla persistente")
+
+            ruta_final = os.path.join(carpeta_destino, nombre_archivo)
+
+            # ── Descargar el CSV ──────────────────────────────────────────────
             try:
-                if intento > 1:
-                    log(f"     🔄 Reintento {intento}/{MAX_REINTENTOS} (timeout {TIMEOUT_DESCARGA_CSV * intento // 1000}s)...")
                 response = page.request.get(url_csv, timeout=TIMEOUT_DESCARGA_CSV * intento)
                 with open(ruta_final, "wb") as f:
                     f.write(response.body())
-                break
-            except Exception as e_retry:
+            except Exception as e_dl:
                 if intento == MAX_REINTENTOS:
                     raise
-                log(f"     ⚠ Intento {intento} falló ({type(e_retry).__name__}) — reintentando...")
+                log(f"     ⚠ Error descargando en intento {intento} ({type(e_dl).__name__}) — reintentando...")
+                continue
 
-        log(f"     ✅ Guardado: {ruta_final} ({os.path.getsize(ruta_final)} bytes)")
-        validar_estructura_csv(ruta_final, empresa_wms)
+            # ── Verificar tamaño — 0 bytes también es señal de fallo ─────────
+            tamaño = os.path.getsize(ruta_final)
+            if tamaño == 0:
+                if intento < MAX_REINTENTOS:
+                    log(f"     ⚠ Archivo vacío (0 bytes) en intento {intento} — reintentando...")
+                    os.remove(ruta_final)
+                    continue
+                else:
+                    # Agotados los reintentos y sigue vacío — eliminar y registrar sin datos
+                    os.remove(ruta_final)
+                    log(f"     ℹ Sin datos en WMS tras {MAX_REINTENTOS} intentos — sin stock para este cliente")
+                    break
+
+            log(f"     ✅ Guardado: {ruta_final} ({tamaño} bytes)")
+            validar_estructura_csv(ruta_final, empresa_wms)
+            break
 
         # Cerrar popup si quedó abierto
         for p in context.pages:
@@ -220,7 +259,7 @@ def descargar_cliente(page, context, empresa_wms, carpeta_destino):
 
 def main():
     log("=" * 60)
-    log("  WMS Egakat — Staging IN/OUT v2.3")
+    log("  WMS Egakat — Staging IN/OUT v2.5")
     log("=" * 60)
 
     resultados = []

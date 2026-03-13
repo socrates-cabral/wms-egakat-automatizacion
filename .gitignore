@@ -11,6 +11,9 @@
 *.cert
 *.pfx
 *.p12
+.env.local
+.env.*.local
+
 
 # ── Datos de empresa — NUNCA subir ───────────────────────────────
 *.xlsx
@@ -75,3 +78,4 @@ build/
 # Mac / Windows basura
 .DS_Store
 Thumbs.db
+venv/
