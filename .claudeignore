@@ -9,6 +9,8 @@
 *.cert
 *.pfx
 *.p12
+.env.local
+.env.*.local
 
 # Solicitudes IT (pueden contener datos corporativos sensibles)
 Solicitudes_IT/

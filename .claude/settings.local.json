@@ -21,7 +21,9 @@
       "Bash(rm \"/c/Users/Socrates Cabral/OneDrive - EGA KAT LOGISTICA SPA/Datos para Dashboard - Stock WMS Semanal/Pudahuel/20260311162649_Reporte_de_Ubicacion_de_Contenedor_PUDAHUEL.xlsx\"\nrm \"/c/Users/Socrates Cabral/OneDrive - EGA KAT LOGISTICA SPA/Datos para Dashboard - Stock WMS Semanal/Pudahuel/20260311162756_Reporte_de_Ubicacion_de_Contenedor_PUDAHUEL_UNITARIO.xlsx\"\necho \"OK\")",
       "Bash(powershell.exe -ExecutionPolicy Bypass -Command \"\n\\\\$action  = New-ScheduledTaskAction -Execute 'C:\\\\Users\\\\Socrates Cabral\\\\AppData\\\\Local\\\\Python\\\\pythoncore-3.14-64\\\\python.exe' -Argument 'C:\\\\ClaudeWork\\\\WMS_Automatizacion\\\\wms_watchdog.py' -WorkingDirectory 'C:\\\\ClaudeWork'\n\\\\$trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At '09:30AM'\n\\\\$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit \\(New-TimeSpan -Minutes 5\\) -StartWhenAvailable\nRegister-ScheduledTask -TaskName 'WMS Egakat - Watchdog Alerta' -Action \\\\$action -Trigger \\\\$trigger -Settings \\\\$settings -RunLevel Limited -Force\n\" 2>&1)",
       "Bash(powershell.exe -Command \"Get-ScheduledTask -TaskName 'WMS Egakat - Watchdog Alerta' | Select-Object TaskName, State; Get-ScheduledTaskInfo -TaskName 'WMS Egakat - Watchdog Alerta' | Select-Object NextRunTime\")",
-      "Bash(powershell.exe -Command \"Get-ScheduledTaskInfo -TaskName 'WMS Egakat - Watchdog Alerta' | Format-List NextRunTime, LastRunTime\")"
+      "Bash(powershell.exe -Command \"Get-ScheduledTaskInfo -TaskName 'WMS Egakat - Watchdog Alerta' | Format-List NextRunTime, LastRunTime\")",
+      "Bash(find . -newer .git/ORIG_HEAD -not -path './.git/*' -not -path './logs/*' -not -path './_debug_historico/*' -not -path './_instaladores/*' -type f 2>/dev/null | sort)",
+      "Bash(find . -newer WMS_Automatizacion/run_todos.py -not -path './.git/*' -not -path './logs/*' -not -path './_debug_historico/*' -not -path './_instaladores/*' -type f 2>/dev/null | sort)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
