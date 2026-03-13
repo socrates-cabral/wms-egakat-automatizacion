@@ -3,6 +3,14 @@
 # Regla general: código sube, datos NO suben
 # ══════════════════════════════════════════════════════════════════
 
+# ── Instrucciones Claude Code — info interna, no subir ───────────
+CLAUDE.md
+
+# ── Capturas de pantalla ─────────────────────────────────────────
+*.png
+*.jpg
+*.jpeg
+
 # ── Credenciales — NUNCA subir ────────────────────────────────────
 .env
 *.env
