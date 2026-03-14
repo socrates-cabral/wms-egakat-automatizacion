@@ -1,5 +1,8 @@
 import sys
-sys.stdout.reconfigure(encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 
 # charts.py — Gráficos Plotly reutilizables para Chiquito Finanzas
 # Paleta consistente con la app HTML original
@@ -26,6 +29,7 @@ _LAYOUT_BASE = dict(
     font=dict(color=COLOR_TEXTO, family='monospace'),
     margin=dict(l=20, r=20, t=40, b=20),
     legend=dict(bgcolor=COLOR_PANEL, bordercolor=COLOR_BORDE, borderwidth=1),
+    separators=',.',  # Formato chileno: punto como separador de miles
 )
 
 
@@ -197,9 +201,9 @@ def chart_proyeccion_12m(proyeccion: list) -> go.Figure:
     proyeccion: lista de dicts con {mes, ventas, costo_total, resultado}
     """
     meses      = [f"M{r['mes']}" for r in proyeccion]
-    ventas     = [r['ventas']     for r in proyeccion]
+    ventas     = [r['ventas']      for r in proyeccion]
     costos     = [r['costo_total'] for r in proyeccion]
-    resultado  = [r['resultado']  for r in proyeccion]
+    resultado  = [r['resultado']   for r in proyeccion]
     colores_r  = [COLOR_VERDE if r >= 0 else COLOR_ROJO for r in resultado]
 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1,
@@ -236,16 +240,29 @@ def chart_deuda_barras(df_deuda: pd.DataFrame) -> go.Figure:
     Barras horizontales ordenadas por saldo de deuda.
     df_deuda: columnas [acreedor, saldo, cuota, tasa, tipo]
     """
-    df = df_deuda[df_deuda['saldo'] > 0].sort_values('saldo', ascending=True)
-    if df.empty:
-        fig = go.Figure()
+    fig = go.Figure()
+
+    if df_deuda is None or df_deuda.empty:
         fig.update_layout(**_LAYOUT_BASE, title='Sin deudas activas')
         return fig
 
-    col_acreedor = 'acreedor' if 'acreedor' in df.columns else df.columns[0]
-    col_saldo    = 'saldo'    if 'saldo'    in df.columns else df.columns[1]
+    df = df_deuda.copy()
 
-    fig = go.Figure(go.Bar(
+    col_acreedor = 'acreedor' if 'acreedor' in df.columns else next((c for c in df.columns if df[c].dtype == 'object'), None)
+    col_saldo = 'saldo' if 'saldo' in df.columns else next((c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])), None)
+
+    if col_acreedor is None or col_saldo is None:
+        fig.update_layout(**_LAYOUT_BASE, title='No se pudo construir el gráfico de deuda')
+        return fig
+
+    df[col_saldo] = pd.to_numeric(df[col_saldo], errors='coerce').fillna(0)
+    df = df[df[col_saldo] > 0].sort_values(col_saldo, ascending=True)
+
+    if df.empty:
+        fig.update_layout(**_LAYOUT_BASE, title='Sin deudas activas')
+        return fig
+
+    fig.add_trace(go.Bar(
         orientation='h',
         x=df[col_saldo],
         y=df[col_acreedor],
@@ -257,7 +274,7 @@ def chart_deuda_barras(df_deuda: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         **_LAYOUT_BASE,
-        title='Deuda por instrumento (mayor a menor)',
+        title='Deuda por instrumento',
         xaxis=dict(gridcolor=COLOR_BORDE, tickprefix='$', tickformat=',.0f'),
         yaxis=dict(gridcolor=COLOR_BORDE),
         height=350,
