@@ -262,7 +262,7 @@ def load_deuda() -> pd.DataFrame:
         return _deuda_default()
 
 
-def get_monthly_summary(df_caja: pd.DataFrame | None = None) -> pd.DataFrame:
+def get_monthly_summary(df_caja=None) -> pd.DataFrame:
     """
     Agrupa por mes: total ingresos, gastos, resultado.
     Columnas: [mes, ingresos, gastos, resultado]
