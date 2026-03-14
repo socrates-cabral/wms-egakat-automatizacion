@@ -1,33 +1,46 @@
 ' Chiquito_Finanzas_Launcher.vbs
-' Lanza la app sin mostrar ventana de consola negra
-' Coloca este archivo en el Escritorio
+' - Si la app ya esta corriendo -> abre el navegador al instante
+' - Si no esta corriendo -> la inicia y espera solo lo necesario (sin tiempo fijo)
 
-Dim shell
+Dim shell, fso
 Set shell = CreateObject("WScript.Shell")
+Set fso   = CreateObject("Scripting.FileSystemObject")
 
-' Ruta al .bat (ajusta si moviste el proyecto)
 Dim batPath
 batPath = "C:\ClaudeWork\chiquito_financiero\Iniciar_ChiquitoFinanzas.bat"
 
-' Verificar que existe el archivo
-Dim fso
-Set fso = CreateObject("Scripting.FileSystemObject")
 If Not fso.FileExists(batPath) Then
-    MsgBox "No se encontro el archivo:" & vbNewLine & batPath & vbNewLine & vbNewLine & _
-           "Verifica que el proyecto esta en C:\ClaudeWork\chiquito_financiero\", _
-           vbCritical, "Chiquito Finanzas"
+    MsgBox "No se encontro:" & vbNewLine & batPath, vbCritical, "Chiquito Finanzas"
     WScript.Quit
 End If
 
-' Mostrar mensaje de inicio
-' MsgBox "Iniciando Chiquito Finanzas..." & vbNewLine & "El navegador se abrira en unos segundos.", vbInformation, "Chiquito Finanzas"
+' --- Funcion: devuelve True si el puerto 8502 ya esta escuchando ---
+Function PuertoActivo()
+    Dim exec, output
+    Set exec = shell.Exec("cmd /c netstat -an 2>nul | findstr :8502")
+    output = exec.StdOut.ReadAll()
+    PuertoActivo = (InStr(output, "8502") > 0)
+End Function
 
-' Lanzar sin ventana de consola (0 = oculta, 1 = normal)
+' --- Si ya esta corriendo, abrir directamente ---
+If PuertoActivo() Then
+    shell.Run "http://localhost:8502"
+    WScript.Quit
+End If
+
+' --- No esta corriendo: iniciar el servidor ---
 shell.Run Chr(34) & batPath & Chr(34), 0, False
 
-' Esperar 4 segundos y abrir el navegador
-WScript.Sleep 4000
+' --- Esperar a que el puerto responda (maximo 20 segundos, revisando cada 500ms) ---
+Dim intentos
+intentos = 0
+Do While Not PuertoActivo() And intentos < 40
+    WScript.Sleep 500
+    intentos = intentos + 1
+Loop
+
+' --- Abrir navegador ---
 shell.Run "http://localhost:8502"
 
 Set shell = Nothing
-Set fso = Nothing
+Set fso   = Nothing

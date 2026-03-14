@@ -5,10 +5,14 @@ sys.stdout.reconfigure(encoding="utf-8")
 # Sprint 1 | Mar-2026 | Sócrates Cabral
 
 import os
+import logging
 import pandas as pd
 import streamlit as st
 from pathlib import Path
 from dotenv import load_dotenv
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', handlers=[logging.StreamHandler(sys.stdout)])
+logger = logging.getLogger(__name__)
 
 # Importar módulos del proyecto
 from calculators import (
@@ -179,24 +183,44 @@ st.markdown("""
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=300)
+CACHE_TTL_SEGUNDOS  = 300        # 5 minutos
+SALDO_ALERTA_DEFAULT = 200_000  # umbral resultado negativo para alerta roja
+PE_ALERTA_DEFAULT    = 70       # % del punto de equilibrio considerado saludable
+
+
+@st.cache_data(ttl=CACHE_TTL_SEGUNDOS)
 def cargar_datos():
     """Carga y cachea datos del Excel (refresca cada 5 min)."""
-    df_caja   = load_caja()
-    df_deuda  = load_deuda()
-    resumen   = get_monthly_summary(df_caja)
+    logger.info("Cargando datos desde Excel...")
+    df_caja    = load_caja()
+    df_deuda   = load_deuda()
+    resumen    = get_monthly_summary(df_caja)
     ultima_act = get_last_update()
+    logger.info(f"Datos cargados — caja: {len(df_caja)} filas, deuda: {len(df_deuda)} filas")
     return df_caja, df_deuda, resumen, ultima_act
 
 
+def validar_datos_consistentes(df_caja: pd.DataFrame, df_deuda: pd.DataFrame) -> list:
+    """Detecta inconsistencias básicas y retorna lista de advertencias."""
+    warns = []
+    if df_caja.empty:
+        warns.append("Sin datos de caja — se están usando datos de ejemplo.")
+    if df_deuda.empty:
+        warns.append("Sin datos de deuda — se están usando datos de ejemplo.")
+    return warns
+
+
 def fmt_clp(valor: float) -> str:
-    """Formatea un número como pesos chilenos."""
-    return f"${valor:,.0f}"
+    """Formatea un número como pesos chilenos con separador de miles chileno (punto)."""
+    try:
+        return "$" + f"{float(valor):,.0f}".replace(",", ".")
+    except (TypeError, ValueError):
+        return "—"
 
 
 def color_resultado(valor: float) -> str:
-    if valor > 0:   return "verde"
-    if valor < -200_000: return "rojo"
+    if valor > 0:                       return "verde"
+    if valor < -SALDO_ALERTA_DEFAULT:   return "rojo"
     return "ambar"
 
 
@@ -207,6 +231,60 @@ def kpi_html(valor: str, label: str, clase: str = '') -> str:
         <div class="kpi-label">{label}</div>
     </div>
     """
+
+
+TIPO_DEUDA_LABELS = {
+    'banco': 'Créditos bancarios',
+    'tc': 'Tarjetas de crédito',
+    'linea': 'Líneas de crédito',
+    'auto': 'Automotriz',
+    'seguro': 'Seguros',
+    'familiar': 'Familiar',
+}
+
+TIPO_DEUDA_CLASE = {
+    'banco': 'rojo',
+    'tc': 'ambar',
+    'linea': 'azul',
+    'auto': 'verde',
+    'seguro': 'azul',
+    'familiar': 'ambar',
+}
+
+
+def resumen_deuda_por_tipo(df_deuda: pd.DataFrame) -> pd.DataFrame:
+    """Agrupa la deuda por categoría para mostrar un consolidado legible."""
+    if df_deuda is None or df_deuda.empty:
+        return pd.DataFrame(columns=['tipo', 'categoria', 'saldo', 'cuota', 'instrumentos'])
+
+    df = df_deuda.copy()
+    for col in ['saldo', 'cuota']:
+        if col not in df.columns:
+            df[col] = 0
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+
+    if 'tipo' not in df.columns:
+        df['tipo'] = 'otros'
+
+    if 'acreedor' not in df.columns:
+        df['acreedor'] = 'Instrumento'
+
+    activos = df[(df['saldo'] > 0) | (df['cuota'] > 0)].copy()
+    if activos.empty:
+        return pd.DataFrame(columns=['tipo', 'categoria', 'saldo', 'cuota', 'instrumentos'])
+
+    resumen = (
+        activos.groupby('tipo', as_index=False)
+        .agg(
+            saldo=('saldo', 'sum'),
+            cuota=('cuota', 'sum'),
+            instrumentos=('acreedor', 'count'),
+        )
+        .sort_values(['saldo', 'cuota'], ascending=[False, False])
+        .reset_index(drop=True)
+    )
+    resumen['categoria'] = resumen['tipo'].map(TIPO_DEUDA_LABELS).fillna(resumen['tipo'].str.title())
+    return resumen
 
 
 # ─── Sidebar ───────────────────────────────────────────────────────────────────
@@ -265,16 +343,29 @@ with st.sidebar:
 
 # ─── Cargar datos ──────────────────────────────────────────────────────────────
 df_caja, df_deuda, df_resumen, ultima_act = cargar_datos()
+warnings_datos = validar_datos_consistentes(df_caja, df_deuda)
+for w in warnings_datos:
+    logger.warning(w)
 
 # Calcular KPIs globales
-prom_ing  = df_resumen['ingresos'].mean()
-prom_gas  = df_resumen['gastos'].mean()
-prom_res  = df_resumen['resultado'].mean()
-total_deuda = df_deuda['saldo'].sum() if 'saldo' in df_deuda.columns else 0
-total_cuotas = df_deuda['cuota'].sum() if 'cuota' in df_deuda.columns else 918_903
-
-pe_actual = calc_punto_equilibrio(COSTOS_FIJOS_BASE, total_cuotas, 0.45)
-pct_pe    = (prom_ing / pe_actual * 100) if pe_actual > 0 else 0
+try:
+    prom_ing  = df_resumen['ingresos'].mean()  if not df_resumen.empty else 0.0
+    prom_gas  = df_resumen['gastos'].mean()    if not df_resumen.empty else 0.0
+    prom_res  = df_resumen['resultado'].mean() if not df_resumen.empty else 0.0
+    total_deuda  = pd.to_numeric(df_deuda['saldo'], errors='coerce').fillna(0).sum() if 'saldo' in df_deuda.columns else 0
+    total_cuotas = pd.to_numeric(df_deuda['cuota'], errors='coerce').fillna(0).sum() if 'cuota' in df_deuda.columns else 918_903
+    resumen_deuda_tipo   = resumen_deuda_por_tipo(df_deuda)
+    instrumentos_activos = int(((pd.to_numeric(df_deuda['saldo'], errors='coerce').fillna(0) > 0) |
+                                (pd.to_numeric(df_deuda['cuota'], errors='coerce').fillna(0) > 0)).sum()) if not df_deuda.empty else 0
+    pe_actual = calc_punto_equilibrio(COSTOS_FIJOS_BASE, total_cuotas, 0.45)
+    pct_pe    = (prom_ing / pe_actual * 100) if pe_actual > 0 else 0
+    pct_cuotas_sobre_ingreso = (total_cuotas / prom_ing * 100) if prom_ing > 0 else 0
+    logger.info(f"KPIs — ing: {fmt_clp(prom_ing)}, gas: {fmt_clp(prom_gas)}, PE: {pct_pe:.0f}%")
+except Exception as e:
+    logger.error(f"Error calculando KPIs: {e}")
+    prom_ing = prom_gas = prom_res = total_deuda = total_cuotas = 0.0
+    resumen_deuda_tipo = pd.DataFrame()
+    instrumentos_activos = pe_actual = pct_pe = pct_cuotas_sobre_ingreso = 0
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PÁGINA: DASHBOARD
@@ -290,7 +381,7 @@ if pagina == "📊 Dashboard":
             f'{fmt_clp(prom_res)}/mes — Capital de trabajo dura ~{meses_q} meses.</div>',
             unsafe_allow_html=True
         )
-    elif pct_pe < 70:
+    elif pct_pe < PE_ALERTA_DEFAULT:
         st.markdown(
             f'<div class="alerta-ambar">🟡 <strong>Ventas al {pct_pe:.0f}% del punto de equilibrio</strong> '
             f'({fmt_clp(prom_ing)} vs {fmt_clp(pe_actual)} PE).</div>',
@@ -301,6 +392,11 @@ if pagina == "📊 Dashboard":
             '<div class="alerta-verde">✅ Negocio saludable — ventas sobre el 70% del PE.</div>',
             unsafe_allow_html=True
         )
+
+    st.caption(f"📅 Datos al: {ultima_act}")
+    if warnings_datos:
+        for w in warnings_datos:
+            st.warning(w)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -318,7 +414,7 @@ if pagina == "📊 Dashboard":
     with col5:
         st.markdown(kpi_html(fmt_clp(total_cuotas), "Cuotas/mes",       "ambar"),  unsafe_allow_html=True)
     with col6:
-        clase_pe = "verde" if pct_pe >= 70 else ("ambar" if pct_pe >= 50 else "rojo")
+        clase_pe = "verde" if pct_pe >= PE_ALERTA_DEFAULT else ("ambar" if pct_pe >= 50 else "rojo")
         st.markdown(kpi_html(f"{pct_pe:.0f}%",    "% PE alcanzado",     clase_pe), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -375,15 +471,19 @@ elif pagina == "🎛 Simulador":
 
     with col_izq:
         st.subheader("Parámetros")
-        ventas_obj  = st.slider("Ventas objetivo/mes ($)", 500_000, 6_000_000,
+        ventas_obj  = st.slider("Ventas objetivo/mes", 500_000, 6_000_000,
                                 st.session_state.get('sim_ventas', 1_860_000), 50_000,
-                                format="$%d", key='sim_ventas')
-        alquiler    = st.slider("Alquiler taller ($)", 200_000, 1_000_000,
+                                format="$%d", key='sim_ventas',
+                                help="Arrastra para cambiar el valor")
+        st.markdown(f'<div style="color:#58a6ff;font-size:13px;font-family:monospace;margin:-12px 0 8px 4px">{fmt_clp(ventas_obj)}</div>', unsafe_allow_html=True)
+        alquiler    = st.slider("Alquiler taller", 200_000, 1_000_000,
                                 st.session_state.get('sim_alquiler', 700_000), 10_000,
                                 format="$%d", key='sim_alquiler')
-        cuota_tc    = st.slider("Cuotas TC ($)", 0, 600_000,
+        st.markdown(f'<div style="color:#58a6ff;font-size:13px;font-family:monospace;margin:-12px 0 8px 4px">{fmt_clp(alquiler)}</div>', unsafe_allow_html=True)
+        cuota_tc    = st.slider("Cuotas TC", 0, 600_000,
                                 st.session_state.get('sim_cuota_tc', 363_097), 10_000,
                                 format="$%d", key='sim_cuota_tc')
+        st.markdown(f'<div style="color:#58a6ff;font-size:13px;font-family:monospace;margin:-12px 0 8px 4px">{fmt_clp(cuota_tc)}</div>', unsafe_allow_html=True)
         margen_bruto = st.slider("Margen bruto (%)", 30, 65,
                                  st.session_state.get('sim_margen', 45), 1,
                                  key='sim_margen')
@@ -421,7 +521,7 @@ elif pagina == "🎛 Simulador":
         col1.markdown(kpi_html(fmt_clp(resultado_sim), "Resultado mensual", clase_sim), unsafe_allow_html=True)
         col2.markdown(kpi_html(fmt_clp(pe_sim), "Punto de equilibrio", "ambar"), unsafe_allow_html=True)
         col3.markdown(kpi_html(f"{pct_pe_sim:.0f}%", "% PE alcanzado",
-                               "verde" if pct_pe_sim >= 100 else ("ambar" if pct_pe_sim >= 70 else "rojo")),
+                               "verde" if pct_pe_sim >= 100 else ("ambar" if pct_pe_sim >= PE_ALERTA_DEFAULT else "rojo")),
                       unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -495,25 +595,45 @@ elif pagina == "💰 Libro de Caja":
 elif pagina == "💳 Deuda":
     st.title("💳 Estado de deuda")
 
-    total_saldo  = df_deuda['saldo'].sum()  if 'saldo'  in df_deuda.columns else 0
-    total_cuota_ = df_deuda['cuota'].sum()  if 'cuota'  in df_deuda.columns else 0
+    total_saldo  = pd.to_numeric(df_deuda['saldo'], errors='coerce').fillna(0).sum() if 'saldo' in df_deuda.columns else 0
+    total_cuota_ = pd.to_numeric(df_deuda['cuota'], errors='coerce').fillna(0).sum() if 'cuota' in df_deuda.columns else 0
 
     col1, col2, col3 = st.columns(3)
-    col1.markdown(kpi_html(fmt_clp(total_saldo), "Deuda total", "rojo"),   unsafe_allow_html=True)
-    col2.markdown(kpi_html(fmt_clp(total_cuota_), "Cuotas/mes", "ambar"),  unsafe_allow_html=True)
-    col3.markdown(kpi_html(f"{len(df_deuda)} inst.", "Instrumentos activos", "azul"), unsafe_allow_html=True)
+    col1.markdown(kpi_html(fmt_clp(total_saldo), "Deuda total consolidada", "rojo"), unsafe_allow_html=True)
+    col2.markdown(kpi_html(fmt_clp(total_cuota_), "Cuotas/mes consolidadas", "ambar"), unsafe_allow_html=True)
+    col3.markdown(kpi_html(f"{instrumentos_activos} inst.", "Instrumentos activos", "azul"), unsafe_allow_html=True)
+
+    st.caption("Incluye tarjetas, líneas, deuda familiar, crédito automotriz y costos financieros asociados con cuota mensual.")
+
+    if not resumen_deuda_tipo.empty:
+        st.markdown("### Consolidado por categoría")
+        cols_cat = st.columns(min(4, len(resumen_deuda_tipo)))
+        for i, (_, row) in enumerate(resumen_deuda_tipo.iterrows()):
+            clase = TIPO_DEUDA_CLASE.get(row['tipo'], 'azul')
+            etiqueta = f"{row['categoria']} · {fmt_clp(row['cuota'])}/mes"
+            cols_cat[i % len(cols_cat)].markdown(
+                kpi_html(fmt_clp(row['saldo']), etiqueta, clase),
+                unsafe_allow_html=True,
+            )
+
+        df_cat = resumen_deuda_tipo[['categoria', 'saldo', 'cuota', 'instrumentos']].copy()
+        df_cat.columns = ['Categoría', 'Saldo', 'Cuota/mes', 'Instrumentos']
+        df_cat['Saldo'] = df_cat['Saldo'].apply(fmt_clp)
+        df_cat['Cuota/mes'] = df_cat['Cuota/mes'].apply(fmt_clp)
+        st.dataframe(df_cat, use_container_width=True, hide_index=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.plotly_chart(chart_deuda_barras(df_deuda), use_container_width=True)
 
-    # Tabla de deuda
     st.subheader("Detalle de deudas")
     df_d = df_deuda.copy()
+    if 'tipo' in df_d.columns:
+        df_d['tipo'] = df_d['tipo'].map(TIPO_DEUDA_LABELS).fillna(df_d['tipo'])
     for col_m in ['saldo', 'cuota']:
         if col_m in df_d.columns:
-            df_d[col_m] = df_d[col_m].apply(lambda x: fmt_clp(float(x)) if pd.notnull(x) else '$0')
+            df_d[col_m] = pd.to_numeric(df_d[col_m], errors='coerce').fillna(0).apply(fmt_clp)
     if 'tasa' in df_d.columns:
-        df_d['tasa'] = df_d['tasa'].apply(lambda x: f"{x:.1f}%/mes" if pd.notnull(x) and x > 0 else '—')
+        df_d['tasa'] = pd.to_numeric(df_d['tasa'], errors='coerce').fillna(0).apply(lambda x: f"{x:.1f}%/mes" if x > 0 else '—')
     st.dataframe(df_d, use_container_width=True, hide_index=True)
 
 
@@ -567,8 +687,8 @@ elif pagina == "✅ Plan de Acción":
     # Diagnóstico 5 causas
     st.markdown("---")
     with st.expander("🔍 Las 5 causas del déficit"):
-        st.markdown("""
-        1. **Deuda aplastante ($18.6M)** — cuotas de $929K/mes = 50% del ingreso promedio
+        st.markdown(f"""
+        1. **Deuda aplastante ({fmt_clp(total_deuda)})** — cuotas de {fmt_clp(total_cuotas)}/mes = {pct_cuotas_sobre_ingreso:.0f}% del ingreso promedio
         2. **Alquiler del taller ($700K/mes)** — 38% del ingreso bruto (lo normal: 10-15%)
         3. **Ventas insuficientes** — se vende $1.86M pero se necesita $3.95M para cubrir todo
         4. **Gastos personales mezclados** — ~$80K/mes de gastos personales salen de la caja
@@ -586,7 +706,7 @@ elif pagina == "💉 Inyección Capital":
     # BLOQUE 1 — COMPARADOR DE OPCIONES BCI
     # ═══════════════════════════════════════════════════════
     st.subheader("📊 Comparador de opciones BCI — ¿Cuál conviene?")
-    st.caption("Datos reales del simulador BCI — Mar 2026 — $10,000,000")
+    st.caption("Datos reales del simulador BCI — Mar 2026 — $10.000.000")
 
     # CSS extra para las cards de comparación
     st.markdown("""
@@ -681,31 +801,37 @@ elif pagina == "💉 Inyección Capital":
     MONTO_BCI = 10_000_000
 
     def _card_bci(op: dict, es_recomendada: bool = False) -> str:
-        intereses = op['ctc'] - MONTO_BCI
-        clase = 'bci-card recomendada' if es_recomendada else 'bci-card'
-        badge = '<div class="bci-badge">Recomendada</div>' if es_recomendada else ''
-        color_cuota = '#3fb950' if es_recomendada else '#f85149'
-        color_total = '#d29922' if es_recomendada else '#f85149'
-        return f"""
-        <div class="{clase}">
-            {badge}
-            <div class="bci-titulo">{op['titulo']}</div>
-            <div class="bci-cuota" style="color:{color_cuota}">${op['cuota_mes']:,.0f}</div>
-            <div class="bci-sub">/mes durante {op['cuotas']} meses</div>
-            <div class="bci-row">
-                <span class="bci-muted">Tasa mensual</span>
-                <span>{op['tasa']*100:.2f}%</span>
-            </div>
-            <div class="bci-row">
-                <span class="bci-muted">Total pagado</span>
-                <span style="color:{color_total}">${op['ctc']:,.0f}</span>
-            </div>
-            <div class="bci-row">
-                <span class="bci-muted">Intereses totales</span>
-                <span style="color:{color_total}">${intereses:,.0f}</span>
-            </div>
-        </div>
         """
+        Genera HTML con 100% inline styles.
+        Streamlit no aplica clases CSS custom en st.markdown() — solo inline styles funcionan.
+        """
+        intereses    = op['ctc'] - MONTO_BCI
+        borde        = '2px solid #58a6ff' if es_recomendada else '1px solid #30363d'
+        color_cuota  = '#3fb950' if es_recomendada else '#f85149'
+        color_total  = '#d29922' if es_recomendada else '#f85149'
+
+        badge = (
+            '<div style="background:#1b2d3d;color:#58a6ff;font-size:11px;'
+            'padding:2px 10px;border-radius:20px;display:inline-block;margin-bottom:6px">'
+            'Recomendada</div>'
+        ) if es_recomendada else ''
+
+        cuota_str    = fmt_clp(op["cuota_mes"])
+        ctc_str      = fmt_clp(op["ctc"])
+        intereses_str= fmt_clp(intereses)
+        html = (
+            f'<div style="background:#161b22;border:{borde};border-radius:10px;padding:14px 16px;box-sizing:border-box;">'
+            f'{badge}'
+            f'<div style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">{op["titulo"]}</div>'
+            f'<div style="font-size:22px;font-weight:700;font-family:monospace;color:{color_cuota}">{cuota_str}</div>'
+            f'<div style="font-size:10px;color:#8b949e;margin-top:2px;margin-bottom:8px">/mes · {op["cuotas"]} meses</div>'
+            f'<div style="border-top:1px solid #30363d;padding-top:6px">'
+            f'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:#8b949e">Tasa mensual</span><span style="color:#e6edf3">{op["tasa"]*100:.2f}%</span></div>'
+            f'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:#8b949e">Total pagado</span><span style="color:{color_total}">{ctc_str}</span></div>'
+            f'<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#8b949e">Intereses totales</span><span style="color:{color_total}">{intereses_str}</span></div>'
+            f'</div></div>'
+        )
+        return html
 
     col_a, col_b, col_c = st.columns(3)
     with col_a:
@@ -724,32 +850,20 @@ elif pagina == "💉 Inyección Capital":
     meses_diferencia = OPCIONES_BCI['B']['cuotas'] - OPCIONES_BCI['A']['cuotas']
 
     col_i1, col_i2, col_i3 = st.columns(3)
+    ahorro_str   = fmt_clp(ahorro_cuota)
+    ahorro18_str = fmt_clp(ahorro_cuota * 18)
+    extra_str    = fmt_clp(costo_extra)
+
     with col_i1:
-        st.markdown(f"""
-        <div class="impacto-card impacto-verde">
-            <div class="impacto-label" style="color:#3fb950">Cuota más baja por</div>
-            <div class="impacto-valor" style="color:#3fb950">${ahorro_cuota:,.0f}/mes</div>
-            <div class="impacto-desc" style="color:#3fb950">
-                Durante 18 meses → ${ahorro_cuota*18:,.0f} liberado
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div style="background:#1b2d1b;border:1px solid #3fb950;border-radius:8px;padding:12px 16px"><div style="font-size:11px;color:#3fb950;margin-bottom:4px">Cuota más baja por</div><div style="font-size:20px;font-weight:700;font-family:monospace;color:#3fb950">{ahorro_str}/mes</div><div style="font-size:11px;color:#3fb950;margin-top:3px">Durante 18 meses → {ahorro18_str} liberado</div></div>', unsafe_allow_html=True)
     with col_i2:
-        st.markdown(f"""
-        <div class="impacto-card impacto-ambar">
-            <div class="impacto-label" style="color:#d29922">Mayor costo total</div>
-            <div class="impacto-valor" style="color:#d29922">+${costo_extra:,.0f}</div>
-            <div class="impacto-desc" style="color:#d29922">
-                En {meses_diferencia} cuotas adicionales
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div style="background:#2d2316;border:1px solid #d29922;border-radius:8px;padding:12px 16px"><div style="font-size:11px;color:#d29922;margin-bottom:4px">Mayor costo total</div><div style="font-size:20px;font-weight:700;font-family:monospace;color:#d29922">+{extra_str}</div><div style="font-size:11px;color:#d29922;margin-top:3px">En {meses_diferencia} cuotas adicionales</div></div>', unsafe_allow_html=True)
     with col_i3:
         st.markdown("""
-        <div class="impacto-card impacto-azul">
-            <div class="impacto-label" style="color:#58a6ff">Veredicto</div>
-            <div class="impacto-valor" style="color:#58a6ff; font-size:16px">Vale la pena</div>
-            <div class="impacto-desc" style="color:#58a6ff">
+        <div style="background:#1b2d3d;border:1px solid #58a6ff;border-radius:8px;padding:12px 16px">
+            <div style="font-size:11px;color:#58a6ff;margin-bottom:4px">Veredicto</div>
+            <div style="font-size:16px;font-weight:700;color:#58a6ff">Vale la pena</div>
+            <div style="font-size:11px;color:#58a6ff;margin-top:3px">
                 $143K/mes extra de liquidez para un negocio deficitario es crítico
             </div>
         </div>
@@ -757,7 +871,9 @@ elif pagina == "💉 Inyección Capital":
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(
-        '<div class="nota-familiar">📝 <strong>Nota sobre el seguro:</strong> '
+        '<div style="background:#1b2d3d;border-left:4px solid #58a6ff;'
+        'border-radius:0 6px 6px 0;padding:12px 16px;color:#e6edf3;font-style:italic">'
+        '📝 <strong>Nota sobre el seguro:</strong> '
         'Con seguro la tasa baja a 1.40% pero la cuota sube a $508,179 vs $505,611 sin seguro. '
         'El descuento de tasa NO compensa el costo del seguro. '
         'Ir sin seguro es más barato en $2,568/mes y $61,632 en total.</div>',
@@ -839,7 +955,7 @@ elif pagina == "💉 Inyección Capital":
         # Nota familiar
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
-            f'<div class="nota-familiar">💙 <strong>Acuerdo familiar:</strong> '
+            f'<div style="background:#1b2d3d;border-left:4px solid #58a6ff;border-radius:0 6px 6px 0;padding:12px 16px;color:#e6edf3;font-style:italic">💙 <strong>Acuerdo familiar:</strong> '
             f'{resultado_inj["acuerdo_hermana"]}</div>',
             unsafe_allow_html=True
         )
@@ -893,7 +1009,8 @@ elif pagina == "💉 Inyección Capital":
 elif pagina == "⚙️ Ajustes":
     st.title("⚙️ Configuración")
 
-    env_path = Path(__file__).parent.parent / ".env"
+    env_candidates = [Path(__file__).resolve().parent / ".env", Path(__file__).resolve().parent.parent / ".env"]
+    env_path = next((p for p in env_candidates if p.exists()), env_candidates[0])
 
     st.subheader("Ruta del archivo Excel")
     ruta_actual = os.getenv('EXCEL_PATH', '')
@@ -957,3 +1074,32 @@ elif pagina == "⚙️ Ajustes":
             )
         else:
             st.warning("No hay datos para ese mes.")
+
+    st.markdown("---")
+    st.subheader("Generar presentación ejecutiva PowerPoint")
+    st.caption("Resumen ejecutivo con KPIs, deuda, punto de equilibrio y plan de acción.")
+
+    from pptx_report import generar_presentacion
+
+    if st.button("📊 Generar PowerPoint ejecutivo"):
+        kpis_dict = {
+            'prom_ing':            prom_ing,
+            'prom_gas':            prom_gas,
+            'prom_res':            prom_res,
+            'total_deuda':         total_deuda,
+            'total_cuotas':        total_cuotas,
+            'pe_actual':           pe_actual,
+            'pct_pe':              pct_pe,
+            'pct_cuotas':          pct_cuotas_sobre_ingreso,
+            'instrumentos_activos': instrumentos_activos,
+        }
+        try:
+            pptx_bytes = generar_presentacion(kpis_dict, df_resumen, df_deuda)
+            st.download_button(
+                label="⬇️ Descargar PowerPoint",
+                data=pptx_bytes,
+                file_name="ChiquitoFinanzas_Ejecutivo.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            )
+        except Exception as e:
+            st.error(f"Error generando presentación: {e}")

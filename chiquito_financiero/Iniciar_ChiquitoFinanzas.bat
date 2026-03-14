@@ -14,11 +14,7 @@ echo.
 :: Ir al directorio del proyecto
 cd /d "C:\ClaudeWork\chiquito_financiero"
 
-:: Abrir el navegador automaticamente despues de 3 segundos
-start "" timeout /t 3 /nobreak >nul
-start "" "http://localhost:8502"
-
-:: Lanzar Streamlit
+:: Lanzar Streamlit (el navegador lo abre el .vbs)
 py -m streamlit run app\main.py --server.port 8502 --server.headless true --browser.gatherUsageStats false
 
 :: Si se cierra Streamlit, pausar para ver el error
