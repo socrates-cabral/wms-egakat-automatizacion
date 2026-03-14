@@ -1079,6 +1079,22 @@ elif pagina == "⚙️ Ajustes":
             st.warning("No hay datos para ese mes.")
 
     st.markdown("---")
+    st.subheader("Plantilla Excel para nuevos clientes")
+    st.caption("Descarga la plantilla con la estructura requerida: Caja_Mensual, Detalle_Gastos, Deudas y Costos_Fijos.")
+
+    _plantilla_path = Path(__file__).resolve().parent.parent / "Plantilla_ChiquitoFinanzas.xlsx"
+    if _plantilla_path.exists():
+        with open(_plantilla_path, "rb") as _f:
+            st.download_button(
+                label="⬇️ Descargar plantilla Excel",
+                data=_f.read(),
+                file_name="Plantilla_ChiquitoFinanzas.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+    else:
+        st.info("Plantilla no encontrada en el servidor.")
+
+    st.markdown("---")
     st.subheader("Generar presentación ejecutiva PowerPoint")
     st.caption("Resumen ejecutivo con KPIs, deuda, punto de equilibrio y plan de acción.")
 
