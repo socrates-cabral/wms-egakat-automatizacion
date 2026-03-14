@@ -25,6 +25,8 @@ CLAUDE.md
 
 # ── Datos de empresa — NUNCA subir ───────────────────────────────
 *.xlsx
+# Excepción: plantilla patrón para clientes (no contiene datos reales)
+!chiquito_financiero/Plantilla_ChiquitoFinanzas.xlsx
 *.xls
 *.csv
 *.pdf
