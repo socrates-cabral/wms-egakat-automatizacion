@@ -15,20 +15,41 @@ import streamlit as st
 from pathlib import Path
 from dotenv import load_dotenv
 
+print("[DEBUG] imports base OK", flush=True)
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
 # Importar módulos del proyecto
-from calculators import (
-    COSTOS_FIJOS_BASE, DEUDAS_DEFAULT, BCI_CREDITO_DEFAULT,
-    calc_punto_equilibrio, calc_cuota_frances, calc_amortizacion,
-    calc_inyeccion_capital, calc_meses_hasta_quiebra, calc_proyeccion_12m,
-)
-from data_loader import load_caja, load_deuda, get_monthly_summary, get_last_update
-from charts import (
-    chart_ingresos_gastos, chart_resultado_mensual, chart_costos_dona,
-    chart_amortizacion, chart_proyeccion_12m, chart_deuda_barras,
-)
+try:
+    from calculators import (
+        COSTOS_FIJOS_BASE, DEUDAS_DEFAULT, BCI_CREDITO_DEFAULT,
+        calc_punto_equilibrio, calc_cuota_frances, calc_amortizacion,
+        calc_inyeccion_capital, calc_meses_hasta_quiebra, calc_proyeccion_12m,
+    )
+    print("[DEBUG] calculators OK", flush=True)
+except Exception as _e:
+    print(f"[DEBUG] ERROR calculators: {_e}", flush=True)
+    raise
+
+try:
+    from data_loader import load_caja, load_deuda, get_monthly_summary, get_last_update
+    print("[DEBUG] data_loader OK", flush=True)
+except Exception as _e:
+    print(f"[DEBUG] ERROR data_loader: {_e}", flush=True)
+    raise
+
+try:
+    from charts import (
+        chart_ingresos_gastos, chart_resultado_mensual, chart_costos_dona,
+        chart_amortizacion, chart_proyeccion_12m, chart_deuda_barras,
+    )
+    print("[DEBUG] charts OK", flush=True)
+except Exception as _e:
+    print(f"[DEBUG] ERROR charts: {_e}", flush=True)
+    raise
+
+print("[DEBUG] todos los imports OK", flush=True)
 
 # ─── Configuración de página ───────────────────────────────────────────────────
 st.set_page_config(
