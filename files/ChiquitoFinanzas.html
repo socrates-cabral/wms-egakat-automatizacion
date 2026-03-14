@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chiquito Finanzas — Centro de Mando</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+    --border: #30363d; --text: #e6edf3; --muted: #8b949e;
+    --green: #3fb950; --green-bg: #0d2818; --green-dim: #1a4520;
+    --red: #f85149; --red-bg: #2d0e0a; --red-dim: #4d1a17;
+    --amber: #d29922; --amber-bg: #2d1f00; --amber-dim: #4a3300;
+    --blue: #58a6ff; --blue-bg: #0d1d36; --blue-dim: #1a3050;
+    --purple: #a371f7; --purple-bg: #1d0d2d;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+
+  /* LAYOUT */
+  .sidebar { position: fixed; left: 0; top: 0; width: 220px; height: 100vh; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; }
+  .main { margin-left: 220px; padding: 24px; max-width: 1200px; }
+  .logo { padding: 20px 16px 16px; border-bottom: 1px solid var(--border); }
+  .logo-title { font-family: var(--font-mono); font-size: 13px; color: var(--green); letter-spacing: 0.05em; }
+  .logo-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .nav { flex: 1; padding: 12px 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--radius); cursor: pointer; font-size: 13px; color: var(--muted); transition: all 0.15s; margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left; }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: var(--blue-dim); color: var(--blue); font-weight: 500; }
+  .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+  .nav-section { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 12px 4px; }
+  .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+
+  /* HEADER */
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .page-title { font-size: 20px; font-weight: 600; }
+  .page-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge-red { background: var(--red-dim); color: var(--red); }
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-amber { background: var(--amber-dim); color: var(--amber); }
+  .badge-blue { background: var(--blue-dim); color: var(--blue); }
+
+  /* CARDS */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; }
+  .card-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .kpi { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .kpi-value { font-family: var(--font-mono); font-size: 22px; font-weight: 700; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .kpi.green { border-left: 3px solid var(--green); }
+  .kpi.red { border-left: 3px solid var(--red); }
+  .kpi.amber { border-left: 3px solid var(--amber); }
+  .kpi.blue { border-left: 3px solid var(--blue); }
+  .kpi.green .kpi-value { color: var(--green); }
+  .kpi.red .kpi-value { color: var(--red); }
+  .kpi.amber .kpi-value { color: var(--amber); }
+  .kpi.blue .kpi-value { color: var(--blue); }
+
+  /* GRID LAYOUTS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .section { margin-bottom: 24px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); font-weight: 500; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+  .mono { font-family: var(--font-mono); }
+  .text-right { text-align: right; }
+  .text-red { color: var(--red); }
+  .text-green { color: var(--green); }
+  .text-amber { color: var(--amber); }
+  .text-blue { color: var(--blue); }
+  .text-muted { color: var(--muted); }
+  .fw600 { font-weight: 600; }
+
+  /* ALERT BOXES */
+  .alert { padding: 12px 16px; border-radius: var(--radius); border: 1px solid; font-size: 13px; margin-bottom: 16px; }
+  .alert-red { background: var(--red-bg); border-color: var(--red); color: #ffa09d; }
+  .alert-green { background: var(--green-bg); border-color: var(--green); color: #7fcc8a; }
+  .alert-amber { background: var(--amber-bg); border-color: var(--amber); color: #d4b157; }
+  .alert-blue { background: var(--blue-bg); border-color: var(--blue); color: #90c1ff; }
+
+  /* SLIDER / CONTROLS */
+  .slider-group { margin-bottom: 18px; }
+  .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .slider-label { font-size: 12px; color: var(--muted); }
+  .slider-value { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+  input[type=range] { width: 100%; -webkit-appearance: none; height: 4px; border-radius: 2px; background: var(--bg3); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--blue); cursor: pointer; }
+  input[type=number], input[type=text] { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 7px 10px; border-radius: var(--radius); font-size: 13px; width: 100%; font-family: var(--font-mono); }
+  input[type=number]:focus, input[type=text]:focus { outline: none; border-color: var(--blue); }
+  select { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 7px 10px; border-radius: var(--radius); font-size: 13px; cursor: pointer; }
+  button { cursor: pointer; border: none; border-radius: var(--radius); padding: 8px 16px; font-size: 13px; font-weight: 500; transition: all 0.15s; font-family: inherit; }
+  .btn-primary { background: var(--blue); color: #000; }
+  .btn-primary:hover { background: #79b8ff; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-ghost:hover { background: var(--bg3); }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-red { background: var(--red); color: #fff; }
+  .checkbox-label { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background 0.15s; margin-bottom: 6px; }
+  .checkbox-label:hover { background: var(--bg3); }
+  .checkbox-label.checked { background: var(--green-dim); border-color: var(--green); }
+  .checkbox-label input { margin-top: 2px; flex-shrink: 0; accent-color: var(--green); width: 15px; height: 15px; }
+
+  /* RESULT BOX */
+  .result-box { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; text-align: center; }
+  .result-box.positive { border-color: var(--green); background: var(--green-bg); }
+  .result-box.negative { border-color: var(--red); background: var(--red-bg); }
+  .result-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+  .result-number { font-family: var(--font-mono); font-size: 32px; font-weight: 700; }
+
+  /* DEUDA BARS */
+  .debt-bar { background: var(--bg3); border-radius: 3px; height: 6px; overflow: hidden; margin-top: 4px; }
+  .debt-bar-fill { height: 100%; border-radius: 3px; }
+
+  /* IMPORT AREA */
+  .drop-zone { border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--blue); background: var(--blue-bg); }
+  .drop-icon { font-size: 32px; margin-bottom: 12px; }
+  .drop-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .drop-sub { font-size: 12px; color: var(--muted); }
+
+  /* CHART CONTAINER */
+  .chart-wrap { position: relative; }
+
+  /* MONTH TABS */
+  .month-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
+  .month-tab { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px; cursor: pointer; background: none; color: var(--muted); }
+  .month-tab.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+
+  /* STATUS INDICATOR */
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .status-dot.green { background: var(--green); }
+  .status-dot.red { background: var(--red); }
+  .status-dot.amber { background: var(--amber); }
+
+  /* RESPONSIVE */
+  @media(max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .main { margin-left: 0; } .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  /* PRINT */
+  @media print { .sidebar { display: none; } .main { margin: 0; padding: 12px; } }
+
+  /* SEPARATOR */
+  hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* TABS INSIDE PAGES */
+  .inner-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .inner-tab { padding: 8px 20px; font-size: 13px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; }
+  .inner-tab.active { color: var(--text); border-bottom-color: var(--blue); }
+  .inner-tab:hover { color: var(--text); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--bg); } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .hidden { display: none !important; }
+  .flex { display: flex; }
+  .gap-8 { gap: 8px; }
+  .gap-12 { gap: 12px; }
+  .align-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .flex-1 { flex: 1; }
+  .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-16 { margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-title">CHIQUITO FINANZAS</div>
+    <div class="logo-sub">Centro de Mando Financiero</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Principal</div>
+    <button class="nav-item active" onclick="showPage('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </button>
+    <button class="nav-item" onclick="showPage('simulador')">
+      <span class="nav-icon">🎛</span> Simulador
+    </button>
+    <div class="nav-section">Datos</div>
+    <button class="nav-item" onclick="showPage('caja')">
+      <span class="nav-icon">💰</span> Libro de Caja
+    </button>
+    <button class="nav-item" onclick="showPage('deuda')">
+      <span class="nav-icon">💳</span> Estructura Deuda
+    </button>
+    <div class="nav-section">Gestión</div>
+    <button class="nav-item" onclick="showPage('plan')">
+      <span class="nav-icon">✅</span> Plan de Acción
+    </button>
+    <button class="nav-item" onclick="showPage('importar')">
+      <span class="nav-icon">📂</span> Importar Excel
+    </button>
+    <div class="nav-section">Análisis</div>
+    <button class="nav-item" onclick="showPage('inyeccion')">
+      <span class="nav-icon">💉</span> Inyección Capital
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    v1.0 · Datos: Nov 25 – Mar 26<br>
+    <span id="last-update" style="color: var(--green); font-size: 10px;">Guardado local activo</span>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- ═══════════════ DASHBOARD ═══════════════ -->
+  <div id="page-dashboard" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Resumen ejecutivo de la empresa</div>
+      </div>
+      <div class="flex gap-8 align-center">
+        <span id="health-badge" class="badge badge-red">⚠ Déficit Estructural</span>
+        <button class="btn-ghost" onclick="window.print()">🖨 Imprimir</button>
+      </div>
+    </div>
+
+    <div id="kpi-grid" class="kpi-grid">
+      <div class="kpi green"><div class="kpi-label">Ingreso prom./mes</div><div class="kpi-value" id="kpi-ing">$1.9M</div><div class="kpi-sub">Datos reales 5 meses</div></div>
+      <div class="kpi red"><div class="kpi-label">Gasto oper. prom./mes</div><div class="kpi-value" id="kpi-gas">$1.6M</div><div class="kpi-sub">Sin deuda bancaria</div></div>
+      <div class="kpi red"><div class="kpi-label">Deuda total</div><div class="kpi-value" id="kpi-deuda">$18.6M</div><div class="kpi-sub">Todos los instrumentos</div></div>
+      <div class="kpi red"><div class="kpi-label">Cuotas bancarias/mes</div><div class="kpi-value" id="kpi-cuotas">$929K</div><div class="kpi-sub">Obligaciones fijas</div></div>
+      <div class="kpi amber"><div class="kpi-label">Resultado neto est.</div><div class="kpi-value" id="kpi-resultado">-$616K</div><div class="kpi-sub">Operativo - deuda</div></div>
+      <div class="kpi blue"><div class="kpi-label">Punto de equilibrio</div><div class="kpi-value" id="kpi-pe">$3.95M</div><div class="kpi-sub" id="kpi-pe-sub">46% alcanzado</div></div>
+    </div>
+
+    <div id="alerta-principal" class="alert alert-red">
+      ⚠️ <strong>Diagnóstico:</strong> El negocio opera en déficit estructural. La deuda acumulada de $18.6M genera obligaciones de ~$929K/mes. El margen bruto del 50% es sano, pero la estructura de costos fijos supera los ingresos actuales. Se necesita duplicar las ventas O reducir costos/deuda para equilibrar.
+    </div>
+
+    <div class="grid-2" style="margin-bottom: 20px;">
+      <div class="card">
+        <div class="card-title">Flujo mensual — Ingresos vs Gastos Operativos</div>
+        <div class="chart-wrap" style="height: 220px;"><canvas id="chart-flujo"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Composición de costos fijos mensuales</div>
+        <div class="chart-wrap" style="height: 220px;"><canvas id="chart-costos"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Causas del déficit</div>
+      <div id="causas-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SIMULADOR ═══════════════ -->
+  <div id="page-simulador" class="page hidden">
+    <div class="page-header">
+      <div><div class="page-title">Simulador de Escenarios</div><div class="page-sub">Mueve los controles y ve el impacto en tiempo real</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Variables del escenario</div>
+        <div class="slider-group">
+          <div class="slider-header"><span class="slider-label">Ventas mensuales objetivo</span><span class="slider-value text-green" id="sv-ventas">$1,860,000</span></div>
+          <input type="range" id="sl-ventas" min="500000" max="6000000" step="50000" value="1860000" oninput="simular()">
+          <div class="flex justify-between mt-8"><span style="font-size:10px;color:var(--muted)">$500K</span><span style="font-size:10px;color:var(--muted)">$6M</span></div>
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><span class="slider-label">Alquiler del taller</span><span class="slider-value text-red" id="sv-alquiler">$700,000</span></div>
+          <input type="range" id="sl-alquiler" min="150000" max="700000" step="10000" value="700000" oninput="simular()">
+          <div class="flex justify-between mt-8"><span style="font-size:10px;color:var(--muted)">$150K</span><span style="font-size:10px;color:var(--muted)">$700K (actual)</span></div>
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><span class="slider-label">Cuota mensual TCs (post-renegociación)</span><span class="slider-value text-red" id="sv-tc">$270,000</span></div>
+          <input type="range" id="sl-tc" min="50000" max="500000" step="10000" value="270000" oninput="simular()">
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><span class="slider-label">Margen bruto (%)</span><span class="slider-value text-amber" id="sv-margen">50%</span></div>
+          <input type="range" id="sl-margen" min="30" max="70" step="1" value="50" oninput="simular()">
+        </div>
+        <hr>
+        <label class="checkbox-label" id="chk-foton-lbl">
+          <input type="checkbox" id="chk-foton" onchange="simular()">
+          <div><div style="font-weight:500">Vender camión Foton</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Libera $329K/mes (cuota $264K + seguro $65K). Usar flete contratado.</div></div>
+        </label>
+        <label class="checkbox-label mt-8" id="chk-personal-lbl">
+          <input type="checkbox" id="chk-personal" onchange="simular()">
+          <div><div style="font-weight:500">Separar gastos personales</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Elimina $80K/mes que sale de caja del negocio.</div></div>
+        </label>
+      </div>
+
+      <div>
+        <div class="result-box negative" id="result-box">
+          <div class="result-label">Resultado neto mensual simulado</div>
+          <div class="result-number text-red" id="sim-resultado">-$616,000</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px" id="sim-alert">⚠ Con ~$500K de capital, quiebra en <strong id="sim-meses">0</strong> meses</div>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-title">Desglose simulado</div>
+          <table>
+            <tr><td class="text-muted">Ventas</td><td class="text-right mono fw600 text-green" id="sd-ventas">$1,860,000</td></tr>
+            <tr><td class="text-muted">Costo de ventas (MP)</td><td class="text-right mono text-red" id="sd-mp">-$930,000</td></tr>
+            <tr><td class="text-muted fw600">= Margen bruto</td><td class="text-right mono fw600 text-green" id="sd-margen">$930,000</td></tr>
+            <tr><td class="text-muted">Gastos operativos fijos</td><td class="text-right mono text-red" id="sd-gasops">-$1,011,000</td></tr>
+            <tr><td class="text-muted fw600">= EBITDA</td><td class="text-right mono fw600 text-amber" id="sd-ebitda">-$81,000</td></tr>
+            <tr><td class="text-muted">Gastos financieros (deuda)</td><td class="text-right mono text-red" id="sd-gasfinc">-$535,000</td></tr>
+            <tr style="border-top: 1px solid var(--border);"><td class="fw600">= Resultado neto</td><td class="text-right mono fw600" id="sd-resultado" style="color:var(--red)">-$616,000</td></tr>
+          </table>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-title">% del punto de equilibrio alcanzado</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:8px;">
+            <div style="flex:1;background:var(--bg3);border-radius:4px;height:10px;overflow:hidden;">
+              <div id="pe-bar" style="height:100%;background:var(--red);border-radius:4px;transition:width 0.3s;width:47%"></div>
+            </div>
+            <span class="mono fw600" id="pe-pct" style="color:var(--red);min-width:40px">47%</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">Punto de equilibrio: <span class="mono" id="pe-valor">$3.95M</span>/mes</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-16">
+      <div class="flex justify-between align-center mb-8">
+        <div class="card-title" style="margin-bottom:0">Proyección 12 meses (crecimiento mensual supuesto)</div>
+        <div class="flex gap-8">
+          <select id="sel-growth" onchange="simular()" style="font-size:12px;padding:4px 8px;">
+            <option value="0">Sin crecimiento</option>
+            <option value="2" selected>+2%/mes</option>
+            <option value="5">+5%/mes</option>
+            <option value="10">+10%/mes</option>
+          </select>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height: 200px;"><canvas id="chart-proyeccion"></canvas></div>
+    </div>
+
+    <div class="card mt-16">
+      <div class="card-title">Escenarios predefinidos rápidos</div>
+      <div class="flex gap-8" style="flex-wrap:wrap;">
+        <button class="btn-ghost" onclick="setEscenario('actual')">📍 Situación actual</button>
+        <button class="btn-ghost" onclick="setEscenario('optimista')">📈 Escenario optimista</button>
+        <button class="btn-ghost" onclick="setEscenario('renegociado')">🤝 Deuda renegociada</button>
+        <button class="btn-ghost" onclick="setEscenario('vendeForton')">🚛 Vende Foton</button>
+        <button class="btn-green" onclick="setEscenario('equilibrio')">⚖️ Punto de equilibrio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ LIBRO DE CAJA ═══════════════ -->
+  <div id="page-caja" class="page hidden">
+    <div class="page-header">
+      <div><div class="page-title">Libro de Caja</div><div class="page-sub">Registro mensual de ingresos y gastos operativos</div></div>
+      <div class="flex gap-8">
+        <select id="sel-mes" onchange="filtrarCaja()" style="font-size:13px;padding:6px 12px;">
+          <option value="todos">Todos los meses</option>
+          <option value="Noviembre">Noviembre 2025</option>
+          <option value="Diciembre">Diciembre 2025</option>
+          <option value="Enero">Enero 2026</option>
+          <option value="Febrero">Febrero 2026</option>
+          <option value="Marzo">Marzo 2026</option>
+        </select>
+        <select id="sel-tipo-caja" onchange="filtrarCaja()" style="font-size:13px;padding:6px 12px;">
+          <option value="todos">Todos</option>
+          <option value="ingreso">Solo ingresos</option>
+          <option value="gasto">Solo gastos</option>
+        </select>
+        <button class="btn-primary" onclick="showPage('importar')">📂 Importar</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="caja-kpis"></div>
+
+    <div class="card">
+      <div class="chart-wrap" style="height:180px;margin-bottom:16px;"><canvas id="chart-caja-mes"></canvas></div>
+      <table id="tabla-caja">
+        <thead><tr><th>Fecha</th><th>Mes</th><th>Descripción</th><th>Tipo</th><th class="text-right">Monto</th></tr></thead>
+        <tbody id="caja-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DEUDA ═══════════════ -->
+  <div id="page-deuda" class="page hidden">
+    <div class="page-header">
+      <div><div class="page-title">Estructura de Deuda</div><div class="page-sub">Detalle de todas las obligaciones financieras</div></div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi red"><div class="kpi-label">Deuda total</div><div class="kpi-value" id="dkpi-total">$18.6M</div><div class="kpi-sub">Todos los instrumentos</div></div>
+      <div class="kpi red"><div class="kpi-label">Cuotas mensuales</div><div class="kpi-value" id="dkpi-cuota">$929K</div><div class="kpi-sub">Obligaciones fijas</div></div>
+      <div class="kpi amber"><div class="kpi-label">Interés mensual est.</div><div class="kpi-value" id="dkpi-interes">$321K</div><div class="kpi-sub">Sin incluir mora</div></div>
+      <div class="kpi blue"><div class="kpi-label">Meses para pagar</div><div class="kpi-value" id="dkpi-meses">20+</div><div class="kpi-sub">Al ritmo actual</div></div>
+    </div>
+
+    <div class="grid-2 mb-16">
+      <div class="card">
+        <div class="card-title">Deuda por tipo de instrumento</div>
+        <div class="chart-wrap" style="height:200px;"><canvas id="chart-deuda-tipo"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Editar / Actualizar deudas</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Actualiza los saldos según los estados de cuenta más recientes</div>
+        <div id="deuda-edit-form"></div>
+        <button class="btn-primary mt-16" onclick="guardarDeudas()" style="width:100%">💾 Guardar cambios</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Detalle completo de deudas</div>
+      <table id="tabla-deuda">
+        <thead><tr><th>Acreedor / Instrumento</th><th>Tipo</th><th class="text-right">Saldo ($)</th><th class="text-right">Cuota/mes ($)</th><th class="text-right">Tasa mensual</th><th class="text-right">Interés/mes ($)</th></tr></thead>
+        <tbody id="deuda-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-blue mt-16">
+      📌 <strong>Tasas de referencia Chile (CMF / Mar 2026):</strong> Avance efectivo: 2.0–2.8%/mes | TC retail (CMR): 2.5–3.3%/mes | Línea de crédito bancaria: 1.5–3.1%/mes | Crédito automotriz: 0.8–1.2%/mes | Tasa Máxima Convencional (mora): ~2.75%/mes
+    </div>
+  </div>
+
+  <!-- ═══════════════ PLAN ═══════════════ -->
+  <div id="page-plan" class="page hidden">
+    <div class="page-header">
+      <div><div class="page-title">Plan de Acción</div><div class="page-sub">Hoja de ruta para restablecer la rentabilidad</div></div>
+      <div class="flex gap-8 align-center">
+        <span id="plan-progreso" class="badge badge-blue">0 / 10 completadas</span>
+        <span id="plan-ahorro" class="badge badge-green" style="display:none">+$0/mes liberado</span>
+      </div>
+    </div>
+
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi red"><div class="kpi-label">Urgente (0-3 meses)</div><div class="kpi-value" id="pk-urgente">0/4</div><div class="kpi-sub">Acciones críticas</div></div>
+      <div class="kpi amber"><div class="kpi-label">Importante (3-12 meses)</div><div class="kpi-value" id="pk-importante">0/3</div><div class="kpi-sub">Crecimiento</div></div>
+      <div class="kpi green"><div class="kpi-label">Largo plazo (12-36m)</div><div class="kpi-value" id="pk-largo">0/3</div><div class="kpi-sub">Consolidación</div></div>
+    </div>
+
+    <div id="plan-container"></div>
+  </div>
+
+  <!-- ═══════════════ IMPORTAR ═══════════════ -->
+  <div id="page-importar" class="page hidden">
+    <div class="page-header">
+      <div><div class="page-title">Importar Datos</div><div class="page-sub">Carga el Excel del libro de caja cada mes</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" 
+             ondragover="event.preventDefault();this.classList.add('dragover')"
+             ondragleave="this.classList.remove('dragover')"
+             ondrop="handleDrop(event)">
+          <div class="drop-icon">📂</div>
+          <div class="drop-title">Arrastra el archivo Excel aquí</div>
+          <div class="drop-sub">o haz clic para seleccionar</div>
+          <div class="drop-sub mt-8" style="color:var(--muted)">Soporta: .xlsx, .xls</div>
+          <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="handleFile(event)">
+        </div>
+
+        <div id="import-log" class="card mt-16 hidden">
+          <div class="card-title">Resultado de la importación</div>
+          <div id="import-log-content" style="font-size:12px;font-family:var(--font-mono);line-height:1.8;"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-title">¿Cómo importar cada mes?</div>
+          <ol style="list-style:none;padding:0;">
+            <li style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start">
+              <span style="background:var(--blue-dim);color:var(--blue);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:600">1</span>
+              <span style="font-size:13px">Abre el archivo Excel original (<code>Chiquito_Act_10_02.xlsx</code>) y agrega las ventas y gastos del mes nuevo en las hojas <strong>Cajas</strong> o <strong>Cajas_2026</strong></span>
+            </li>
+            <li style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start">
+              <span style="background:var(--blue-dim);color:var(--blue);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:600">2</span>
+              <span style="font-size:13px">Guarda el archivo Excel. Luego arrastra el archivo aquí o haz clic para seleccionarlo.</span>
+            </li>
+            <li style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start">
+              <span style="background:var(--blue-dim);color:var(--blue);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:600">3</span>
+              <span style="font-size:13px">La app lee automáticamente las hojas <code>Cajas</code> y <code>Cajas_2026</code> y actualiza todos los gráficos y KPIs.</span>
+            </li>
+            <li style="display:flex;gap:10px;align-items:flex-start">
+              <span style="background:var(--green-dim);color:var(--green);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:600">✓</span>
+              <span style="font-size:13px">Los datos se guardan en tu computador (localStorage). La próxima vez que abras esta app, los datos ya estarán cargados.</span>
+            </li>
+          </ol>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-title">Ingresar datos manualmente</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Si no tienes Excel, ingresa los totales del mes directamente</div>
+          <div class="flex gap-8 mb-8">
+            <select id="mes-manual" style="flex:1;font-size:13px;padding:6px 8px;">
+              <option>Abr-2026</option><option>May-2026</option><option>Jun-2026</option>
+              <option>Jul-2026</option><option>Ago-2026</option><option>Sep-2026</option>
+            </select>
+          </div>
+          <div class="flex gap-8 mb-8">
+            <div style="flex:1"><label style="font-size:11px;color:var(--muted)">Total ingresos</label><input type="number" id="ing-manual" placeholder="Ej: 2500000"></div>
+            <div style="flex:1"><label style="font-size:11px;color:var(--muted)">Total gastos</label><input type="number" id="gas-manual" placeholder="Ej: 1800000"></div>
+          </div>
+          <button class="btn-primary" style="width:100%" onclick="agregarMesManual()">+ Agregar mes</button>
+        </div>
+
+        <div class="alert alert-amber mt-16">
+          💾 <strong>Tus datos se guardan automáticamente</strong> en el navegador de este computador. No se envían a internet. Para hacer una copia de seguridad, usa el botón "Exportar datos" abajo.
+        </div>
+        <div class="flex gap-8 mt-16">
+          <button class="btn-ghost flex-1" onclick="exportarDatos()">📤 Exportar datos JSON</button>
+          <button class="btn-ghost flex-1" onclick="resetearDatos()">🔄 Restaurar datos originales</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════ INYECCIÓN CAPITAL ═══════════════ -->
+  <div id="page-inyeccion" class="page hidden">
+    <div class="page-header">
+      <div><div class="page-title">Análisis — Inyección de Capital</div>
+      <div class="page-sub">Aporte familiar + Crédito BCI para reestructurar deuda</div></div>
+      <div id="inyeccion-badge" class="badge badge-amber">⟳ Calculando...</div>
+    </div>
+
+    <!-- INPUTS -->
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-title">💰 Fuentes de capital</div>
+        <div style="margin-bottom:16px">
+          <div class="flex justify-between align-center mb-8">
+            <span style="font-size:13px;font-weight:500">Aporte familiar (sin interés)</span>
+            <span class="badge badge-green">Sin costo</span>
+          </div>
+          <input type="number" id="inp-aporte" value="2200000" oninput="calcInyeccion()" style="width:100%;font-size:15px;padding:8px 12px;font-family:var(--font-mono)">
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Aporte de los hermanos — cuota: $0/mes</div>
+        </div>
+        <hr>
+        <div class="card-title" style="margin-top:12px">🏦 Crédito BCI (datos simulación real)</div>
+        <div class="grid-2" style="gap:10px;margin-bottom:10px">
+          <div><label style="font-size:11px;color:var(--muted)">Monto del crédito</label>
+            <input type="number" id="inp-monto-bci" value="10000000" oninput="calcInyeccion()" style="font-size:13px;padding:7px 10px;width:100%;font-family:var(--font-mono)"></div>
+          <div><label style="font-size:11px;color:var(--muted)">N° de cuotas</label>
+            <input type="number" id="inp-cuotas-bci" value="18" min="6" max="48" oninput="calcInyeccion()" style="font-size:13px;padding:7px 10px;width:100%;font-family:var(--font-mono)"></div>
+          <div><label style="font-size:11px;color:var(--muted)">Tasa mensual (%)</label>
+            <input type="number" id="inp-tasa-bci" value="1.43" step="0.01" oninput="calcInyeccion()" style="font-size:13px;padding:7px 10px;width:100%;font-family:var(--font-mono)"></div>
+          <div><label style="font-size:11px;color:var(--muted)">Primera cuota</label>
+            <input type="month" id="inp-fecha-bci" value="2026-04" oninput="calcInyeccion()" style="font-size:13px;padding:7px 10px;width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius)"></div>
+        </div>
+        <div style="background:var(--blue-bg);border:1px solid var(--blue);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:#90c1ff">
+          📋 <strong>Datos oficiales simulador BCI (Mar-2026):</strong> $10M · 18 cuotas · 1.43%/mes (con seguro desgravamen) · Cuota $648,805 · CAE 20.24% · CTC $11,678,482
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">Total disponible para inyectar</div>
+          <div style="font-family:var(--font-mono);font-size:28px;font-weight:700;color:var(--green)" id="total-disponible">$12,200,000</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Aporte + Crédito BCI</div>
+        </div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">Cuota mensual BCI (tu costo)</div>
+          <div style="font-family:var(--font-mono);font-size:28px;font-weight:700;color:var(--red)" id="cuota-bci-display">$648,805</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">durante <span id="cuotas-display">18</span> meses</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Costo real del crédito BCI (intereses)</div>
+          <div style="font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--amber)" id="costo-intereses">$1,678,482</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Total pagado: $<span id="ctc-display">11,678,482</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA DE DEUDAS A PAGAR -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="flex justify-between align-center mb-8">
+        <div class="card-title" style="margin-bottom:0">Orden de pago (prioridad: mayor tasa primero)</div>
+        <span style="font-size:11px;color:var(--muted)">Arrastra o edita para cambiar orden</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>#</th><th>Acreedor</th><th class="text-right">Saldo deuda</th>
+          <th class="text-right">Tasa/mes</th><th class="text-right">Cuota lib.</th>
+          <th class="text-right">Capital asignado</th><th>Estado</th>
+        </tr></thead>
+        <tbody id="tabla-inyeccion"></tbody>
+      </table>
+      <div style="margin-top:12px;padding:10px 14px;background:var(--bg3);border-radius:var(--radius);font-size:12px">
+        <div class="flex justify-between">
+          <span style="color:var(--muted)">Capital total disponible</span>
+          <span class="mono" id="resumen-disponible">$12,200,000</span>
+        </div>
+        <div class="flex justify-between mt-8">
+          <span style="color:var(--muted)">Capital asignado a deudas</span>
+          <span class="mono text-red" id="resumen-asignado">-$0</span>
+        </div>
+        <div class="flex justify-between mt-8" style="border-top:1px solid var(--border);padding-top:8px">
+          <span style="font-weight:500">Capital remanente</span>
+          <span class="mono fw600" id="resumen-remanente">$12,200,000</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMPACTO EN FLUJO -->
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-title">📊 Impacto en flujo mensual</div>
+        <table>
+          <tr><td class="text-muted">Cuotas bancarias eliminadas</td><td class="text-right mono text-green fw600" id="cuotas-liberadas">+$0</td></tr>
+          <tr><td class="text-muted">Nueva cuota BCI (Sócrates)</td><td class="text-right mono text-red fw600" id="cuota-bci-row">-$648,805</td></tr>
+          <tr style="border-top:1px solid var(--border)"><td class="fw600">Impacto neto en cuotas</td><td class="text-right mono fw600" id="impacto-cuotas">-$322,708</td></tr>
+          <tr><td colspan="2"><div style="height:8px"></div></td></tr>
+          <tr><td class="text-muted">Intereses eliminados/mes</td><td class="text-right mono text-green" id="intereses-elim">+$0</td></tr>
+          <tr><td class="text-muted">Interés BCI/mes (aprox)</td><td class="text-right mono text-red" id="interes-bci-row">-$93,249</td></tr>
+          <tr style="border-top:1px solid var(--border)"><td class="fw600 text-green">Ahorro neto en intereses</td><td class="text-right mono fw600 text-green" id="ahorro-intereses">+$280,268</td></tr>
+          <tr><td colspan="2"><div style="height:8px"></div></td></tr>
+          <tr><td class="text-muted">Arbitraje de tasa</td><td class="text-right mono text-amber fw600" id="arbitraje-tasa">1.70%/mes</td></tr>
+          <tr><td class="text-muted">Ahorro total 18 meses</td><td class="text-right mono text-green fw600" id="ahorro-total">$3,363,213</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">📉 Amortización deuda BCI (18 meses)</div>
+          <div class="chart-wrap" style="height:160px"><canvas id="chart-amortizacion"></canvas></div>
+        </div>
+        <div id="veredicto-inyeccion" class="alert alert-amber">Calculando veredicto...</div>
+      </div>
+    </div>
+
+    <!-- CONDICIONES -->
+    <div class="card">
+      <div class="card-title">⚠️ Condiciones para ejecutar esta estrategia</div>
+      <div id="condiciones-inyeccion"></div>
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<script>
+// ═══════════════════════════════════════════════
+// DATOS BASE
+// ═══════════════════════════════════════════════
+const DATOS_DEFAULT = {
+  monthly: [
+    { mes:'Nov-25', periodo:'Noviembre', ing:1721170, gas:2025470 },
+    { mes:'Dic-25', periodo:'Diciembre', ing:3024913, gas:2715420 },
+    { mes:'Ene-26', periodo:'Enero',    ing:1625820, gas:1601683 },
+    { mes:'Feb-26', periodo:'Febrero',  ing:1964928, gas:1617387 },
+    { mes:'Mar-26', periodo:'Marzo',    ing:2400000, gas:2200000 },
+  ],
+  deudas: [
+    { acreedor:'Banco Itau (crédito 36m)',   saldo:5749547, cuota:154028, tasa:2.8, tipo:'banco' },
+    { acreedor:'Banco Estado (crédito 36m)', saldo:5600000, cuota:174437, tasa:3.1, tipo:'banco' },
+    { acreedor:'Banco Santander (TC)',        saldo:3760935, cuota:109000, tasa:2.8, tipo:'tc' },
+    { acreedor:'CMR Falabella (TC retail)',   saldo:1607443, cuota:80000,  tasa:3.3, tipo:'tc' },
+    { acreedor:'Líneas crédito (3 bancos)',   saldo:2360000, cuota:71660,  tasa:3.1, tipo:'linea' },
+    { acreedor:'Crédito automotriz Foton',   saldo:9517195, cuota:264366, tasa:1.2, tipo:'auto' },
+    { acreedor:'Seguro camión Foton',        saldo:0,       cuota:65412,  tasa:0,   tipo:'seguro' },
+    { acreedor:'Hermana (dólares)',           saldo:1050000, cuota:0,      tasa:0,   tipo:'familiar' },
+  ],
+  plan: {},
+  caja_detalle: []
+};
+
+const PLAN_ITEMS = [
+  { id:'p1', prioridad:'urgente', titulo:'Renegociar alquiler del taller', desc:'De $700K → meta $400K. Hablar con el arrendador con argumento de pago puntual.', ahorro:300000 },
+  { id:'p2', prioridad:'urgente', titulo:'Separar gastos personales del negocio', desc:'Cuenta separada para gastos de Chiquito. ~$80K/mes que drena la caja.', ahorro:80000 },
+  { id:'p3', prioridad:'urgente', titulo:'Renegociar deuda TC con los bancos', desc:'Pedir reprogramación a mayor plazo antes de entrar en mora formal.', ahorro:150000 },
+  { id:'p4', prioridad:'urgente', titulo:'Subir precios de venta 10-15%', desc:'Los clientes online son menos sensibles al precio. Margen mejora directo.', ahorro:186000 },
+  { id:'p5', prioridad:'importante', titulo:'Escalar ventas a $3.5M/mes', desc:'Instagram, MercadoLibre, proyectos corporativos (oficinas, locales).', ahorro:0 },
+  { id:'p6', prioridad:'importante', titulo:'Formalizar empresa (EIRL o SpA)', desc:'Acceder a créditos SERCOTEC/FOGAPE con tasas de 0.5-1%/mes.', ahorro:100000 },
+  { id:'p7', prioridad:'importante', titulo:'Evaluar vender el camión Foton', desc:'Libera $329K/mes (cuota $264K + seguro $65K). Usar flete contratado.', ahorro:329000 },
+  { id:'p8', prioridad:'largo', titulo:'Liquidar tarjetas de crédito (CMR primero)', desc:'CMR tiene saldo menor. Cada TC pagada libera flujo permanente.', ahorro:0 },
+  { id:'p9', prioridad:'largo', titulo:'Colchón de liquidez (2 meses de gastos)', desc:'Meta: $3.8M intocable en cuenta separada para quiebres de stock.', ahorro:0 },
+  { id:'p10', prioridad:'largo', titulo:'Vendedor/a comisionista (sin sueldo fijo)', desc:'5-8% de comisión. Sin gasto fijo pero puede multiplicar ventas.', ahorro:0 },
+];
+
+const TIPO_LABEL = { banco:'Crédito banco', tc:'Tarjeta crédito', linea:'Línea crédito', auto:'Crédito auto', seguro:'Seguro', familiar:'Deuda familiar' };
+const TIPO_COLOR = { banco:'#58a6ff', tc:'#f85149', linea:'#d29922', auto:'#3fb950', seguro:'#8b949e', familiar:'#a371f7' };
+
+// ═══════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════
+let DATOS = loadData();
+let charts = {};
+
+function loadData() {
+  try {
+    const s = localStorage.getItem('chiquito_datos');
+    return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DATOS_DEFAULT));
+  } catch(e) { return JSON.parse(JSON.stringify(DATOS_DEFAULT)); }
+}
+function saveData() {
+  localStorage.setItem('chiquito_datos', JSON.stringify(DATOS));
+  document.getElementById('last-update').textContent = 'Guardado: ' + new Date().toLocaleTimeString('es-CL');
+}
+
+// ═══════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.remove('hidden');
+  event && event.currentTarget && event.currentTarget.classList.add('active');
+  if (id==='dashboard') initDashboard();
+  if (id==='simulador') { simular(); initProyeccion(); }
+  if (id==='caja') initCaja();
+  if (id==='deuda') initDeuda();
+  if (id==='plan') initPlan();
+  if (id==='inyeccion') calcInyeccion();
+}
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+const fmt = n => {
+  const abs = Math.abs(Math.round(n));
+  const s = n < 0 ? '-' : '';
+  if (abs >= 1000000) return s + '$' + (abs/1000000).toFixed(2).replace(/\.?0+$/, '') + 'M';
+  if (abs >= 1000) return s + '$' + Math.round(abs/1000) + 'K';
+  return s + '$' + abs.toLocaleString('es-CL');
+};
+const fmtFull = n => {
+  const s = n < 0 ? '-' : '';
+  return s + '$' + Math.abs(Math.round(n)).toLocaleString('es-CL');
+};
+const destroyChart = id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } };
+
+// ═══════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════
+function initDashboard() {
+  const monthly = DATOS.monthly;
+  const avgIng = monthly.reduce((a,d)=>a+d.ing,0)/monthly.length;
+  const avgGas = monthly.reduce((a,d)=>a+d.gas,0)/monthly.length;
+  const totalDeuda = DATOS.deudas.reduce((a,d)=>a+d.saldo,0);
+  const totalCuota = DATOS.deudas.reduce((a,d)=>a+d.cuota,0);
+  const ebitda = (avgIng * 0.5) - (avgGas - avgIng * 0.5);
+  const resultado = avgIng - avgGas - totalCuota;
+  const pe = calcPE(700000, 270000, 0.50);
+  const pePct = Math.round(avgIng/pe*100);
+
+  document.getElementById('kpi-ing').textContent = fmt(avgIng);
+  document.getElementById('kpi-gas').textContent = fmt(avgGas);
+  document.getElementById('kpi-deuda').textContent = fmt(totalDeuda);
+  document.getElementById('kpi-cuotas').textContent = fmt(totalCuota);
+  document.getElementById('kpi-resultado').textContent = fmt(resultado);
+  document.getElementById('kpi-resultado').style.color = resultado >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('kpi-pe').textContent = fmt(pe);
+  document.getElementById('kpi-pe-sub').textContent = pePct + '% alcanzado';
+
+  // Chart flujo
+  destroyChart('flujo');
+  charts.flujo = new Chart(document.getElementById('chart-flujo'), {
+    type:'bar',
+    data:{
+      labels: monthly.map(d=>d.mes),
+      datasets:[
+        { label:'Ingresos', data:monthly.map(d=>d.ing), backgroundColor:'rgba(63,185,80,0.7)', borderRadius:4 },
+        { label:'Gastos Op.', data:monthly.map(d=>d.gas), backgroundColor:'rgba(248,81,73,0.7)', borderRadius:4 },
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+fmt(ctx.raw)}}},
+      scales:{ x:{grid:{display:false},ticks:{color:'#8b949e',font:{size:10}}}, y:{grid:{color:'#30363d'},ticks:{callback:v=>fmt(v),color:'#8b949e',font:{size:10}}} }
+    }
+  });
+
+  // Chart costos
+  destroyChart('costos');
+  const costoLabels = ['Alquiler taller','Crédito Foton','Banco Estado','Banco Itau','TCs (min)','Seguro Foton','Otras líneas','Ops. fijas'];
+  const costoData = [700000,264366,174437,154028,270000,65412,71660,193000];
+  const costoColors = ['#f85149','#f85149','#58a6ff','#58a6ff','#d29922','#8b949e','#d29922','#8b949e'];
+  charts.costos = new Chart(document.getElementById('chart-costos'), {
+    type:'doughnut',
+    data:{ labels:costoLabels, datasets:[{ data:costoData, backgroundColor:costoColors, borderWidth:1, borderColor:'#161b22' }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+fmt(ctx.raw)}} }
+    }
+  });
+
+  // Causas
+  const causas = [
+    { emoji:'💳', titulo:'Deuda aplastante', desc:'$18.6M en TCs y créditos genera $929K/mes en cuotas — el 50% del ingreso promedio.' },
+    { emoji:'🏠', titulo:'Alquiler desproporcionado', desc:'$700K/mes = 38% del ingreso bruto. Lo normal para un taller es 10-15%.' },
+    { emoji:'📉', titulo:'Ventas insuficientes', desc:'Se vende $1.9M/mes pero se necesita $3.95M/mes para cubrir todo. Solo el 46% del PE.' },
+    { emoji:'👤', titulo:'Mezcla gastos personales', desc:'~$80K/mes en comida, pasajes y gastos de "Chiquito" salen de la caja del negocio.' },
+    { emoji:'⚠️', titulo:'TCs en mora', desc:'Registro de cuota morosa dic-25. La mora sube la tasa a TMC (~2.75%/mes), bola de nieve.' },
+  ];
+  document.getElementById('causas-list').innerHTML = causas.map(c=>`
+    <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:20px">${c.emoji}</span>
+      <div><div style="font-weight:500;margin-bottom:2px">${c.titulo}</div><div style="font-size:12px;color:var(--muted)">${c.desc}</div></div>
+    </div>
+  `).join('');
+}
+
+function calcPE(alquiler, cuotaTC, margen) {
+  const costosFijos = alquiler + 264366 + 174437 + 154028 + 65412 + cuotaTC + 45000 + 18000 + 55000 + 36000 + 100000 + 40000;
+  return Math.round(costosFijos / margen);
+}
+
+// ═══════════════════════════════════════════════
+// SIMULADOR
+// ═══════════════════════════════════════════════
+let proyChart = null;
+
+function simular() {
+  const ventas = +document.getElementById('sl-ventas').value;
+  const alquiler = +document.getElementById('sl-alquiler').value;
+  const cuotaTC = +document.getElementById('sl-tc').value;
+  const margen = +document.getElementById('sl-margen').value / 100;
+  const vendeForton = document.getElementById('chk-foton').checked;
+  const sinPersonal = document.getElementById('chk-personal').checked;
+
+  document.getElementById('sv-ventas').textContent = fmtFull(ventas);
+  document.getElementById('sv-alquiler').textContent = fmtFull(alquiler);
+  document.getElementById('sv-tc').textContent = fmtFull(cuotaTC);
+  document.getElementById('sv-margen').textContent = Math.round(margen*100) + '%';
+
+  const mp = ventas * (1 - margen);
+  const gasPersonal = sinPersonal ? 0 : 80000;
+  const gasOps = alquiler + 45000 + 18000 + 55000 + 36000 + gasPersonal + 100000 + 40000;
+  const margenBruto = ventas * margen;
+  const ebitda = margenBruto - gasOps;
+  const cuotaForton = vendeForton ? 0 : (264366 + 65412);
+  const gasFinancieros = cuotaTC + cuotaForton + 154028 + 174437;
+  const resultado = ebitda - gasFinancieros;
+  const pe = calcPE(alquiler, cuotaTC, margen);
+  const pePct = Math.min(200, Math.round(ventas/pe*100));
+
+  document.getElementById('sd-ventas').textContent = fmtFull(ventas);
+  document.getElementById('sd-mp').textContent = '-' + fmtFull(mp);
+  document.getElementById('sd-margen').textContent = fmtFull(margenBruto);
+  document.getElementById('sd-margen').style.color = 'var(--green)';
+  document.getElementById('sd-gasops').textContent = '-' + fmtFull(gasOps);
+  document.getElementById('sd-ebitda').textContent = fmtFull(ebitda);
+  document.getElementById('sd-ebitda').style.color = ebitda >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('sd-gasfinc').textContent = '-' + fmtFull(gasFinancieros);
+  document.getElementById('sd-resultado').textContent = fmtFull(resultado);
+  document.getElementById('sd-resultado').style.color = resultado >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('sim-resultado').textContent = fmtFull(resultado);
+  document.getElementById('sim-resultado').style.color = resultado >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('pe-valor').textContent = fmtFull(pe);
+
+  const peBar = document.getElementById('pe-bar');
+  const pePctEl = document.getElementById('pe-pct');
+  peBar.style.width = Math.min(100, pePct) + '%';
+  peBar.style.background = pePct >= 100 ? 'var(--green)' : pePct >= 70 ? 'var(--amber)' : 'var(--red)';
+  pePctEl.textContent = pePct + '%';
+  pePctEl.style.color = pePct >= 100 ? 'var(--green)' : pePct >= 70 ? 'var(--amber)' : 'var(--red)';
+
+  const rb = document.getElementById('result-box');
+  rb.className = 'result-box ' + (resultado >= 0 ? 'positive' : 'negative');
+
+  const alertEl = document.getElementById('sim-alert');
+  if (resultado < 0) {
+    const meses = Math.ceil(500000 / Math.abs(resultado));
+    document.getElementById('sim-meses').textContent = meses;
+    alertEl.style.display = 'block';
+  } else {
+    alertEl.style.display = 'none';
+  }
+
+  initProyeccion(ventas, alquiler, cuotaTC, margen, vendeForton, sinPersonal);
+}
+
+function initProyeccion(ventas, alquiler, cuotaTC, margen, vendeForton, sinPersonal) {
+  ventas = ventas || +document.getElementById('sl-ventas').value;
+  alquiler = alquiler || +document.getElementById('sl-alquiler').value;
+  cuotaTC = cuotaTC || +document.getElementById('sl-tc').value;
+  margen = margen || +document.getElementById('sl-margen').value/100;
+  vendeForton = vendeForton || document.getElementById('chk-foton').checked;
+  sinPersonal = sinPersonal || document.getElementById('chk-personal').checked;
+  const growth = +document.getElementById('sel-growth').value / 100;
+
+  const meses = ['Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar'];
+  const data = meses.map((m,i) => {
+    const v = Math.round(ventas * Math.pow(1+growth, i));
+    const gasPersonal = sinPersonal ? 0 : 80000;
+    const gasOps = alquiler + 45000 + 18000 + 55000 + 36000 + gasPersonal + 100000 + 40000;
+    const mb = v * margen;
+    const ebitda = mb - gasOps;
+    const cf = vendeForton ? 0 : (264366 + 65412);
+    const gf = cuotaTC + cf + 154028 + 174437;
+    return { mes: m + '-26', resultado: ebitda - gf };
+  });
+
+  destroyChart('proyeccion');
+  charts.proyeccion = new Chart(document.getElementById('chart-proyeccion'), {
+    type:'bar',
+    data:{
+      labels: data.map(d=>d.mes),
+      datasets:[{ label:'Resultado neto', data:data.map(d=>d.resultado),
+        backgroundColor: data.map(d=>d.resultado>=0?'rgba(63,185,80,0.7)':'rgba(248,81,73,0.7)'), borderRadius:3 }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.raw)}}},
+      scales:{ x:{grid:{display:false},ticks:{color:'#8b949e',font:{size:10}}}, y:{grid:{color:'#30363d'},ticks:{callback:v=>fmt(v),color:'#8b949e',font:{size:10}}} }
+    }
+  });
+}
+
+function setEscenario(id) {
+  const esc = {
+    actual:      { ventas:1860000, alquiler:700000, tc:270000, margen:50, foton:false, personal:false },
+    optimista:   { ventas:3500000, alquiler:600000, tc:200000, margen:55, foton:false, personal:true },
+    renegociado: { ventas:2200000, alquiler:500000, tc:120000, margen:50, foton:false, personal:true },
+    vendeForton: { ventas:1860000, alquiler:700000, tc:270000, margen:50, foton:true,  personal:false },
+    equilibrio:  { ventas:3950000, alquiler:400000, tc:120000, margen:50, foton:false, personal:true },
+  }[id];
+  document.getElementById('sl-ventas').value = esc.ventas;
+  document.getElementById('sl-alquiler').value = esc.alquiler;
+  document.getElementById('sl-tc').value = esc.tc;
+  document.getElementById('sl-margen').value = esc.margen;
+  document.getElementById('chk-foton').checked = esc.foton;
+  document.getElementById('chk-personal').checked = esc.personal;
+  simular();
+}
+
+// ═══════════════════════════════════════════════
+// CAJA
+// ═══════════════════════════════════════════════
+function initCaja() {
+  renderCaja();
+}
+
+function filtrarCaja() { renderCaja(); }
+
+function renderCaja() {
+  const mesFiltro = document.getElementById('sel-mes').value;
+  const tipoFiltro = document.getElementById('sel-tipo-caja').value;
+  let caja = DATOS.caja_detalle.length > 0 ? DATOS.caja_detalle : generarCajaDefault();
+
+  if (mesFiltro !== 'todos') caja = caja.filter(r => r.periodo === mesFiltro);
+  if (tipoFiltro !== 'todos') caja = caja.filter(r => r.tipo === tipoFiltro);
+
+  const totalIng = caja.filter(r=>r.tipo==='ingreso').reduce((a,r)=>a+r.monto,0);
+  const totalGas = caja.filter(r=>r.tipo==='gasto').reduce((a,r)=>a+r.monto,0);
+  const saldo = totalIng - totalGas;
+
+  document.getElementById('caja-kpis').innerHTML = `
+    <div class="kpi green"><div class="kpi-label">Total Ingresos</div><div class="kpi-value">${fmtFull(totalIng)}</div><div class="kpi-sub">${caja.filter(r=>r.tipo==='ingreso').length} transacciones</div></div>
+    <div class="kpi red"><div class="kpi-label">Total Gastos Op.</div><div class="kpi-value">${fmtFull(totalGas)}</div><div class="kpi-sub">${caja.filter(r=>r.tipo==='gasto').length} transacciones</div></div>
+    <div class="kpi ${saldo>=0?'green':'red'}"><div class="kpi-label">Saldo</div><div class="kpi-value">${fmtFull(saldo)}</div><div class="kpi-sub">Ingresos - Gastos</div></div>
+  `;
+
+  document.getElementById('caja-tbody').innerHTML = caja.slice(0,100).map(r=>`
+    <tr>
+      <td class="text-muted" style="font-size:12px">${r.fecha}</td>
+      <td style="font-size:12px">${r.periodo}</td>
+      <td style="font-size:12px">${r.desc}</td>
+      <td><span class="badge ${r.tipo==='ingreso'?'badge-green':'badge-red'}" style="font-size:10px">${r.tipo}</span></td>
+      <td class="text-right mono ${r.tipo==='ingreso'?'text-green':'text-red'}" style="font-size:12px">${r.tipo==='gasto'?'-':''}${fmtFull(r.monto)}</td>
+    </tr>
+  `).join('');
+
+  if (caja.length > 100) document.getElementById('caja-tbody').innerHTML += `<tr><td colspan="5" style="text-align:center;color:var(--muted);font-size:12px">... y ${caja.length-100} registros más</td></tr>`;
+
+  // Chart por mes
+  const byMes = {};
+  generarCajaDefault().forEach(r => {
+    if (!byMes[r.periodo]) byMes[r.periodo] = {ing:0, gas:0};
+    if (r.tipo==='ingreso') byMes[r.periodo].ing += r.monto;
+    else byMes[r.periodo].gas += r.monto;
+  });
+  const mesesChart = Object.keys(byMes);
+  destroyChart('cajaMes');
+  charts.cajaMes = new Chart(document.getElementById('chart-caja-mes'), {
+    type:'bar',
+    data:{
+      labels: mesesChart,
+      datasets:[
+        { label:'Ingresos', data:mesesChart.map(m=>byMes[m].ing), backgroundColor:'rgba(63,185,80,0.7)', borderRadius:3 },
+        { label:'Gastos', data:mesesChart.map(m=>byMes[m].gas), backgroundColor:'rgba(248,81,73,0.7)', borderRadius:3 },
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+fmt(ctx.raw)}}},
+      scales:{ x:{grid:{display:false},ticks:{color:'#8b949e',font:{size:10}}}, y:{grid:{color:'#30363d'},ticks:{callback:v=>fmt(v),color:'#8b949e',font:{size:10}}} }
+    }
+  });
+}
+
+function generarCajaDefault() {
+  const rows = [];
+  DATOS.monthly.forEach(m => {
+    rows.push({ fecha: '01/' + m.mes, periodo: m.periodo || m.mes, desc: 'Total ventas y delivery', tipo: 'ingreso', monto: m.ing });
+    rows.push({ fecha: '15/' + m.mes, periodo: m.periodo || m.mes, desc: 'Materias primas y operación', tipo: 'gasto', monto: Math.round(m.ing * 0.42) });
+    rows.push({ fecha: '15/' + m.mes, periodo: m.periodo || m.mes, desc: 'Alquiler taller', tipo: 'gasto', monto: 700000 });
+    rows.push({ fecha: '28/' + m.mes, periodo: m.periodo || m.mes, desc: 'Gasolina y delivery', tipo: 'gasto', monto: 100000 });
+    rows.push({ fecha: '28/' + m.mes, periodo: m.periodo || m.mes, desc: 'Otros gastos operativos', tipo: 'gasto', monto: Math.round(m.gas - Math.round(m.ing*0.42) - 700000 - 100000) });
+  });
+  return rows.filter(r=>r.monto>0);
+}
+
+// ═══════════════════════════════════════════════
+// DEUDA
+// ═══════════════════════════════════════════════
+function initDeuda() {
+  const deudas = DATOS.deudas;
+  const total = deudas.reduce((a,d)=>a+d.saldo,0);
+  const totalCuota = deudas.reduce((a,d)=>a+d.cuota,0);
+  const totalInteres = deudas.reduce((a,d)=>a+(d.saldo*(d.tasa/100)),0);
+
+  document.getElementById('dkpi-total').textContent = fmt(total);
+  document.getElementById('dkpi-cuota').textContent = fmt(totalCuota);
+  document.getElementById('dkpi-interes').textContent = fmt(totalInteres);
+  document.getElementById('dkpi-meses').textContent = totalCuota > 0 ? Math.ceil(total/totalCuota) + 'm' : 'N/A';
+
+  // Chart por tipo
+  const byTipo = {};
+  deudas.forEach(d => { if (d.saldo>0) { byTipo[d.tipo] = (byTipo[d.tipo]||0) + d.saldo; }});
+  destroyChart('deudaTipo');
+  charts.deudaTipo = new Chart(document.getElementById('chart-deuda-tipo'), {
+    type:'doughnut',
+    data:{ labels:Object.keys(byTipo).map(t=>TIPO_LABEL[t]||t), datasets:[{ data:Object.values(byTipo), backgroundColor:Object.keys(byTipo).map(t=>TIPO_COLOR[t]||'#888'), borderWidth:1, borderColor:'#161b22' }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'55%',
+      plugins:{ legend:{position:'bottom', labels:{color:'#8b949e',font:{size:10},padding:8}}, tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+fmt(ctx.raw)}} }
+    }
+  });
+
+  // Edit form
+  document.getElementById('deuda-edit-form').innerHTML = deudas.map((d,i)=>`
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <span style="font-size:11px;color:var(--muted);flex:1;min-width:120px">${d.acreedor}</span>
+      <input type="number" id="deuda-saldo-${i}" value="${d.saldo}" placeholder="Saldo" style="width:100px;font-size:12px;padding:5px 8px">
+      <input type="number" id="deuda-cuota-${i}" value="${d.cuota}" placeholder="Cuota" style="width:90px;font-size:12px;padding:5px 8px">
+    </div>
+  `).join('');
+
+  // Tabla
+  document.getElementById('deuda-tbody').innerHTML = deudas.map(d=>`
+    <tr>
+      <td style="font-size:13px">${d.acreedor}</td>
+      <td><span style="background:${TIPO_COLOR[d.tipo]}22;color:${TIPO_COLOR[d.tipo]};padding:2px 8px;border-radius:20px;font-size:11px">${TIPO_LABEL[d.tipo]||d.tipo}</span></td>
+      <td class="text-right mono ${d.saldo>0?'text-red':'text-muted'}">${d.saldo>0?fmtFull(d.saldo):'—'}</td>
+      <td class="text-right mono ${d.cuota>0?'text-amber':'text-muted'}">${d.cuota>0?fmtFull(d.cuota):'—'}</td>
+      <td class="text-right mono text-muted">${d.tasa>0?d.tasa+'%':'—'}</td>
+      <td class="text-right mono text-muted">${d.saldo>0&&d.tasa>0?fmt(d.saldo*d.tasa/100):'—'}</td>
+    </tr>
+  `).join('') + `<tr style="border-top:1px solid var(--border)">
+    <td class="fw600" colspan="2">TOTAL</td>
+    <td class="text-right mono fw600 text-red">${fmtFull(total)}</td>
+    <td class="text-right mono fw600 text-amber">${fmtFull(totalCuota)}</td>
+    <td></td>
+    <td class="text-right mono text-muted">${fmt(totalInteres)}</td>
+  </tr>`;
+}
+
+function guardarDeudas() {
+  DATOS.deudas.forEach((d,i) => {
+    const s = document.getElementById('deuda-saldo-'+i);
+    const c = document.getElementById('deuda-cuota-'+i);
+    if (s) d.saldo = +s.value;
+    if (c) d.cuota = +c.value;
+  });
+  saveData();
+  initDeuda();
+  initDashboard();
+  alert('Deudas actualizadas y guardadas ✓');
+}
+
+// ═══════════════════════════════════════════════
+// PLAN
+// ═══════════════════════════════════════════════
+function initPlan() {
+  renderPlan();
+}
+
+function renderPlan() {
+  const plan = DATOS.plan || {};
+  const completadas = PLAN_ITEMS.filter(p=>plan[p.id]).length;
+  const ahorroTotal = PLAN_ITEMS.filter(p=>plan[p.id]&&p.ahorro>0).reduce((a,p)=>a+p.ahorro,0);
+
+  document.getElementById('plan-progreso').textContent = completadas + ' / ' + PLAN_ITEMS.length + ' completadas';
+
+  const ahorroEl = document.getElementById('plan-ahorro');
+  if (ahorroTotal > 0) { ahorroEl.style.display='inline-flex'; ahorroEl.textContent='+'+fmt(ahorroTotal)+'/mes liberado'; }
+  else { ahorroEl.style.display='none'; }
+
+  ['urgente','importante','largo'].forEach(pr => {
+    const items = PLAN_ITEMS.filter(p=>p.prioridad===pr);
+    const done = items.filter(p=>plan[p.id]).length;
+    const el = { urgente:'pk-urgente', importante:'pk-importante', largo:'pk-largo' }[pr];
+    document.getElementById(el).textContent = done + '/' + items.length;
+  });
+
+  const grupos = ['urgente','importante','largo'];
+  const titulos = { urgente:'⚑ Urgente — 0 a 3 meses', importante:'◎ Importante — 3 a 12 meses', largo:'◇ Largo plazo — 12 a 36 meses' };
+  const colors = { urgente:'var(--red)', importante:'var(--amber)', largo:'var(--green)' };
+
+  document.getElementById('plan-container').innerHTML = grupos.map(gr => {
+    const items = PLAN_ITEMS.filter(p=>p.prioridad===gr);
+    return `<div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:500;color:${colors[gr]};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${titulos[gr]}</div>
+      ${items.map(item=>`
+        <label class="checkbox-label ${plan[item.id]?'checked':''}" onclick="togglePlan('${item.id}',this)">
+          <input type="checkbox" ${plan[item.id]?'checked':''} onchange="togglePlan('${item.id}',this.parentElement)">
+          <div style="flex:1">
+            <div style="font-weight:500;font-size:13px;${plan[item.id]?'text-decoration:line-through;opacity:0.6':''}">${item.titulo}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${item.desc}</div>
+          </div>
+          ${item.ahorro>0?`<div style="font-size:11px;color:var(--green);font-family:var(--font-mono);white-space:nowrap">+${fmt(item.ahorro)}/mes</div>`:''}
+        </label>
+      `).join('')}
+    </div>`;
+  }).join('');
+}
+
+function togglePlan(id, el) {
+  DATOS.plan[id] = !DATOS.plan[id];
+  if (!el.classList.contains('checkbox-label')) return;
+  saveData();
+  initPlan();
+}
+
+// ═══════════════════════════════════════════════
+// IMPORTAR EXCEL
+// ═══════════════════════════════════════════════
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) processFile(f);
+}
+function handleFile(e) { if (e.target.files[0]) processFile(e.target.files[0]); }
+
+function processFile(file) {
+  const log = document.getElementById('import-log');
+  const logContent = document.getElementById('import-log-content');
+  log.classList.remove('hidden');
+  logContent.innerHTML = '⟳ Leyendo archivo: ' + file.name + '...\n';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
+      logContent.innerHTML += '✓ Archivo leído. Hojas encontradas: ' + wb.SheetNames.join(', ') + '\n';
+
+      const cajasSheets = wb.SheetNames.filter(s => s.includes('Cajas') || s.includes('cajas'));
+      let totalIng = 0, totalGas = 0, registros = [];
+      let mesesEncontrados = {};
+
+      cajasSheets.forEach(shName => {
+        const sh = wb.Sheets[shName];
+        const data = XLSX.utils.sheet_to_json(sh, { header:1, defval:null });
+        logContent.innerHTML += '  → Hoja "' + shName + '": ' + data.length + ' filas\n';
+
+        data.forEach(row => {
+          const fecha = row[0], mes = row[1], desc = row[2], monto = row[3];
+          if (fecha && mes && monto && typeof monto === 'number' && monto > 0 && typeof mes === 'string') {
+            const fechaStr = fecha instanceof Date ? fecha.toLocaleDateString('es-CL') : String(fecha).split('T')[0];
+            registros.push({ fecha:fechaStr, periodo:mes, desc:desc||'Ingreso', tipo:'ingreso', monto:Math.round(monto) });
+            if (!mesesEncontrados[mes]) mesesEncontrados[mes] = { ing:0, gas:0 };
+            mesesEncontrados[mes].ing += Math.round(monto);
+          }
+          const gFecha = row[9], gMes = row[10], gDesc = row[11], gMonto = row[12];
+          if (gFecha && gMes && gMonto && typeof gMonto === 'number' && gMonto > 0 && typeof gMes === 'string') {
+            const fechaStr = gFecha instanceof Date ? gFecha.toLocaleDateString('es-CL') : String(gFecha).split('T')[0];
+            registros.push({ fecha:fechaStr, periodo:gMes, desc:gDesc||'Gasto', tipo:'gasto', monto:Math.round(gMonto) });
+            if (!mesesEncontrados[gMes]) mesesEncontrados[gMes] = { ing:0, gas:0 };
+            mesesEncontrados[gMes].gas += Math.round(gMonto);
+          }
+        });
+      });
+
+      if (registros.length > 0) {
+        DATOS.caja_detalle = registros;
+        DATOS.monthly = Object.entries(mesesEncontrados)
+          .filter(([m,v]) => v.ing > 0)
+          .map(([m,v]) => ({ mes: m.substring(0,3) + (m.includes('26')?'-26':'-25'), periodo: m, ing: v.ing, gas: v.gas }));
+
+        logContent.innerHTML += '\n✅ Importación exitosa!\n';
+        logContent.innerHTML += '   Meses: ' + DATOS.monthly.map(m=>m.mes).join(', ') + '\n';
+        logContent.innerHTML += '   Registros: ' + registros.length + ' transacciones\n';
+        saveData();
+        logContent.innerHTML += '   Datos guardados en localStorage ✓\n';
+      } else {
+        logContent.innerHTML += '\n⚠️ No se encontraron datos en las hojas de Cajas.\n   Verifica que el archivo tiene columnas: Fecha, Mes, Descripción, Monto\n';
+      }
+    } catch(err) {
+      logContent.innerHTML += '\n❌ Error al leer el archivo: ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function agregarMesManual() {
+  const mes = document.getElementById('mes-manual').value;
+  const ing = +document.getElementById('ing-manual').value;
+  const gas = +document.getElementById('gas-manual').value;
+  if (!ing || !gas) { alert('Ingresa ingresos y gastos'); return; }
+  DATOS.monthly.push({ mes, periodo: mes, ing, gas });
+  saveData();
+  document.getElementById('ing-manual').value = '';
+  document.getElementById('gas-manual').value = '';
+  alert('Mes ' + mes + ' agregado ✓');
+}
+
+function exportarDatos() {
+  const blob = new Blob([JSON.stringify(DATOS, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'chiquito_datos_' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+}
+
+function resetearDatos() {
+  if (confirm('¿Restaurar todos los datos originales? Se perderán los datos importados.')) {
+    DATOS = JSON.parse(JSON.stringify(DATOS_DEFAULT));
+    saveData();
+    initDashboard();
+    alert('Datos restaurados ✓');
+  }
+}
+
+
+
+// ═══════════════════════════════════════════════
+// INYECCIÓN DE CAPITAL
+// ═══════════════════════════════════════════════
+function calcInyeccion() {
+  const aporte = +document.getElementById('inp-aporte').value || 0;
+  const montoBCI = +document.getElementById('inp-monto-bci').value || 0;
+  const cuotas = +document.getElementById('inp-cuotas-bci').value || 18;
+  const tasaMes = +document.getElementById('inp-tasa-bci').value / 100 || 0.0143;
+
+  const totalDisponible = aporte + montoBCI;
+  const cuotaBCI = tasaMes > 0 ? Math.round(montoBCI * tasaMes / (1 - Math.pow(1+tasaMes, -cuotas))) : Math.round(montoBCI/cuotas);
+  const ctc = cuotaBCI * cuotas;
+  const costoIntereses = ctc - montoBCI;
+  const interesUnitario = cuotaBCI - montoBCI/cuotas;
+
+  document.getElementById('total-disponible').textContent = fmtFull(totalDisponible);
+  document.getElementById('cuota-bci-display').textContent = fmtFull(cuotaBCI);
+  document.getElementById('cuotas-display').textContent = cuotas;
+  document.getElementById('costo-intereses').textContent = fmtFull(costoIntereses);
+  document.getElementById('ctc-display').textContent = fmtFull(ctc).replace('$','');
+
+  // Calcular asignación por prioridad (mayor tasa primero)
+  const deudasOrdenadas = [...DATOS.deudas].filter(d=>d.saldo>0).sort((a,b)=>b.tasa-a.tasa);
+  let disponible = totalDisponible;
+  let cuotasLiberadas = 0;
+  let interesesEliminados = 0;
+  let asignado = 0;
+
+  const asignaciones = deudasOrdenadas.map((d,i) => {
+    if (disponible <= 0) return {...d, asignado:0, estado:'pendiente'};
+    if (disponible >= d.saldo) {
+      const a = d.saldo;
+      disponible -= a; asignado += a;
+      cuotasLiberadas += d.cuota;
+      interesesEliminados += d.saldo * d.tasa;
+      return {...d, asignado:a, estado:'pago_completo'};
+    } else {
+      const a = disponible;
+      asignado += a;
+      interesesEliminados += a * d.tasa;
+      disponible = 0;
+      return {...d, asignado:a, estado:'pago_parcial'};
+    }
+  });
+
+  // Render tabla
+  const tbody = document.getElementById('tabla-inyeccion');
+  tbody.innerHTML = asignaciones.map((d,i) => {
+    const estadoBadge = d.estado==='pago_completo' ? '<span class="badge badge-green">✓ Cancelado</span>' 
+      : d.estado==='pago_parcial' ? '<span class="badge badge-amber">⚡ Parcial</span>'
+      : '<span class="badge" style="background:var(--bg3);color:var(--muted)">— Pendiente</span>';
+    return `<tr>
+      <td class="text-muted mono" style="font-size:12px">${i+1}</td>
+      <td style="font-size:12px">${d.acreedor}</td>
+      <td class="text-right mono" style="font-size:12px">${fmtFull(d.saldo)}</td>
+      <td class="text-right mono text-amber" style="font-size:12px">${d.tasa>0?d.tasa.toFixed(1)+'%':'—'}</td>
+      <td class="text-right mono" style="font-size:12px">${d.cuota>0?fmtFull(d.cuota):'—'}</td>
+      <td class="text-right mono ${d.asignado>0?'text-green':'text-muted'} fw600" style="font-size:12px">${d.asignado>0?fmtFull(d.asignado):'—'}</td>
+      <td>${estadoBadge}</td>
+    </tr>`;
+  }).join('');
+
+  const remanente = totalDisponible - asignado;
+  document.getElementById('resumen-disponible').textContent = fmtFull(totalDisponible);
+  document.getElementById('resumen-asignado').textContent = '-' + fmtFull(asignado);
+  document.getElementById('resumen-remanente').textContent = fmtFull(remanente);
+  document.getElementById('resumen-remanente').style.color = remanente > 0 ? 'var(--green)' : 'var(--text)';
+
+  const impactoNeto = cuotasLiberadas - cuotaBCI;
+  const ahorroIntereses = interesesEliminados - interesUnitario;
+  const ahorroTotal = ahorroIntereses * cuotas;
+  const tasaPromPond = cuotasLiberadas > 0 ? interesesEliminados / (asignado || 1) * 100 : 0;
+  const arbitraje = tasaPromPond - tasaMes*100;
+
+  document.getElementById('cuotas-liberadas').textContent = '+' + fmtFull(cuotasLiberadas);
+  document.getElementById('cuota-bci-row').textContent = '-' + fmtFull(cuotaBCI);
+  const impEl = document.getElementById('impacto-cuotas');
+  impEl.textContent = (impactoNeto>=0?'+':'')+fmtFull(impactoNeto);
+  impEl.style.color = impactoNeto >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('intereses-elim').textContent = '+' + fmtFull(interesesEliminados);
+  document.getElementById('interes-bci-row').textContent = '-' + fmtFull(Math.round(interesUnitario));
+  const ahorroEl = document.getElementById('ahorro-intereses');
+  ahorroEl.textContent = (ahorroIntereses>=0?'+':'')+fmtFull(Math.round(ahorroIntereses));
+  ahorroEl.style.color = ahorroIntereses >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('arbitraje-tasa').textContent = arbitraje.toFixed(2) + '%/mes';
+  document.getElementById('ahorro-total').textContent = fmtFull(Math.round(ahorroTotal));
+
+  // Badge
+  const badge = document.getElementById('inyeccion-badge');
+  if (ahorroIntereses > 200000) { badge.className='badge badge-green'; badge.textContent='✓ Arbitraje favorable'; }
+  else if (ahorroIntereses > 0) { badge.className='badge badge-amber'; badge.textContent='⚠ Revisar condiciones'; }
+  else { badge.className='badge badge-red'; badge.textContent='✗ No recomendado'; }
+
+  // Amortización chart
+  const saldoInicial = montoBCI;
+  const saldos = [], intereses2 = [], principal = [];
+  let saldo = saldoInicial;
+  for (let i=0; i<cuotas; i++) {
+    const int = Math.round(saldo * tasaMes);
+    const ppal = cuotaBCI - int;
+    saldo = Math.max(0, saldo - ppal);
+    saldos.push(Math.round(saldo/1000));
+    intereses2.push(int);
+    principal.push(ppal);
+  }
+  const mesesLabels = ['Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Mar'].slice(0,cuotas);
+  destroyChart('amortizacion');
+  charts.amortizacion = new Chart(document.getElementById('chart-amortizacion'), {
+    type:'bar',
+    data:{
+      labels: mesesLabels,
+      datasets:[
+        { label:'Principal', data:principal.map(v=>Math.round(v/1000)), backgroundColor:'rgba(88,166,255,0.5)', borderRadius:2, stack:'a' },
+        { label:'Interés',   data:intereses2.map(v=>Math.round(v/1000)), backgroundColor:'rgba(248,81,73,0.5)', borderRadius:2, stack:'a' },
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': $'+ctx.raw+'K'}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#8b949e',font:{size:9}}},
+        y:{grid:{color:'#30363d'},stacked:true,ticks:{callback:v=>v+'K',color:'#8b949e',font:{size:9}}}
+      }
+    }
+  });
+
+  // Veredicto
+  const veredicto = document.getElementById('veredicto-inyeccion');
+  if (arbitraje > 1.5 && montoBCI >= 8000000) {
+    veredicto.className = 'alert alert-amber';
+    veredicto.innerHTML = '⚠️ <strong>Estrategia válida CONDICIONALMENTE.</strong> El arbitraje de tasa es atractivo (' + arbitraje.toFixed(2) + '%/mes). Sin embargo, el flujo de caja empeora $' + Math.round(Math.abs(impactoNeto)/1000) + 'K/mes en los primeros 18 meses. Solo ejecutar si: (1) se baja el alquiler ≤$450K, (2) ventas alcanzan $2.5M/mes antes del 4° mes, (3) hay acuerdo escrito de devolución con la hermana.';
+  } else {
+    veredicto.className = 'alert alert-blue';
+    veredicto.innerHTML = '💡 Ajusta el monto y cuotas para ver el impacto en el arbitraje de tasa.';
+  }
+
+  // Condiciones
+  document.getElementById('condiciones-inyeccion').innerHTML = [
+    { ok:false, texto:'Negociar alquiler del taller a máximo $450K/mes antes de ejecutar', critica:true },
+    { ok:false, texto:'La hermana paga la cuota exacta del BCI ($648,805/mes) a Sócrates. Sin interés adicional — es apoyo familiar sin costo para ella.', critica:true },
+    { ok:false, texto:'Ventas deben alcanzar $2.5M/mes antes del 4° mes post-inyección', critica:true },
+    { ok:false, texto:'Formalizar empresa (EIRL/SpA) para separar patrimonio personal del negocio', critica:false },
+    { ok:false, texto:'Santander ($1,128,378 remanente) renegociar por separado con el banco', critica:false },
+  ].map(c=>`
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;margin-bottom:6px;border-radius:var(--radius);border:1px solid var(--border);background:${c.critica?'var(--red-bg)':'var(--bg3)'}">
+      <span style="font-size:16px;margin-top:1px">${c.ok?'✅':'⬜'}</span>
+      <div>
+        <span style="font-size:13px;${c.critica?'color:var(--red);font-weight:500':''}">${c.texto}</span>
+        ${c.critica?'<span class="badge badge-red" style="margin-left:8px;font-size:10px">Crítica</span>':''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  initDashboard();
+});
+</script>
+</body>
+</html>
