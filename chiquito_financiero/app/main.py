@@ -1,8 +1,9 @@
 import sys
+print(f"[DEBUG] Python {sys.version} arrancando main.py", flush=True)
 try:
     sys.stdout.reconfigure(encoding="utf-8")
-except Exception:
-    pass
+except Exception as e:
+    print(f"[DEBUG] reconfigure falló: {e}", flush=True)
 
 # main.py — App Streamlit Chiquito Finanzas
 # Sprint 1 | Mar-2026 | Sócrates Cabral
