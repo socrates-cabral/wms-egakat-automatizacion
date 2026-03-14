@@ -1,9 +1,8 @@
 import sys
-print(f"[DEBUG] Python {sys.version} arrancando main.py", flush=True)
 try:
     sys.stdout.reconfigure(encoding="utf-8")
-except Exception as e:
-    print(f"[DEBUG] reconfigure falló: {e}", flush=True)
+except Exception:
+    pass
 
 # main.py — App Streamlit Chiquito Finanzas
 # Sprint 1 | Mar-2026 | Sócrates Cabral
@@ -15,41 +14,20 @@ import streamlit as st
 from pathlib import Path
 from dotenv import load_dotenv
 
-print("[DEBUG] imports base OK", flush=True)
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
 # Importar módulos del proyecto
-try:
-    from calculators import (
-        COSTOS_FIJOS_BASE, DEUDAS_DEFAULT, BCI_CREDITO_DEFAULT,
-        calc_punto_equilibrio, calc_cuota_frances, calc_amortizacion,
-        calc_inyeccion_capital, calc_meses_hasta_quiebra, calc_proyeccion_12m,
-    )
-    print("[DEBUG] calculators OK", flush=True)
-except Exception as _e:
-    print(f"[DEBUG] ERROR calculators: {_e}", flush=True)
-    raise
-
-try:
-    from data_loader import load_caja, load_deuda, get_monthly_summary, get_last_update
-    print("[DEBUG] data_loader OK", flush=True)
-except Exception as _e:
-    print(f"[DEBUG] ERROR data_loader: {_e}", flush=True)
-    raise
-
-try:
-    from charts import (
-        chart_ingresos_gastos, chart_resultado_mensual, chart_costos_dona,
-        chart_amortizacion, chart_proyeccion_12m, chart_deuda_barras,
-    )
-    print("[DEBUG] charts OK", flush=True)
-except Exception as _e:
-    print(f"[DEBUG] ERROR charts: {_e}", flush=True)
-    raise
-
-print("[DEBUG] todos los imports OK", flush=True)
+from calculators import (
+    COSTOS_FIJOS_BASE, DEUDAS_DEFAULT, BCI_CREDITO_DEFAULT,
+    calc_punto_equilibrio, calc_cuota_frances, calc_amortizacion,
+    calc_inyeccion_capital, calc_meses_hasta_quiebra, calc_proyeccion_12m,
+)
+from data_loader import load_caja, load_deuda, get_monthly_summary, get_last_update
+from charts import (
+    chart_ingresos_gastos, chart_resultado_mensual, chart_costos_dona,
+    chart_amortizacion, chart_proyeccion_12m, chart_deuda_barras,
+)
 
 # ─── Configuración de página ───────────────────────────────────────────────────
 st.set_page_config(
@@ -448,19 +426,19 @@ if pagina == "📊 Dashboard":
     col_izq, col_der = st.columns([3, 2])
 
     with col_izq:
-        st.plotly_chart(chart_ingresos_gastos(df_resumen), use_container_width=True)
+        st.plotly_chart(chart_ingresos_gastos(df_resumen), width='stretch')
 
     with col_der:
-        st.plotly_chart(chart_costos_dona(COSTOS_FIJOS_BASE, total_cuotas), use_container_width=True)
+        st.plotly_chart(chart_costos_dona(COSTOS_FIJOS_BASE, total_cuotas), width='stretch')
 
-    st.plotly_chart(chart_resultado_mensual(df_resumen), use_container_width=True)
+    st.plotly_chart(chart_resultado_mensual(df_resumen), width='stretch')
 
     # ── Tabla resumen ──
     with st.expander("📋 Detalle mensual"):
         df_mostrar = df_resumen.copy()
         for col in ['ingresos', 'gastos', 'resultado']:
             df_mostrar[col] = df_mostrar[col].apply(fmt_clp)
-        st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
+        st.dataframe(df_mostrar, width='stretch', hide_index=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -553,7 +531,7 @@ elif pagina == "🎛 Simulador":
 
         # Proyección 12 meses
         proy = calc_proyeccion_12m(ventas_obj, crec_pct, costos_sim, cuotas_bancarias_sim, margen_bruto / 100)
-        st.plotly_chart(chart_proyeccion_12m(proy), use_container_width=True)
+        st.plotly_chart(chart_proyeccion_12m(proy), width='stretch')
 
         # Tabla proyección
         with st.expander("📋 Tabla de proyección"):
@@ -561,7 +539,7 @@ elif pagina == "🎛 Simulador":
             df_proy['mes'] = df_proy['mes'].apply(lambda x: f"Mes {x}")
             for col in ['ventas', 'costo_total', 'resultado']:
                 df_proy[col] = df_proy[col].apply(fmt_clp)
-            st.dataframe(df_proy, use_container_width=True, hide_index=True)
+            st.dataframe(df_proy, width='stretch', hide_index=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -601,12 +579,12 @@ elif pagina == "💰 Libro de Caja":
         if not df_filtrado.empty:
             resumen_fil = get_monthly_summary(df_filtrado)
             if not resumen_fil.empty:
-                st.plotly_chart(chart_ingresos_gastos(resumen_fil), use_container_width=True)
+                st.plotly_chart(chart_ingresos_gastos(resumen_fil), width='stretch')
 
         # Tabla
         df_tabla = df_filtrado[['mes', 'tipo', 'descripcion', 'monto']].copy()
         df_tabla['monto'] = df_tabla['monto'].apply(fmt_clp)
-        st.dataframe(df_tabla, use_container_width=True, hide_index=True)
+        st.dataframe(df_tabla, width='stretch', hide_index=True)
 
         col_btn, _ = st.columns([1, 4])
         if col_btn.button("🔄 Actualizar desde Excel"):
@@ -645,10 +623,10 @@ elif pagina == "💳 Deuda":
         df_cat.columns = ['Categoría', 'Saldo', 'Cuota/mes', 'Instrumentos']
         df_cat['Saldo'] = df_cat['Saldo'].apply(fmt_clp)
         df_cat['Cuota/mes'] = df_cat['Cuota/mes'].apply(fmt_clp)
-        st.dataframe(df_cat, use_container_width=True, hide_index=True)
+        st.dataframe(df_cat, width='stretch', hide_index=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.plotly_chart(chart_deuda_barras(df_deuda), use_container_width=True)
+    st.plotly_chart(chart_deuda_barras(df_deuda), width='stretch')
 
     st.subheader("Detalle de deudas")
     df_d = df_deuda.copy()
@@ -659,7 +637,7 @@ elif pagina == "💳 Deuda":
             df_d[col_m] = pd.to_numeric(df_d[col_m], errors='coerce').fillna(0).apply(fmt_clp)
     if 'tasa' in df_d.columns:
         df_d['tasa'] = pd.to_numeric(df_d['tasa'], errors='coerce').fillna(0).apply(lambda x: f"{x:.1f}%/mes" if x > 0 else '—')
-    st.dataframe(df_d, use_container_width=True, hide_index=True)
+    st.dataframe(df_d, width='stretch', hide_index=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -997,7 +975,7 @@ elif pagina == "💉 Inyección Capital":
             df_asig['cuota_liberada']    = df_asig['cuota_liberada'].apply(fmt_clp)
             df_asig['interes_eliminado'] = df_asig['interes_eliminado'].apply(fmt_clp)
             df_asig.columns = ['Acreedor', 'Saldo original', 'Pago', 'Cuota liberada', 'Interés eliminado', 'Estado']
-            st.dataframe(df_asig, use_container_width=True, hide_index=True)
+            st.dataframe(df_asig, width='stretch', hide_index=True)
 
         if resultado_inj['capital_sobrante'] > 0:
             st.info(f"Capital sobrante: {fmt_clp(resultado_inj['capital_sobrante'])} → disponible para capital de trabajo.")
@@ -1006,14 +984,14 @@ elif pagina == "💉 Inyección Capital":
         st.markdown("---")
         st.subheader("Amortización del crédito BCI")
         tabla_amort = calc_amortizacion(monto_bci, tasa_bci, cuotas_bci)
-        st.plotly_chart(chart_amortizacion(tabla_amort), use_container_width=True)
+        st.plotly_chart(chart_amortizacion(tabla_amort), width='stretch')
 
         with st.expander("📋 Tabla completa de amortización"):
             df_amort = pd.DataFrame(tabla_amort)
             for col in ['cuota', 'interes', 'principal', 'saldo']:
                 df_amort[col] = df_amort[col].apply(fmt_clp)
             df_amort.columns = ['Mes', 'Cuota', 'Interés', 'Principal', 'Saldo']
-            st.dataframe(df_amort, use_container_width=True, hide_index=True)
+            st.dataframe(df_amort, width='stretch', hide_index=True)
 
         # Condiciones recomendadas
         st.markdown("---")
