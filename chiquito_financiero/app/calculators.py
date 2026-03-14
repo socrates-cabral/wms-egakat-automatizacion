@@ -1,5 +1,8 @@
 import sys
-sys.stdout.reconfigure(encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 
 # calculators.py — Lógica financiera para Chiquito Finanzas
 # Contiene: punto de equilibrio, amortización francesa, inyección de capital
@@ -96,7 +99,7 @@ def calc_inyeccion_capital(
     aporte_familiar: float,
     tasa_bci:        float,
     cuotas_bci:      int,
-    deudas:          list | None = None,
+    deudas=None,
 ) -> dict:
     """
     Calcula el impacto de inyectar capital en la deuda.
@@ -186,7 +189,7 @@ def calc_inyeccion_capital(
     }
 
 
-def calc_meses_hasta_quiebra(resultado_mensual: float, capital_trabajo: float = 500_000) -> int | None:
+def calc_meses_hasta_quiebra(resultado_mensual: float, capital_trabajo: float = 500_000):
     """
     Si el resultado mensual es negativo, retorna cuántos meses dura el capital de trabajo.
     Retorna None si el negocio es rentable.
