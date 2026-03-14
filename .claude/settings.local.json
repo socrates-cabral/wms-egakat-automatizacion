@@ -23,7 +23,13 @@
       "Bash(powershell.exe -Command \"Get-ScheduledTask -TaskName 'WMS Egakat - Watchdog Alerta' | Select-Object TaskName, State; Get-ScheduledTaskInfo -TaskName 'WMS Egakat - Watchdog Alerta' | Select-Object NextRunTime\")",
       "Bash(powershell.exe -Command \"Get-ScheduledTaskInfo -TaskName 'WMS Egakat - Watchdog Alerta' | Format-List NextRunTime, LastRunTime\")",
       "Bash(find . -newer .git/ORIG_HEAD -not -path './.git/*' -not -path './logs/*' -not -path './_debug_historico/*' -not -path './_instaladores/*' -type f 2>/dev/null | sort)",
-      "Bash(find . -newer WMS_Automatizacion/run_todos.py -not -path './.git/*' -not -path './logs/*' -not -path './_debug_historico/*' -not -path './_instaladores/*' -type f 2>/dev/null | sort)"
+      "Bash(find . -newer WMS_Automatizacion/run_todos.py -not -path './.git/*' -not -path './logs/*' -not -path './_debug_historico/*' -not -path './_instaladores/*' -type f 2>/dev/null | sort)",
+      "Bash(git rm:*)",
+      "Bash(mkdir -p c:/ClaudeWork/chiquito_financiero/app)",
+      "Bash(cp \"c:/ClaudeWork/files/ChiquitoFinanzas.html\" \"c:/ClaudeWork/chiquito_financiero/\")",
+      "Bash(cp \"c:/ClaudeWork/files/Diagnostico_Financiero_Chiquito.xlsx\" \"c:/ClaudeWork/chiquito_financiero/\")",
+      "Bash(cp \"c:/ClaudeWork/files/MEMORY_ChiquitoFinanzas.md\" \"c:/ClaudeWork/chiquito_financiero/MEMORY.md\")",
+      "Bash(cp \"c:/ClaudeWork/files/CLAUDE_CODE_SPRINT.md\" \"c:/ClaudeWork/chiquito_financiero/\")"
     ],
     "deny": [
       "Bash(rm -rf:*)",
