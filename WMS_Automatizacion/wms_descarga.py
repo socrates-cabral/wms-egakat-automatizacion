@@ -1,17 +1,25 @@
 """
 WMS EGAKAT - Descarga automática de Reporte de Contenedores
 Autor: Sócrates Cabral - Control de Gestión y Mejora Continua
-Versión: 2.3 - Guarda directo en OneDrive Desktop → SharePoint automático
+Versión: 2.4 - Reintento por centro con reset de página
 Flujo:
   1. Login → Depósito → Aceptar
   2. Procesos WMS → Buscar Contenedores en Warehouse
   3. Exportar Excel → captura con expect_download
   4. Guarda en OneDrive → SharePoint sincroniza automáticamente
   5. Power Automate Cloud detecta el archivo y envía correo de confirmación
+Cambios v2.4:
+  - Reintento por centro (1 intento extra, pausa 60s) si falla
+  - Reset de página antes del reintento — evita que un timeout deje la
+    página en estado roto y arrastre al siguiente centro
 """
 
+import sys
 import os
+import time
 from datetime import datetime
+
+sys.stdout.reconfigure(encoding="utf-8")
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 
@@ -32,8 +40,10 @@ CENTROS = [
     ("PUDAHUEL UNITARIO", os.path.join(ONEDRIVE_BASE, "Pudahuel")),  # misma carpeta
 ]
 
-TIMEOUT          = 60_000
-TIMEOUT_DESCARGA = 180_000  # 3 min — Quilicura puede demorar ~75s
+TIMEOUT              = 60_000
+TIMEOUT_DESCARGA     = 180_000  # 3 min — Quilicura puede demorar ~75s
+PAUSA_REINTENTO      = 60       # segundos de espera antes de reintentar un centro
+MAX_INTENTOS_CENTRO  = 2        # 1 intento normal + 1 reintento
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
 
@@ -123,6 +133,22 @@ def run():
         for centro_nombre, carpeta_destino in CENTROS:
             log(f"\n>> Procesando: {centro_nombre}")
             ok = procesar_centro(page, centro_nombre, carpeta_destino)
+
+            if not ok:
+                log(f"  >> Reintentando {centro_nombre} en {PAUSA_REINTENTO}s...")
+                time.sleep(PAUSA_REINTENTO)
+                try:
+                    page.goto(WMS_LOGIN, wait_until="load", timeout=TIMEOUT)
+                    page.wait_for_timeout(2000)
+                except Exception:
+                    pass  # si el reset falla, procesar_centro hará su propio goto
+                log(f"  >> Reintento {centro_nombre}...")
+                ok = procesar_centro(page, centro_nombre, carpeta_destino)
+                if ok:
+                    log(f"  >> [REINTENTO OK] {centro_nombre}")
+                else:
+                    log(f"  >> [REINTENTO FALLO] {centro_nombre}")
+
             resultados.append((centro_nombre, ok))
 
         browser.close()
