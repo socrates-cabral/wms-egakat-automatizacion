@@ -1,7 +1,10 @@
 """
-run_todos.py — v1.6
+run_todos.py — v1.7
 Orquestador WMS Egakat: ejecuta los módulos en secuencia y envía notificación por correo.
 Uso: py run_todos.py
+Cambios v1.7:
+  - Reintento automático de módulos fallidos (1 intento extra con pausa de 60s)
+  - Estado "REINTENTO_OK" / "REINTENTO_FALLO" en log y JSON para trazabilidad
 Cambios v1.6:
   - JSON para Power Automate incluye tabla_html preformateada (sin loops Apply to each en PA)
   - Ruta OneDrive: "Datos para Dashboard - Notificaciones WMS"
@@ -81,16 +84,12 @@ def log(msg):
         f.write(msg + "\n")
 
 
-def correr_script(nombre, archivo):
-    """Ejecuta un script Python, captura toda su salida al log y retorna (ok, duracion, fallos_internos)."""
-    ruta   = os.path.join(BASE, archivo)
-    inicio = datetime.now()
-    log(f"\n{'='*60}")
-    log(f"  {nombre}")
-    log(f"  Inicio: {inicio.strftime('%H:%M:%S')}")
-    log(f"{'='*60}")
+PAUSA_REINTENTO = 60  # segundos de espera antes de reintentar un módulo fallido
 
-    result = subprocess.run(
+
+def _ejecutar_una_vez(ruta):
+    """Lanza el subprocess y retorna el objeto result."""
+    return subprocess.run(
         [sys.executable, ruta],
         cwd=BASE,
         stdout=subprocess.PIPE,
@@ -100,33 +99,63 @@ def correr_script(nombre, archivo):
         errors="replace",
     )
 
+
+def correr_script(nombre, archivo):
+    """Ejecuta un script Python con 1 reintento automático si falla.
+    Retorna (ok, duracion, fallos_internos, reintentos)."""
+    import time
+    ruta   = os.path.join(BASE, archivo)
+    inicio = datetime.now()
+    log(f"\n{'='*60}")
+    log(f"  {nombre}")
+    log(f"  Inicio: {inicio.strftime('%H:%M:%S')}")
+    log(f"{'='*60}")
+
+    result = _ejecutar_una_vez(ruta)
     if result.stdout:
         for linea in result.stdout.splitlines():
             log(linea)
 
+    ok = (result.returncode == 0)
+    reintentos = 0
+
+    if not ok:
+        log(f"\n  --> [FALLO codigo {result.returncode}] — reintentando en {PAUSA_REINTENTO}s...")
+        time.sleep(PAUSA_REINTENTO)
+        reintentos = 1
+        log(f"\n  --- REINTENTO 1 ---  {datetime.now().strftime('%H:%M:%S')}")
+        result2 = _ejecutar_una_vez(ruta)
+        if result2.stdout:
+            for linea in result2.stdout.splitlines():
+                log(linea)
+        ok = (result2.returncode == 0)
+        estado_reintento = "[REINTENTO_OK]" if ok else "[REINTENTO_FALLO]"
+        log(f"\n  --> {estado_reintento}")
+        result = result2  # usar stdout del reintento para detectar fallos internos
+
     duracion = int((datetime.now() - inicio).total_seconds())
-    ok       = (result.returncode == 0)
-    estado   = "[OK]" if ok else f"[FALLO codigo {result.returncode}]"
+    estado   = "[OK]" if ok else "[FALLO]"
     log(f"\n  --> {estado}  |  Duracion: {duracion}s")
 
-    # Detectar fallos internos (ej: clientes que fallaron dentro de un módulo exitoso)
     fallos_internos = [
         l.strip() for l in (result.stdout or "").splitlines()
         if "[FALLO]" in l and "Errores: 0" not in l
     ]
-    return ok, duracion, fallos_internos
+    return ok, duracion, fallos_internos, reintentos
 
 
 def generar_tabla_html(resultados):
     """Genera HTML de la tabla de módulos. Reutilizado por email Outlook y JSON para PA."""
     filas = ""
-    for nombre, ok, dur, fallos in resultados:
+    for nombre, ok, dur, fallos, reintentos in resultados:
         if not ok:
             icono, bg = "&#10060; FALLO", "#fdecea"
         elif fallos:
             icono, bg = "&#9888;&#65039; PARCIAL", "#fef9e7"
         else:
             icono, bg = "&#9989; OK", "#eafaf1"
+        if reintentos > 0 and ok:
+            icono += " &#8635;"  # ↻ indica que requirió reintento
 
         detalle_fallos = ""
         if fallos:
@@ -179,7 +208,7 @@ def escribir_estado_onedrive(inicio_total, resultados, dur_total, hay_errores):
 
 def construir_email(inicio_total, resultados, dur_total):
     """Construye el HTML completo del correo Outlook. Reutiliza generar_tabla_html()."""
-    hay_errores    = any(not ok or fallos for _, ok, _, fallos in resultados)
+    hay_errores    = any(not ok or fallos for _, ok, _, fallos, _ in resultados)
     estado_general = "&#10060; CON FALLOS" if hay_errores else "&#9989; TODO OK"
     color_header   = "#c0392b" if hay_errores else "#27ae60"
     tabla_html     = generar_tabla_html(resultados)
@@ -215,16 +244,18 @@ def main():
 
     resultados = []
     for nombre, archivo in SCRIPTS:
-        ok, dur, fallos = correr_script(nombre, archivo)
-        resultados.append((nombre, ok, dur, fallos))
+        ok, dur, fallos, reintentos = correr_script(nombre, archivo)
+        resultados.append((nombre, ok, dur, fallos, reintentos))
 
     log("\n" + "=" * 60)
     log("  RESUMEN FINAL")
     log("=" * 60)
     errores = 0
-    for nombre, ok, dur, fallos in resultados:
+    for nombre, ok, dur, fallos, reintentos in resultados:
+        sufijo_reintento = " (reintento exitoso)" if (reintentos > 0 and ok) else \
+                           " (fallo tras reintento)" if (reintentos > 0 and not ok) else ""
         estado = "[OK]" if ok else "[FALLO]"
-        log(f"  {estado}  {nombre}  ({dur // 60}m {dur % 60}s)")
+        log(f"  {estado}  {nombre}  ({dur // 60}m {dur % 60}s){sufijo_reintento}")
         if not ok:
             errores += 1
         for f in fallos:
