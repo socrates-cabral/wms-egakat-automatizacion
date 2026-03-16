@@ -193,6 +193,7 @@ def escribir_estado_onedrive(inicio_total, resultados, dur_total, hay_errores):
     El campo tabla_html contiene el HTML preformateado — PA lo inyecta directo, sin loops."""
     try:
         os.makedirs(ONEDRIVE_NOTIF, exist_ok=True)
+        cuerpo_html, _ = construir_email(inicio_total, resultados, dur_total)
         payload = {
             "fecha":          inicio_total.strftime("%d/%m/%Y"),
             "hora_inicio":    inicio_total.strftime("%H:%M:%S"),
@@ -200,7 +201,7 @@ def escribir_estado_onedrive(inicio_total, resultados, dur_total, hay_errores):
             "resultado":      "CON_FALLOS" if hay_errores else "OK",
             "n_modulos":      len(resultados),
             "log":            LOGFILE,
-            "tabla_html":     generar_tabla_html(resultados),
+            "email_html":     cuerpo_html,
         }
         nombre_archivo = f"notificacion_{inicio_total.strftime('%Y%m%d_%H%M%S')}.json"
         ruta = os.path.join(ONEDRIVE_NOTIF, nombre_archivo)
