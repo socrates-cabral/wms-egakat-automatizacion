@@ -171,7 +171,7 @@ def generar_tabla_html(resultados):
           <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;text-align:right">{dur // 60}m {dur % 60}s</td>
         </tr>"""
 
-    return f"""<table style="border-collapse:collapse;width:100%">
+    return f"""<table style="border-collapse:collapse;width:600px;max-width:100%">
       <thead>
         <tr style="background:#2c3e50;color:#fff">
           <th style="padding:10px 12px;text-align:left;font-family:Calibri">M&oacute;dulo</th>
