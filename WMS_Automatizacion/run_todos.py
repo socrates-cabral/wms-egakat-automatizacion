@@ -166,17 +166,22 @@ def generar_tabla_html(resultados):
 
         filas += f"""
         <tr style="background:{bg}">
-          <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px">{nombre}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;font-weight:bold">{icono}{detalle_fallos}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;text-align:right">{dur // 60}m {dur % 60}s</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;width:55%">{nombre}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;font-weight:bold;width:28%">{icono}{detalle_fallos}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;text-align:right;width:17%;white-space:nowrap">{dur // 60}m {dur % 60}s</td>
         </tr>"""
 
-    return f"""<table style="border-collapse:collapse;width:600px;max-width:100%">
+    return f"""<table style="border-collapse:collapse;width:100%;max-width:560px;table-layout:fixed">
+      <colgroup>
+        <col style="width:55%">
+        <col style="width:28%">
+        <col style="width:17%">
+      </colgroup>
       <thead>
         <tr style="background:#2c3e50;color:#fff">
-          <th style="padding:10px 12px;text-align:left;font-family:Calibri">M&oacute;dulo</th>
-          <th style="padding:10px 12px;text-align:left;font-family:Calibri">Estado</th>
-          <th style="padding:10px 12px;text-align:right;font-family:Calibri">Duraci&oacute;n</th>
+          <th style="padding:10px 12px;text-align:left;font-family:Calibri;font-size:13px">M&oacute;dulo</th>
+          <th style="padding:10px 12px;text-align:left;font-family:Calibri;font-size:13px">Estado</th>
+          <th style="padding:10px 12px;text-align:right;font-family:Calibri;font-size:13px">Duraci&oacute;n</th>
         </tr>
       </thead>
       <tbody>{filas}</tbody>
@@ -214,22 +219,22 @@ def construir_email(inicio_total, resultados, dur_total):
     tabla_html     = generar_tabla_html(resultados)
 
     html = f"""
-    <html><body style="font-family:Calibri,Arial,sans-serif;font-size:14px;color:#222;margin:0;padding:0">
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr><td style="background:{color_header};padding:18px 24px">
-        <span style="color:#fff;font-size:20px;font-weight:bold">WMS Egakat &mdash; Descarga Diaria</span><br>
-        <span style="color:#fff;font-size:15px">{estado_general} &nbsp;|&nbsp; {inicio_total.strftime('%d/%m/%Y')}</span>
-      </td></tr>
-      <tr><td style="padding:20px 24px">
+    <html><body style="margin:0;padding:16px;background:#f4f4f4;font-family:Calibri,Arial,sans-serif">
+    <div style="max-width:620px;margin:0 auto;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.1)">
+      <div style="background:{color_header};padding:16px 20px">
+        <span style="color:#fff;font-size:18px;font-weight:bold">WMS Egakat &mdash; Descarga Diaria</span><br>
+        <span style="color:#fff;font-size:14px">{estado_general} &nbsp;|&nbsp; {inicio_total.strftime('%d/%m/%Y')}</span>
+      </div>
+      <div style="padding:20px">
         {tabla_html}
-        <p style="margin-top:16px;color:#555;font-size:13px">
+        <p style="margin-top:14px;color:#555;font-size:12px;border-top:1px solid #eee;padding-top:10px">
           &#128336; Inicio: {inicio_total.strftime('%H:%M:%S')} &nbsp;|&nbsp;
           Duraci&oacute;n total: {dur_total // 60}m {dur_total % 60}s &nbsp;|&nbsp;
           M&oacute;dulos: {len(resultados)}
         </p>
-        <p style="color:#888;font-size:12px">Log: {LOGFILE}</p>
-      </td></tr>
-    </table>
+        <p style="color:#aaa;font-size:11px;margin-top:4px">&#128196; Log: {LOGFILE}</p>
+      </div>
+    </div>
     </body></html>"""
     return html, hay_errores
 
