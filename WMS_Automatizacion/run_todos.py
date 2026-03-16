@@ -219,22 +219,30 @@ def construir_email(inicio_total, resultados, dur_total):
     tabla_html     = generar_tabla_html(resultados)
 
     html = f"""
-    <html><body style="margin:0;padding:16px;background:#f4f4f4;font-family:Calibri,Arial,sans-serif">
-    <div style="max-width:620px;margin:0 auto;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.1)">
-      <div style="background:{color_header};padding:16px 20px">
-        <span style="color:#fff;font-size:18px;font-weight:bold">WMS Egakat &mdash; Descarga Diaria</span><br>
-        <span style="color:#fff;font-size:14px">{estado_general} &nbsp;|&nbsp; {inicio_total.strftime('%d/%m/%Y')}</span>
-      </div>
-      <div style="padding:20px">
-        {tabla_html}
-        <p style="margin-top:14px;color:#555;font-size:12px;border-top:1px solid #eee;padding-top:10px">
-          &#128336; Inicio: {inicio_total.strftime('%H:%M:%S')} &nbsp;|&nbsp;
-          Duraci&oacute;n total: {dur_total // 60}m {dur_total % 60}s &nbsp;|&nbsp;
-          M&oacute;dulos: {len(resultados)}
-        </p>
-        <p style="color:#aaa;font-size:11px;margin-top:4px">&#128196; Log: {LOGFILE}</p>
-      </div>
-    </div>
+    <html><body style="margin:0;padding:0;background:#f4f4f4;font-family:Calibri,Arial,sans-serif">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4">
+      <tr><td align="center" style="padding:16px">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:6px;border:1px solid #ddd">
+          <tr>
+            <td style="background:{color_header};padding:16px 20px;border-radius:6px 6px 0 0">
+              <span style="color:#fff;font-size:18px;font-weight:bold">WMS Egakat &mdash; Descarga Diaria</span><br>
+              <span style="color:#fff;font-size:14px">{estado_general} &nbsp;|&nbsp; {inicio_total.strftime('%d/%m/%Y')}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px">
+              {tabla_html}
+              <p style="margin-top:14px;color:#555;font-size:12px;border-top:1px solid #eee;padding-top:10px">
+                &#128336; Inicio: {inicio_total.strftime('%H:%M:%S')} &nbsp;|&nbsp;
+                Duraci&oacute;n total: {dur_total // 60}m {dur_total % 60}s &nbsp;|&nbsp;
+                M&oacute;dulos: {len(resultados)}
+              </p>
+              <p style="color:#aaa;font-size:11px;margin-top:4px">&#128196; Log: {LOGFILE}</p>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>
     </body></html>"""
     return html, hay_errores
 
