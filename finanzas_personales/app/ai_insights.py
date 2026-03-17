@@ -89,6 +89,9 @@ def _claude_personal(prompt_usuario: str, nivel: str = "senior") -> str:
             nivel=nivel,
         )
     except Exception as e:
+        err = str(e)
+        if "credit balance" in err or "insufficient" in err or "402" in err:
+            return "⚠️ **Análisis AI no disponible** — recarga saldo en [console.anthropic.com](https://console.anthropic.com)"
         return f"_Error al consultar el agente: {e}_"
 
 

@@ -57,6 +57,7 @@ from debt_manager import (
     proyeccion_pago, alertas_tmc, parsear_informe_cmf, obtener_tmc_cmf,
     INSTITUCIONES, TIPOS_DEUDA,
 )
+from streamlit_option_menu import option_menu
 from bank_scraper import (
     scrape_bancoestado, scrape_bancoestado_visible, scrape_bci,
     cargar_excel_manual,
@@ -126,26 +127,21 @@ div[data-testid="stSidebar"] > div { padding-top: 0 !important; }
     line-height: 1 !important;
 }
 
-/* Radio items: collapse default Streamlit spacing */
-div[data-testid="stSidebar"] .stRadio { margin: 0 !important; }
-div[data-testid="stSidebar"] .stRadio > div { gap: 0 !important; }
-div[data-testid="stSidebar"] [role="radiogroup"] { gap: 1px !important; }
-
-/* Section labels via ::before positioned above items 1, 5, 8 */
-div[data-testid="stSidebar"] [role="radiogroup"] > label:nth-child(1),
-div[data-testid="stSidebar"] [role="radiogroup"] > label:nth-child(5),
-div[data-testid="stSidebar"] [role="radiogroup"] > label:nth-child(8) {
-    margin-top: 22px !important;
+/* ── option_menu: section labels via ::before ─────────────────────────────── */
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(1),
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(5),
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(8) {
+    margin-top: 24px !important;
     position: relative !important;
 }
-div[data-testid="stSidebar"] [role="radiogroup"] > label:nth-child(1)::before { content: "ANÁLISIS"; }
-div[data-testid="stSidebar"] [role="radiogroup"] > label:nth-child(5)::before { content: "PATRIMONIO"; }
-div[data-testid="stSidebar"] [role="radiogroup"] > label:nth-child(8)::before { content: "HERRAMIENTAS"; }
-div[data-testid="stSidebar"] [role="radiogroup"] > label:nth-child(1)::before,
-div[data-testid="stSidebar"] [role="radiogroup"] > label:nth-child(5)::before,
-div[data-testid="stSidebar"] [role="radiogroup"] > label:nth-child(8)::before {
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(1)::before { content: "ANÁLISIS"; }
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(5)::before { content: "PATRIMONIO"; }
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(8)::before { content: "HERRAMIENTAS"; }
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(1)::before,
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(5)::before,
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(8)::before {
     position: absolute !important;
-    top: -17px !important;
+    top: -18px !important;
     left: 14px !important;
     color: #2d3f55 !important;
     font-size: 0.6rem !important;
@@ -153,45 +149,6 @@ div[data-testid="stSidebar"] [role="radiogroup"] > label:nth-child(8)::before {
     letter-spacing: 0.14em !important;
     text-transform: uppercase !important;
     line-height: 1 !important;
-}
-
-/* Each radio label = nav item */
-div[data-testid="stSidebar"] [role="radiogroup"] label {
-    padding: 7px 10px 7px 12px !important;
-    margin: 1px 6px !important;
-    border-radius: 6px !important;
-    border-left: 2.5px solid transparent !important;
-    color: #475569 !important;
-    font-size: 0.84rem !important;
-    font-weight: 500 !important;
-    transition: all 0.15s ease !important;
-    width: calc(100% - 12px) !important;
-    cursor: pointer !important;
-}
-div[data-testid="stSidebar"] [role="radiogroup"] label:hover {
-    background: rgba(20,184,166,0.06) !important;
-    color: #94A3B8 !important;
-    border-left-color: #1a3535 !important;
-}
-div[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {
-    background: rgba(20,184,166,0.09) !important;
-    border-left-color: #14b8a6 !important;
-    color: #14b8a6 !important;
-    font-weight: 600 !important;
-}
-
-/* Radio dot: shrink and teal on active */
-div[data-testid="stSidebar"] [role="radiogroup"] div[role="radio"] {
-    border-color: #1e3a38 !important;
-    width: 10px !important;
-    height: 10px !important;
-    min-width: 10px !important;
-    margin-right: 8px !important;
-    flex-shrink: 0 !important;
-}
-div[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) div[role="radio"] {
-    border-color: #14b8a6 !important;
-    background: #14b8a6 !important;
 }
 
 /* Sidebar button (Recargar) override */
@@ -279,6 +236,21 @@ details summary { color: #CBD5E1 !important; font-weight: 600 !important; }
 hr { border-color: #1E293B !important; }
 .stCaption, small { color: #64748B !important; }
 [data-testid="stAlert"] { border-radius: 8px !important; }
+
+/* ── Tablas BI ────────────────────────────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    border: 1px solid #1E293B !important;
+    background: #1E293B !important;
+}
+[data-testid="stDataFrame"] > div > div {
+    background: #1E293B !important;
+}
+/* Scrollbar dark */
+[data-testid="stDataFrame"] ::-webkit-scrollbar { height: 4px; width: 4px; }
+[data-testid="stDataFrame"] ::-webkit-scrollbar-track { background: #0F172A; }
+[data-testid="stDataFrame"] ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -286,32 +258,89 @@ hr { border-color: #1E293B !important; }
 init_config()
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
+# ── Helper tablas BI ─────────────────────────────────────────────────────────
+def _bi_table(df: "pd.DataFrame", money_cols: list = None, pct_cols: list = None,
+               neg_col: str = None, height: int = None):
+    """st.dataframe con column_config BI: moneda CLP, porcentajes, highlight."""
+    if df is None or df.empty:
+        st.info("Sin datos disponibles.")
+        return
+    cfg = {}
+    for c in (money_cols or []):
+        if c in df.columns:
+            cfg[c] = st.column_config.NumberColumn(c, format="$ %,.0f")
+    for c in (pct_cols or []):
+        if c in df.columns:
+            cfg[c] = st.column_config.NumberColumn(c, format="%.1f %%")
+    kw = {"use_container_width": True, "hide_index": True}
+    if height:
+        kw["height"] = height
+    if cfg:
+        kw["column_config"] = cfg
+    st.dataframe(df, **kw)
+
+
+_OPT_MAP = {
+    "Dashboard":       "📊 Dashboard",
+    "Mis Ingresos":    "📋 Mis Ingresos",
+    "Mes Detalle":     "📅 Mes Detalle",
+    "Anual":           "📈 Anual",
+    "Patrimonio Neto": "💎 Patrimonio Neto",
+    "Deudas":          "🏦 Deudas",
+    "AFP y Previsión": "🏛️ AFP y Previsión",
+    "Liquidaciones":   "📄 Liquidaciones",
+    "Simulador":       "🎯 Simulador",
+    "Ajustes":         "⚙️ Ajustes",
+}
+
 with st.sidebar:
-    st.markdown(
-        '<div class="sb-brand">'
-        '<span style="font-size:1.4rem">💰</span>'
-        '<div><div class="sb-title">MIS FINANZAS</div>'
-        '<div class="sb-sub">v1.0 · Puerto 8503</div></div>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-    pagina = st.radio(
-        "",
-        options=[
-            "📊 Dashboard",
-            "📋 Mis Ingresos",
-            "📅 Mes Detalle",
-            "📈 Anual",
-            "💎 Patrimonio Neto",
-            "🏦 Deudas",
-            "🏛️ AFP y Previsión",
-            "📄 Liquidaciones",
-            "🎯 Simulador",
-            "⚙️ Ajustes",
+    _sel = option_menu(
+        menu_title="💰 MIS FINANZAS",
+        options=list(_OPT_MAP.keys()),
+        icons=[
+            "bar-chart-fill", "cash-coin", "calendar3", "graph-up-arrow",
+            "gem", "credit-card-2-front", "bank",
+            "file-text", "bullseye", "gear",
         ],
-        label_visibility="collapsed",
+        menu_icon="wallet2",
+        default_index=0,
+        styles={
+            "container": {
+                "background-color": "#080E1A",
+                "padding": "0 0 8px 0",
+            },
+            "menu-title": {
+                "color": "#E2E8F0",
+                "font-size": "0.95rem",
+                "font-weight": "700",
+                "padding": "18px 16px 12px",
+                "border-bottom": "1px solid #0d2228",
+                "margin-bottom": "4px",
+            },
+            "icon": {
+                "color": "#475569",
+                "font-size": "0.9rem",
+            },
+            "nav-link": {
+                "color": "#475569",
+                "font-size": "0.84rem",
+                "font-weight": "500",
+                "padding": "7px 10px 7px 14px",
+                "margin": "1px 6px",
+                "border-radius": "6px",
+                "border-left": "2.5px solid transparent",
+            },
+            "nav-link-selected": {
+                "color": "#14b8a6",
+                "background-color": "rgba(20,184,166,0.09)",
+                "border-left": "2.5px solid #14b8a6",
+                "font-weight": "600",
+            },
+        },
     )
-    st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
+    pagina = _OPT_MAP.get(_sel, "📊 Dashboard")
+
+    st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
     if st.button("🔄 Recargar Excel", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
@@ -750,9 +779,8 @@ elif pagina == "📅 Mes Detalle":
     df_mostrar = df_mes if grupo_filtro == "Todos" else df_mes[df_mes["grupo"] == grupo_filtro]
     df_tabla = df_mostrar[["fecha", "grupo", "concepto", "detalle", "importe"]].copy()
     df_tabla["fecha"] = df_tabla["fecha"].dt.strftime("%d/%m/%Y").fillna("")
-    df_tabla["importe"] = df_tabla["importe"].apply(fmt_clp)
     df_tabla.columns = ["Fecha", "Grupo", "Concepto", "Detalle", "Importe"]
-    st.dataframe(df_tabla, use_container_width=True, hide_index=True)
+    _bi_table(df_tabla, money_cols=["Importe"], height=400)
 
     # Total filtrado
     total_filtrado = df_mostrar["importe"].sum()
@@ -808,7 +836,7 @@ elif pagina == "📈 Anual":
             # Formatear
             for col in cols_meses:
                 df_show[col] = df_show[col].apply(lambda v: fmt_clp(v) if v > 0 else "-")
-            st.dataframe(df_show, use_container_width=True)
+            _bi_table(df_show, height=380)
     except Exception as e:
         st.caption(f"Resumen anual no disponible: {e}")
 
@@ -1610,12 +1638,23 @@ elif pagina == "⚙️ Ajustes":
             key=f"uploader_be_{tipo_sel}",
             label_visibility="collapsed",
         )
+        _res_key = f"_be_upload_result_{tipo_sel}"
         if archivo_be:
-            res_manual = cargar_excel_manual(archivo_be.read(), tipo_cuenta=_tipos_label[tipo_sel])
-            if res_manual["ok"]:
-                st.success(f"✅ {res_manual['nuevos']} nuevos movimientos ({_tipos_label[tipo_sel]}) | {res_manual['total']} en archivo")
+            _nombre = archivo_be.name
+            if st.session_state.get(f"_be_last_{tipo_sel}") != _nombre:
+                with st.spinner("Procesando Excel..."):
+                    try:
+                        _res = cargar_excel_manual(archivo_be.read(), tipo_cuenta=_tipos_label[tipo_sel])
+                    except Exception as _ex:
+                        _res = {"ok": False, "error": str(_ex), "total": 0, "nuevos": 0}
+                st.session_state[_res_key] = _res
+                st.session_state[f"_be_last_{tipo_sel}"] = _nombre
+        if _res_key in st.session_state:
+            _r = st.session_state[_res_key]
+            if _r["ok"]:
+                st.success(f"✅ **{_r['nuevos']} nuevos** movimientos importados | {_r['total']} en archivo")
             else:
-                st.error(f"❌ {res_manual['error']}")
+                st.error(f"❌ Error: {_r['error']}")
 
         st.markdown("---")
 

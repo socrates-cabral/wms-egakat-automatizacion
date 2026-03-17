@@ -29,17 +29,36 @@ _FONT_CLR = "#94A3B8"
 _TITLE_CLR= "#CBD5E1"
 
 _LAYOUT_BASE = dict(
-    font=dict(family="Inter, Segoe UI, Arial, sans-serif", size=12, color=_FONT_CLR),
-    paper_bgcolor=_BG_CARD,
-    plot_bgcolor=_BG_CARD,
-    margin=dict(l=16, r=16, t=44, b=16),
+    font=dict(family="Inter, Segoe UI, Arial, sans-serif", size=13, color=_FONT_CLR),
+    paper_bgcolor="#1E293B",
+    plot_bgcolor="#1E293B",
+    margin=dict(l=20, r=20, t=48, b=20),
     colorway=COLORES_GRUPOS,
+    separators=",.",
     legend=dict(
         bgcolor="rgba(0,0,0,0)",
         font=dict(color=_FONT_CLR, size=11),
         orientation="h",
         yanchor="bottom", y=1.02,
-        xanchor="right",  x=1,
+        xanchor="right", x=1,
+    ),
+    hoverlabel=dict(
+        bgcolor="#0F172A",
+        font=dict(family="Inter, Segoe UI, Arial", size=12, color="#E2E8F0"),
+        bordercolor="#334155",
+    ),
+    xaxis=dict(
+        gridcolor="#1a2535",
+        tickfont=dict(color=_FONT_CLR, size=11),
+        linecolor="#334155",
+        zerolinecolor="#334155",
+    ),
+    yaxis=dict(
+        gridcolor="#1a2535",
+        tickfont=dict(color=_FONT_CLR, size=11),
+        linecolor="#334155",
+        zerolinecolor="#334155",
+        tickformat=",.0f",
     ),
 )
 
@@ -67,7 +86,11 @@ def chart_barras_gastos_mes(df_mes: pd.DataFrame) -> go.Figure:
             x=top["importe"],
             y=top["grupo"],
             orientation="h",
-            marker_color=COLOR_SECUNDARIO,
+            marker=dict(
+                color=top["importe"],
+                colorscale=[[0, "#6366F1"], [1, "#14b8a6"]],
+                line=dict(width=0),
+            ),
             text=[fmt_clp(v) for v in top["importe"]],
             textposition="outside",
             hovertemplate="%{y}: %{text}<extra></extra>",
@@ -77,8 +100,6 @@ def chart_barras_gastos_mes(df_mes: pd.DataFrame) -> go.Figure:
         title=dict(text="Top 10 Grupos de Gasto", font=dict(color=_TITLE_CLR, size=14)),
         xaxis_title="",
         yaxis_title="",
-        xaxis=dict(tickformat=",.0f", gridcolor=_GRID_CLR, tickfont=dict(color=_FONT_CLR)),
-        yaxis=dict(gridcolor=_GRID_CLR, tickfont=dict(color=_FONT_CLR)),
         **_LAYOUT_BASE,
     )
     return fig
@@ -110,7 +131,6 @@ def chart_dona_tipos(por_tipo: dict) -> go.Figure:
     )
     fig.update_layout(
         title="Distribución por Tipo",
-        separators=",.",
         **_LAYOUT_BASE,
     )
     return fig
@@ -129,8 +149,10 @@ def chart_evolucion_mensual(df: pd.DataFrame) -> go.Figure:
             x=evol["mes_nombre"],
             y=evol["importe"],
             mode="lines+markers+text",
-            line=dict(color=COLOR_BRAND, width=3),
+            line=dict(color="#14b8a6", width=3),
             marker=dict(size=8),
+            fill="tozeroy",
+            fillcolor="rgba(20,184,166,0.08)",
             text=[fmt_clp(v) for v in evol["importe"]],
             textposition="top center",
             hovertemplate="%{x}: %{text}<extra></extra>",
@@ -140,7 +162,6 @@ def chart_evolucion_mensual(df: pd.DataFrame) -> go.Figure:
         title="Evolución de Gastos Mensual",
         xaxis_title="",
         yaxis_title="CLP",
-        yaxis=dict(tickformat=",.0f"),
         **_LAYOUT_BASE,
     )
     return fig
@@ -182,8 +203,7 @@ def chart_50_30_20(regla_dict: dict) -> go.Figure:
     fig.update_layout(
         title="Regla 50/30/20",
         barmode="group",
-        yaxis=dict(tickformat=",.0f"),
-        separators=",.",
+        bargap=0.3,
         **_LAYOUT_BASE,
     )
     return fig
@@ -228,7 +248,6 @@ def chart_patrimonio_waterfall(activos: dict, pasivos: dict) -> go.Figure:
     )
     fig.update_layout(
         title="Waterfall Patrimonio Neto",
-        yaxis=dict(tickformat=",.0f"),
         **_LAYOUT_BASE,
     )
     return fig
@@ -245,7 +264,7 @@ def chart_afp_proyeccion(saldos_listas: List[List[float]], anos_lista: List[int]
             y=saldos,
             mode="lines",
             name=etiqueta,
-            line=dict(color=colores_esc[i % len(colores_esc)], width=2),
+            line=dict(color=colores_esc[i % len(colores_esc)], width=2.5),
             fill="tozeroy" if i == 0 else "tonexty",
             fillcolor=f"rgba({','.join(str(int(c*255)) for c in px.colors.hex_to_rgb(colores_esc[i % len(colores_esc)].lstrip('#'))[:3])}, 0.1)",
             hovertemplate=f"{etiqueta} - Año %{{x}}: %{{y:,.0f}}<extra></extra>",
@@ -254,8 +273,6 @@ def chart_afp_proyeccion(saldos_listas: List[List[float]], anos_lista: List[int]
         title="Proyección AFP — 3 Escenarios",
         xaxis_title="Años desde hoy",
         yaxis_title="Saldo CLP",
-        yaxis=dict(tickformat=",.0f"),
-        separators=",.",
         **_LAYOUT_BASE,
     )
     return fig
@@ -272,7 +289,7 @@ def chart_ingresos_vs_gastos(
         name="Ingresos",
         x=meses_lista,
         y=ingresos_lista,
-        marker_color=COLOR_BRAND,
+        marker_color="#14b8a6",
         text=[fmt_clp(v) for v in ingresos_lista],
         textposition="outside",
     ))
@@ -280,15 +297,14 @@ def chart_ingresos_vs_gastos(
         name="Gastos",
         x=meses_lista,
         y=gastos_lista,
-        marker_color=COLOR_NEGATIVO,
+        marker_color="#F43F5E",
         text=[fmt_clp(v) for v in gastos_lista],
         textposition="outside",
     ))
     fig.update_layout(
         title="Ingresos vs Gastos por Mes",
         barmode="group",
-        yaxis=dict(tickformat=",.0f"),
-        separators=",.",
+        bargap=0.25,
         **_LAYOUT_BASE,
     )
     return fig
@@ -318,8 +334,7 @@ def chart_barras_apiladas_grupos(df: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title="Gastos por Grupo y Mes",
         barmode="stack",
-        yaxis=dict(tickformat=",.0f"),
-        separators=",.",
+        bargap=0.2,
         **_LAYOUT_BASE,
     )
     return fig
