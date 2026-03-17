@@ -34,7 +34,8 @@ import json
 from datetime import datetime
 from dotenv import load_dotenv
 
-sys.stdout.reconfigure(encoding="utf-8")
+if sys.stdout:
+    sys.stdout.reconfigure(encoding="utf-8")
 load_dotenv()
 
 # ─── Scripts a ejecutar (en orden) ──────────────────────────────────

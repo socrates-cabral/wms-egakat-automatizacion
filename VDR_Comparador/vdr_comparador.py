@@ -26,7 +26,8 @@ import openpyxl
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.utils import get_column_letter
 
-sys.stdout.reconfigure(encoding="utf-8")
+if sys.stdout:
+    sys.stdout.reconfigure(encoding="utf-8")
 
 # ─── CONFIGURACION ────────────────────────────────────────────────────────────
 

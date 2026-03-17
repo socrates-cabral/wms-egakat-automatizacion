@@ -14,17 +14,20 @@ def calc_ingresos_totales(liquido: float, amipass: float = 0, otros: float = 0) 
 def calc_resumen_mes(df: pd.DataFrame, mes: int) -> dict:
     """
     Retorna resumen del mes dado.
-    {por_grupo: {grupo: total}, total: float, por_tipo: {tipo: total}}
+    {por_grupo: {grupo: total}, total: float, por_tipo: {tipo: total}, ingresos: float}
+    total solo cuenta Gastos (no Ingresos) para no inflar el KPI de gastos.
     """
     df_mes = df[df["mes"] == mes].copy()
     if df_mes.empty:
-        return {"por_grupo": {}, "total": 0.0, "por_tipo": {}}
-    por_grupo = df_mes.groupby("grupo")["importe"].sum().to_dict()
-    total = df_mes["importe"].sum()
-    por_tipo = {}
-    if "tipo" in df_mes.columns:
-        por_tipo = df_mes.groupby("tipo")["importe"].sum().to_dict()
-    return {"por_grupo": por_grupo, "total": total, "por_tipo": por_tipo}
+        return {"por_grupo": {}, "total": 0.0, "por_tipo": {}, "ingresos": 0.0}
+    col_tipo = "tipo_tx" if "tipo_tx" in df_mes.columns else "tipo"
+    df_gastos  = df_mes[df_mes[col_tipo] != "Ingreso"] if col_tipo in df_mes.columns else df_mes
+    df_ingresos = df_mes[df_mes[col_tipo] == "Ingreso"] if col_tipo in df_mes.columns else pd.DataFrame()
+    por_grupo = df_gastos.groupby("grupo")["importe"].sum().to_dict()
+    total     = df_gastos["importe"].sum()
+    ingresos  = df_ingresos["importe"].sum() if not df_ingresos.empty else 0.0
+    por_tipo  = df_mes.groupby(col_tipo)["importe"].sum().to_dict() if col_tipo in df_mes.columns else {}
+    return {"por_grupo": por_grupo, "total": total, "por_tipo": por_tipo, "ingresos": ingresos}
 
 
 def calc_tasa_ahorro(ingresos: float, gastos: float) -> dict:

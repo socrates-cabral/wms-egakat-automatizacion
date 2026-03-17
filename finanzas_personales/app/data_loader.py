@@ -43,11 +43,98 @@ def _load_workbook(ruta: Path = None):
     return openpyxl.load_workbook(str(ruta), data_only=True, keep_vba=True)
 
 
+def _detectar_formato(wb) -> str:
+    """Detecta formato: 'nuevo' (hoja Transacciones) o 'antiguo' (hojas mensuales)."""
+    if "Transacciones" in wb.sheetnames:
+        return "nuevo"
+    for hoja in wb.sheetnames:
+        if hoja in MESES_MAP:
+            return "antiguo"
+    return "desconocido"
+
+
+def _cargar_tx_nuevo(wb) -> pd.DataFrame:
+    """Lee formato nuevo: hoja Transacciones — headers en fila 1, Tipo en col B."""
+    if "Transacciones" not in wb.sheetnames:
+        return pd.DataFrame()
+    ws = wb["Transacciones"]
+    headers_raw = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
+    headers = [str(h).strip().lower() if h else "" for h in headers_raw]
+
+    # Find column indices flexibly
+    def _col(names):
+        for n in names:
+            for i, h in enumerate(headers):
+                if n in h:
+                    return i
+        return None
+
+    idx_fecha    = _col(["fecha"])
+    idx_tipo     = _col(["tipo"])
+    idx_grupo    = _col(["grupo"])
+    idx_concepto = _col(["concepto"])
+    idx_detalle  = _col(["detalle"])
+    idx_importe  = _col(["importe", "monto", "valor"])
+    idx_cuenta   = _col(["cuenta"])
+
+    if idx_importe is None:
+        return pd.DataFrame()
+
+    filas = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or all(v is None for v in row):
+            continue
+
+        def _get(idx):
+            return row[idx] if idx is not None and idx < len(row) else None
+
+        importe = _get(idx_importe)
+        if not isinstance(importe, (int, float)) or importe <= 0:
+            continue
+
+        tipo = str(_get(idx_tipo) or "Gasto").strip()
+        fecha_raw = _get(idx_fecha)
+        fecha = fecha_raw if isinstance(fecha_raw, datetime) else None
+        mes_num = fecha.month if fecha else 1
+
+        filas.append({
+            "mes": mes_num,
+            "mes_nombre": NOMBRES_MESES.get(mes_num, ""),
+            "tipo_tx": tipo,
+            "grupo": str(_get(idx_grupo) or "Varios y Otros").strip(),
+            "concepto": str(_get(idx_concepto) or "").strip(),
+            "fecha": fecha,
+            "detalle": str(_get(idx_detalle) or "").strip(),
+            "importe": float(importe),
+            "cuenta": str(_get(idx_cuenta) or "").strip(),
+        })
+
+    if not filas:
+        return pd.DataFrame(columns=["mes", "mes_nombre", "tipo_tx", "grupo", "concepto",
+                                      "fecha", "detalle", "importe", "cuenta"])
+    df = pd.DataFrame(filas)
+    df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
+    return df
+
+
 @st.cache_data(ttl=300)
 def cargar_transacciones(ruta_str: str = None) -> pd.DataFrame:
-    """Carga todas las transacciones del año desde las hojas mensuales."""
+    """Carga todas las transacciones del año. Detecta formato automáticamente:
+    - 'nuevo': hoja Transacciones (Plantilla_FinanzasPersonales.xlsx)
+    - 'antiguo': hojas mensuales (Plantilla-para-controlar-gastos.xlsm)
+    Retorna DataFrame unificado con columna tipo_tx.
+    """
     ruta = Path(ruta_str) if ruta_str else _get_excel_path()
     wb = _load_workbook(ruta)
+    fmt = _detectar_formato(wb)
+
+    if fmt == "nuevo":
+        df = _cargar_tx_nuevo(wb)
+        if "tipo_tx" not in df.columns:
+            df["tipo_tx"] = "Gasto"
+        return df
+
+    # Formato antiguo: hojas mensuales
     filas = []
     for hoja, num_mes in MESES_MAP.items():
         if hoja not in wb.sheetnames:
@@ -60,24 +147,31 @@ def cargar_transacciones(ruta_str: str = None) -> pd.DataFrame:
             grupo, concepto, fecha, detalle, importe = (
                 row[1], row[2], row[3], row[4], row[5]
             )
+            # Algunos meses tienen cols B y C intercambiadas — intentar swap antes de descartar
+            if grupo is None and concepto is not None:
+                grupo, concepto = concepto, grupo
             if grupo is None:
                 continue
             if not isinstance(importe, (int, float)):
                 continue
-            if importe <= 0:
+            if importe == 0:
                 continue
+            # Convención: IMPORTE negativo = Ingreso (resta del SUMA → aumenta saldo)
+            tipo_tx = "Ingreso" if importe < 0 else "Gasto"
             filas.append({
                 "mes": num_mes,
                 "mes_nombre": NOMBRES_MESES[num_mes],
+                "tipo_tx": tipo_tx,
                 "grupo": str(grupo).strip(),
                 "concepto": str(concepto).strip() if concepto else "",
                 "fecha": fecha if isinstance(fecha, datetime) else None,
                 "detalle": str(detalle).strip() if detalle else "",
-                "importe": float(importe),
+                "importe": abs(float(importe)),
+                "cuenta": "",
             })
     if not filas:
-        return pd.DataFrame(columns=["mes", "mes_nombre", "grupo", "concepto",
-                                      "fecha", "detalle", "importe"])
+        return pd.DataFrame(columns=["mes", "mes_nombre", "tipo_tx", "grupo", "concepto",
+                                      "fecha", "detalle", "importe", "cuenta"])
     df = pd.DataFrame(filas)
     df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
     return df
@@ -499,3 +593,95 @@ def cargar_gastos_compartidos(ruta_str: str = None) -> dict:
         "total": total_total,
         "por_persona": total_persona,
     }
+
+
+@st.cache_data(ttl=300)
+def cargar_patrimonio_mensual(ruta_str: str = None) -> pd.DataFrame:
+    """Lee hoja Patrimonio del formato nuevo → DataFrame con snapshots mensuales."""
+    ruta = Path(ruta_str) if ruta_str else _get_excel_path()
+    try:
+        wb = _load_workbook(ruta)
+    except Exception:
+        return pd.DataFrame()
+    if "Patrimonio" not in wb.sheetnames:
+        return pd.DataFrame()
+    ws = wb["Patrimonio"]
+    headers_raw = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
+    headers = [str(h).strip() if h else f"col_{i}" for i, h in enumerate(headers_raw)]
+    filas = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or row[0] is None:
+            continue
+        fila = {}
+        for i, h in enumerate(headers):
+            fila[h] = row[i] if i < len(row) else None
+        filas.append(fila)
+    return pd.DataFrame(filas) if filas else pd.DataFrame(columns=headers)
+
+
+@st.cache_data(ttl=300)
+def cargar_inversiones(ruta_str: str = None) -> pd.DataFrame:
+    """
+    Lee hoja 'Inversiones' del Excel.
+    Columnas esperadas: Activo | Ticker_CG | Cantidad | Precio_Compra_CLP | Fecha_Compra
+    Retorna DataFrame vacío si la hoja no existe.
+    """
+    ruta = Path(ruta_str) if ruta_str else _get_excel_path()
+    try:
+        wb = _load_workbook(ruta)
+    except Exception:
+        return pd.DataFrame()
+    if "Inversiones" not in wb.sheetnames:
+        return pd.DataFrame()
+    ws = wb["Inversiones"]
+    rows = list(ws.iter_rows(min_row=1, values_only=True))
+    if len(rows) < 2:
+        return pd.DataFrame()
+    headers = [str(c).strip() if c else f"col{i}" for i, c in enumerate(rows[0])]
+    data = []
+    for row in rows[1:]:
+        if not row or all(c is None for c in row):
+            continue
+        data.append(dict(zip(headers, row)))
+    if not data:
+        return pd.DataFrame()
+    df = pd.DataFrame(data)
+    # Normalizar columnas clave
+    rename = {}
+    for col in df.columns:
+        cl = col.lower().replace(" ", "_")
+        if "activo" in cl:            rename[col] = "activo"
+        elif "ticker" in cl:          rename[col] = "ticker_cg"
+        elif "cantidad" in cl:        rename[col] = "cantidad"
+        elif "precio" in cl and "compra" in cl: rename[col] = "precio_compra_clp"
+        elif "fecha" in cl:           rename[col] = "fecha_compra"
+    df = df.rename(columns=rename)
+    for col in ["activo", "ticker_cg", "cantidad", "precio_compra_clp", "fecha_compra"]:
+        if col not in df.columns:
+            df[col] = None
+    df["cantidad"]          = pd.to_numeric(df["cantidad"], errors="coerce").fillna(0)
+    df["precio_compra_clp"] = pd.to_numeric(df["precio_compra_clp"], errors="coerce").fillna(0)
+    df = df[df["cantidad"] > 0].reset_index(drop=True)
+    return df
+
+
+@st.cache_data(ttl=300)
+def cargar_config_excel(ruta_str: str = None) -> dict:
+    """Lee hoja Config del formato nuevo → dict {parámetro: valor}."""
+    ruta = Path(ruta_str) if ruta_str else _get_excel_path()
+    try:
+        wb = _load_workbook(ruta)
+    except Exception:
+        return {}
+    if "Config" not in wb.sheetnames:
+        return {}
+    ws = wb["Config"]
+    config = {}
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or row[0] is None:
+            continue
+        key = str(row[0]).strip()
+        val = row[1] if len(row) > 1 else None
+        if key and val is not None:
+            config[key] = val
+    return config

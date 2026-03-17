@@ -16,7 +16,8 @@ from email.mime.text import MIMEText
 from datetime import datetime
 from dotenv import load_dotenv
 
-sys.stdout.reconfigure(encoding="utf-8")
+if sys.stdout:
+    sys.stdout.reconfigure(encoding="utf-8")
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
 LOGDIR     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "logs")

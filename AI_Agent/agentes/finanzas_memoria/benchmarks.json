@@ -1,0 +1,75 @@
+{
+  "_actualizados": "2026-03-16T22:06:05.807781",
+  "_fuente": "mindicador.cl + yfinance + CMF API v3 + BCCH SI3",
+  "chile": {
+    "UF": 39841.72,
+    "TPM": 4.5,
+    "USD_CLP": 913.98,
+    "EUR_CLP": 1045.62,
+    "IPC_12M": -0.2,
+    "IPSA": 10584.63,
+    "BCP_5Y_UF": 2.3,
+    "BCP_10Y_UF": 2.7,
+    "swap_camara_360": 4.8
+  },
+  "global": {
+    "fed_funds": 4.5,
+    "UST_2Y": 3.605,
+    "UST_10Y": 4.22,
+    "SP500": 6699.38,
+    "VIX": 23.51,
+    "MSCI_World_PE": 18.5,
+    "MSCI_EM_PE": 12.0,
+    "IG_spread_bps": 110,
+    "HY_spread_bps": 340
+  },
+  "sectorial_chile_pe": {
+    "retail": 16.0,
+    "utilities": 14.0,
+    "mineria": 11.0,
+    "banca": 10.0,
+    "inmobiliario": 18.0,
+    "agroindustria": 13.0
+  },
+  "sectorial_chile_ev_ebitda": {
+    "retail": 8.5,
+    "utilities": 9.0,
+    "mineria": 7.0,
+    "banca": "N/A",
+    "inmobiliario": 12.0,
+    "agroindustria": 7.5
+  },
+  "cmf": {
+    "USD_CLP_oficial": 913.98,
+    "TMC": {
+      "CP_pequeño (<90d, <5kUF)": "49.02% (2026-03-14)",
+      "CP_grande (<90d, >5kUF)": "8.7% (2026-03-14)",
+      "LP_pequeño (>=90d, <50UF)": "29.85% (2026-03-14)",
+      "Reajustable_UF": "6.96% (2026-03-14)",
+      "LP_grande (>=90d, >50UF)": "10.05% (2026-03-14)"
+    },
+    "TMC_fecha": "2026-03-14"
+  },
+  "bcch": {
+    "TPM_BCCH": {
+      "valor": 4.5,
+      "fecha": "16-03-2026"
+    },
+    "IPC_var_mens_BCCH": {
+      "valor": -0.00946499530360256,
+      "fecha": "01-02-2026"
+    },
+    "BCLP_2Y_BCCH": {
+      "valor": 4.94,
+      "fecha": "13-03-2026"
+    },
+    "BCLP_5Y_BCCH": {
+      "valor": 5.17,
+      "fecha": "13-03-2026"
+    },
+    "BCLP_10Y_BCCH": {
+      "valor": 5.46,
+      "fecha": "13-03-2026"
+    }
+  }
+}

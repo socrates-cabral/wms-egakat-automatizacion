@@ -363,8 +363,14 @@ C:\ClaudeWork\finanzas_personales\
 | `Gastos Compartidos` | Desglose vivienda compartida |
 | `Trámites` | ❌ NO LEER — datos trámites Venezuela |
 
+**Filas especiales (hojas mensuales):**
+- Fila 4: Saldo Actual (fórmula F4 — calculado) → leer con `data_only=True`
+- Fila 5: Saldo Inicial (F5 = cuentas + USDT × precio fijo hardcodeado en Excel) → **ignorar F5 para patrimonio; recalcular USDT con precio configurable en Ajustes**
+- Fila 7: Headers | Fila 8+: Transacciones
+
 **Columnas hojas mensuales (fila 8 en adelante):**
 - Col B: GRUPO | Col C: CONCEPTO | Col D: Fecha | Col E: DETALLE | Col F: IMPORTE
+- ⚠️ Algunos meses tienen cols B y C **intercambiadas** → si row[1] es None y row[2] no lo es, hacer swap (ya implementado en data_loader.py)
 
 ## Páginas implementadas (estado al 2026-03-17)
 | Página | Ícono | Estado | Descripción |
@@ -427,71 +433,23 @@ COLOR_MAP = {
 }
 ```
 
-## Mejoras de diseño PENDIENTES (Sprint 2 — 2026-03-17)
-Aplicar en orden de impacto visual:
+## Mejoras de diseño — Estado (2026-03-17)
 
-### P1 — CRÍTICO (rompen la coherencia del tema oscuro)
-**1. Tablas al tema oscuro** — todas las `st.dataframe()` y `st.table()` tienen fondo blanco por defecto. Solución: inyectar CSS global en `main.py`:
-```python
-st.markdown("""<style>
-.stDataFrame { background: transparent !important; }
-.stDataFrame table { background: #111d2e !important; color: #e2e8f0 !important; }
-.stDataFrame thead tr th { background: #0c1422 !important; color: #4a6278 !important;
-    font-size: 11px !important; font-weight: 500 !important; text-transform: uppercase !important;
-    letter-spacing: 0.06em !important; border-bottom: 0.5px solid #1e2d45 !important; }
-.stDataFrame tbody tr td { border-bottom: 0.5px solid #0f1a2a !important; }
-.stDataFrame tbody tr:hover td { background: rgba(20,184,166,0.04) !important; }
-.stDataFrame tbody tr:nth-child(even) td { background: rgba(255,255,255,0.015) !important; }
-[data-testid="stTable"] { background: transparent !important; }
-</style>""", unsafe_allow_html=True)
-```
+### ✅ Aplicadas (Sprint 2)
+1. **Tablas oscuras** — CSS `.stDataFrame table` dark + header uppercase + zebra + hover teal
+2. **COLOR_MAP unificado** — 15 categorías en `charts.py`, usado en barras apiladas y top gastos
+3. **KPI cards con delta** — Gastos muestra `±$X vs [mes anterior]` con `delta_color="inverse"`
+4. **Badges de categoría** — tabla Mes Detalle usa HTML + pills de color via `badge_grupo()` + `.badge-table` CSS
+5. **% en barras Top Gastos** — etiqueta `$521K  37%` + colores semánticos por grupo (sin gradiente)
+6. **Tooltips CLP** — `hovertemplate` en `chart_barras_gastos_mes` y `chart_ingresos_vs_gastos`
+7. **Área rellena Dashboard** — `fill='tozeroy'` con `rgba(20,184,166,0.08)` ya activo
+8. **Semáforo Financiero** — cards oscuras `#111d2e` en lugar de `#f8f9fa`
 
-**2. Paleta Plotly unificada** — definir `COLOR_MAP` (ver arriba) en `charts.py` como constante global y referenciarla en TODOS los gráficos de barras apiladas, horizontales y donas. El gráfico Anual actualmente usa la paleta arcoíris de Plotly (12 colores sin semántica) — reemplazar con `color_discrete_map=COLOR_MAP`.
-
-**3. KPI cards con delta** — en Dashboard y Mes Detalle, calcular variación vs mes anterior y mostrar con `st.metric()` nativo de Streamlit (soporta delta con flecha ▲▼ y color automático verde/rojo):
-```python
-st.metric(label="Gastos Marzo", value="$1.392.078",
-          delta="+$276K vs feb", delta_color="inverse")
-```
-
-### P2 — IMPORTANTE (mejoran legibilidad y presentación)
-**4. Badges de categoría en tabla transacciones** — reemplazar texto plano en columna Grupo por HTML con pill de color:
-```python
-def badge_grupo(grupo):
-    color = COLOR_MAP.get(grupo, '#94a3b8')
-    return f'<span style="background:{color}22;color:{color};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;">{grupo}</span>'
-```
-Usar `st.write(df.to_html(escape=False), unsafe_allow_html=True)` para renderizar.
-
-**5. Tooltip Plotly en formato CLP** — agregar en todos los gráficos:
-```python
-fig.update_traces(hovertemplate='<b>%{y}</b><br>$%{x:,.0f}<extra></extra>')
-# Para barras verticales:
-fig.update_traces(hovertemplate='<b>%{x}</b><br>$%{y:,.0f}<extra></extra>')
-```
-
-### P3 — POLISH (detalles finales)
-**6. Línea Dashboard → área rellena** — cambiar tipo de línea en el gráfico de tendencia de gastos:
-```python
-fig.update_traces(fill='tozeroy',
-                  fillcolor='rgba(20,184,166,0.10)',
-                  line=dict(color='#14b8a6', width=2))
-```
-
-**7. Plotly layout global oscuro** — aplicar en `charts.py` como función helper:
-```python
-def apply_dark_theme(fig):
-    fig.update_layout(
-        paper_bgcolor='#111d2e',
-        plot_bgcolor='#0c1422',
-        font=dict(color='#94a3b8', size=12),
-        xaxis=dict(gridcolor='#1e2d45', zerolinecolor='#1e2d45'),
-        yaxis=dict(gridcolor='#1e2d45', zerolinecolor='#1e2d45'),
-        margin=dict(l=10, r=10, t=30, b=10),
-        legend=dict(bgcolor='#111d2e', bordercolor='#1e2d45', borderwidth=0.5)
-    )
-    return fig
-```
+### 🔜 Pendientes Sprint 3
+- Badges en otras tablas (Anual, Patrimonio)
+- BCI scraper parser Excel
+- ITAÚ scraper
+- Recargar saldo API Anthropic (AI Insights)
 
 ## Dependencias del proyecto
 ```
@@ -506,3 +464,5 @@ py -m pip install streamlit pandas openpyxl plotly python-dotenv requests --brea
 5. `COLOR_MAP` definido en `charts.py` — importar desde ahí, nunca redefinir local
 6. Tipo de cambio USDT configurable en Ajustes — nunca hardcodeado
 7. Indicadores económicos desde `mindicador.cl` — manejar timeout con try/except y mostrar valor N/D si falla
+8. Cols B/C pueden estar intercambiadas en algunos meses → si `row[1]` (grupo) es None y `row[2]` no lo es, hacer swap; implementado en `data_loader.py`
+9. F5 (Saldo Inicial) tiene USDT × precio fijo hardcodeado → **nunca usar F5 para calcular patrimonio**; recalcular siempre con precio actual de Ajustes

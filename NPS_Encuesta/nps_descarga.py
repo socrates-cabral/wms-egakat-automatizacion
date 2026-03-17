@@ -6,7 +6,8 @@ Egakat SPA — Control Management & Continuous Improvement
 """
 
 import sys
-sys.stdout.reconfigure(encoding="utf-8")
+if sys.stdout:
+    sys.stdout.reconfigure(encoding="utf-8")
 
 import os
 import json

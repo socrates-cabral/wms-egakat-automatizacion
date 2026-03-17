@@ -43,6 +43,8 @@ from charts import (
     chart_ingresos_vs_gastos,
     chart_barras_apiladas_grupos,
     fmt_clp,
+    COLOR_MAP,
+    badge_grupo,
 )
 from config_manager import init_config, get_cfg, set_cfg
 from market_data import obtener_indicadores_cached, render_widget_indicadores, precio_usdt_estimado
@@ -130,16 +132,16 @@ div[data-testid="stSidebar"] > div { padding-top: 0 !important; }
 /* ── option_menu: section labels via ::before ─────────────────────────────── */
 div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(1),
 div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(5),
-div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(8) {
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(9) {
     margin-top: 24px !important;
     position: relative !important;
 }
 div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(1)::before { content: "ANÁLISIS"; }
 div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(5)::before { content: "PATRIMONIO"; }
-div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(8)::before { content: "HERRAMIENTAS"; }
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(9)::before { content: "HERRAMIENTAS"; }
 div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(1)::before,
 div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(5)::before,
-div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(8)::before {
+div[data-testid="stSidebar"] ul.nav-pills > li:nth-child(9)::before {
     position: absolute !important;
     top: -18px !important;
     left: 14px !important;
@@ -188,10 +190,24 @@ h3 { color: #94A3B8 !important; font-weight: 600 !important; }
 [data-testid="stMetricDelta"] { font-size: 0.75rem !important; font-weight: 600 !important; }
 [data-testid="stMetricDelta"][data-direction="up"]   { color: #34D399 !important; }
 [data-testid="stMetricDelta"][data-direction="down"] { color: #F43F5E !important; }
+[data-testid="stMetricDelta"][data-direction="off"],
+[data-testid="stMetricDelta"]:not([data-direction]) { color: #94A3B8 !important; }
 
 /* ── Cards ────────────────────────────────────────────────────────────────── */
 [data-testid="stContainer"], div.element-container { border-radius: 8px; }
 div[data-testid="stHorizontalBlock"] { gap: 12px; }
+
+/* ── Widget labels (number_input, text_input, file_uploader, slider) ─────── */
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label,
+[data-testid="stWidgetLabel"],
+.stNumberInput label, .stTextInput label,
+.stFileUploader label, .stSelectbox label,
+.stSlider label, .stTextArea label {
+    color: #94A3B8 !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+}
 
 /* ── Inputs ───────────────────────────────────────────────────────────────── */
 input, textarea, select {
@@ -234,7 +250,7 @@ details summary { color: #CBD5E1 !important; font-weight: 600 !important; }
 .num-negativo  { color: #F43F5E; font-weight: 700; font-variant-numeric: tabular-nums; }
 .num-neutro    { color: #94A3B8; font-weight: 600; font-variant-numeric: tabular-nums; }
 hr { border-color: #1E293B !important; }
-.stCaption, small { color: #64748B !important; }
+.stCaption, small { color: #94A3B8 !important; }
 [data-testid="stAlert"] { border-radius: 8px !important; }
 
 /* ── Tablas BI ────────────────────────────────────────────────────────────── */
@@ -247,10 +263,35 @@ hr { border-color: #1E293B !important; }
 [data-testid="stDataFrame"] > div > div {
     background: #1E293B !important;
 }
+.stDataFrame { background: transparent !important; }
+.stDataFrame table { background: #111d2e !important; color: #e2e8f0 !important; }
+.stDataFrame thead tr th {
+    background: #0c1422 !important; color: #4a6278 !important;
+    font-size: 11px !important; font-weight: 500 !important;
+    text-transform: uppercase !important; letter-spacing: 0.06em !important;
+    border-bottom: 0.5px solid #1e2d45 !important;
+}
+.stDataFrame tbody tr td { border-bottom: 0.5px solid #0f1a2a !important; }
+.stDataFrame tbody tr:hover td { background: rgba(20,184,166,0.04) !important; }
+.stDataFrame tbody tr:nth-child(even) td { background: rgba(255,255,255,0.015) !important; }
+[data-testid="stTable"] { background: transparent !important; }
 /* Scrollbar dark */
 [data-testid="stDataFrame"] ::-webkit-scrollbar { height: 4px; width: 4px; }
 [data-testid="stDataFrame"] ::-webkit-scrollbar-track { background: #0F172A; }
 [data-testid="stDataFrame"] ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+/* ── Tabla HTML con badges (Mes Detalle) ──────────────────────────────────── */
+.badge-table { width:100%; border-collapse:collapse; font-size:13px; }
+.badge-table thead tr th {
+    background:#0c1422 !important; color:#94a3b8;
+    font-size:11px; font-weight:600; text-transform:uppercase;
+    letter-spacing:0.07em; padding:8px 12px;
+    border-bottom:1px solid #1e2d45; text-align:left;
+}
+.badge-table tbody tr td { padding:7px 12px; border-bottom:0.5px solid #0f1a2a; color:#e2e8f0; }
+.badge-table tbody tr:hover td { background:rgba(20,184,166,0.04); }
+.badge-table tbody tr:nth-child(even) td { background:rgba(255,255,255,0.015); }
+.badge-table .col-importe { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -260,24 +301,64 @@ init_config()
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 # ── Helper tablas BI ─────────────────────────────────────────────────────────
 def _bi_table(df: "pd.DataFrame", money_cols: list = None, pct_cols: list = None,
-               neg_col: str = None, height: int = None):
-    """st.dataframe con column_config BI: moneda CLP, porcentajes, highlight."""
+               height: int = None, right_cols: list = None, highlight_cols: list = None,
+               neg_col: str = None):
+    """Tabla HTML dark — reemplaza st.dataframe(). **text** → bold teal.
+    highlight_cols: columnas resaltadas (mes en curso) — header blanco + borde teal + celda sutil."""
     if df is None or df.empty:
         st.info("Sin datos disponibles.")
         return
-    cfg = {}
-    for c in (money_cols or []):
-        if c in df.columns:
-            cfg[c] = st.column_config.NumberColumn(c, format="$ %,.0f")
-    for c in (pct_cols or []):
-        if c in df.columns:
-            cfg[c] = st.column_config.NumberColumn(c, format="%.1f %%")
-    kw = {"use_container_width": True, "hide_index": True}
-    if height:
-        kw["height"] = height
-    if cfg:
-        kw["column_config"] = cfg
-    st.dataframe(df, **kw)
+    df_d = df.copy().reset_index(drop=True)
+    money_set  = set(money_cols or [])
+    pct_set    = set(pct_cols or [])
+    right_set  = money_set | pct_set | set(right_cols or [])
+    hi_set     = set(c.upper() for c in (highlight_cols or []))
+    col_up     = {c: c.upper() for c in df_d.columns}
+
+    for c in money_set:
+        if c in df_d.columns:
+            df_d[c] = df_d[c].apply(
+                lambda v: fmt_clp(v) if isinstance(v, (int, float)) else (str(v) if v is not None else "")
+            )
+    for c in pct_set:
+        if c in df_d.columns:
+            df_d[c] = df_d[c].apply(
+                lambda v: f"{v:.1f}%" if isinstance(v, (int, float)) else (str(v) if v is not None else "")
+            )
+
+    def _cell(col, val):
+        s = str(val) if val is not None else ""
+        if s.startswith("**") and s.endswith("**") and len(s) > 4:
+            return f'<strong style="color:#14b8a6">{s[2:-2]}</strong>'
+        return s
+
+    def _th_style(c):
+        base = f'text-align:{"right" if c in right_set else "left"}'
+        if col_up.get(c, "") in hi_set:
+            return f'{base};color:#F1F5F9;border-bottom:2px solid #14b8a6'
+        return base
+
+    def _td_style(col):
+        base = f'text-align:{"right" if col in right_set else "left"}'
+        if col_up.get(col, "") in hi_set:
+            return f'{base};background:rgba(20,184,166,0.07);font-weight:500'
+        return base
+
+    ths = "".join(f'<th style="{_th_style(c)}">{c}</th>' for c in df_d.columns)
+    rows_html = "".join(
+        "<tr>" + "".join(
+            f'<td style="{_td_style(col)}">{_cell(col, val)}</td>'
+            for col, val in row.items()
+        ) + "</tr>"
+        for _, row in df_d.iterrows()
+    )
+    h_style = f"max-height:{height}px;overflow-y:auto;" if height else ""
+    st.markdown(
+        f'<div style="{h_style}border-radius:8px;border:1px solid #1e2d45">'
+        f'<table class="badge-table"><thead><tr>{ths}</tr></thead>'
+        f'<tbody>{rows_html}</tbody></table></div>',
+        unsafe_allow_html=True,
+    )
 
 
 _OPT_MAP = {
@@ -287,6 +368,7 @@ _OPT_MAP = {
     "Anual":           "📈 Anual",
     "Patrimonio Neto": "💎 Patrimonio Neto",
     "Deudas":          "🏦 Deudas",
+    "Inversiones":     "₿ Inversiones",
     "AFP y Previsión": "🏛️ AFP y Previsión",
     "Liquidaciones":   "📄 Liquidaciones",
     "Simulador":       "🎯 Simulador",
@@ -299,7 +381,7 @@ with st.sidebar:
         options=list(_OPT_MAP.keys()),
         icons=[
             "bar-chart-fill", "cash-coin", "calendar3", "graph-up-arrow",
-            "gem", "credit-card-2-front", "bank",
+            "gem", "credit-card-2-front", "currency-bitcoin", "bank",
             "file-text", "bullseye", "gear",
         ],
         menu_icon="wallet2",
@@ -400,7 +482,16 @@ if pagina == "📊 Dashboard":
     # Calcular métricas del mes más reciente
     resumen = calc_resumen_mes(df_tx, mes_actual)
     gastos_mes = resumen["total"]
-    ahorro_info = calc_tasa_ahorro(ingresos_config, gastos_mes)
+    # Si hay ingresos en Excel, usarlos; si no, usar config Ajustes
+    ingresos_excel = resumen.get("ingresos", 0.0)
+    ingresos_mes = ingresos_excel if ingresos_excel > 0 else ingresos_config
+    ahorro_info = calc_tasa_ahorro(ingresos_mes, gastos_mes)
+
+    # Mes anterior (para delta)
+    meses_prev = [m for m in meses_con_datos if m < mes_actual]
+    mes_prev = meses_prev[-1] if meses_prev else None
+    gastos_mes_prev = calc_resumen_mes(df_tx, mes_prev)["total"] if mes_prev else None
+    mes_prev_nombre = NOMBRES_MESES.get(mes_prev, "") if mes_prev else ""
 
     # Patrimonio neto básico (desde config)
     afp_saldo = get_cfg("afp_saldo")
@@ -411,16 +502,25 @@ if pagina == "📊 Dashboard":
     # ── KPI Cards ────────────────────────────────────────────────────────────
     col1, col2, col3, col4 = st.columns(4)
     with col1:
+        fuente_ing = "Excel" if ingresos_excel > 0 else "Config"
         st.metric(
             label=f"💵 Ingresos {NOMBRES_MESES.get(mes_actual, '')}",
-            value=fmt_clp(ingresos_config),
+            value=fmt_clp(ingresos_mes),
+            delta=f"Fuente: {fuente_ing}",
+            delta_color="off",
         )
     with col2:
-        delta_gasto = gastos_mes - ingresos_config
+        if gastos_mes_prev is not None:
+            diff_prev = gastos_mes - gastos_mes_prev
+            signo = "+" if diff_prev >= 0 else ""
+            delta_gasto = f"{signo}{fmt_clp(diff_prev)} vs {mes_prev_nombre}"
+        else:
+            diff_g = gastos_mes - ingresos_mes
+            delta_gasto = f"{fmt_clp(abs(diff_g))} {'sobre' if diff_g > 0 else 'bajo'} ingresos"
         st.metric(
             label=f"💸 Gastos {NOMBRES_MESES.get(mes_actual, '')}",
             value=fmt_clp(gastos_mes),
-            delta=f"{fmt_clp(abs(delta_gasto))} {'sobre' if delta_gasto > 0 else 'bajo'} ingresos",
+            delta=delta_gasto,
             delta_color="inverse",
         )
     with col3:
@@ -459,17 +559,17 @@ if pagina == "📊 Dashboard":
     st.markdown("### 🔔 Alertas Automáticas")
     alertas = []
 
-    if gastos_mes > ingresos_config:
-        alertas.append(("rojo", f"Gastos ({fmt_clp(gastos_mes)}) superan los ingresos ({fmt_clp(ingresos_config)})."))
+    if gastos_mes > ingresos_mes:
+        alertas.append(("rojo", f"Gastos ({fmt_clp(gastos_mes)}) superan los ingresos ({fmt_clp(ingresos_mes)})."))
 
     por_grupo = resumen.get("por_grupo", {})
     deudas = por_grupo.get("Financiero - Deudas", 0)
-    if ingresos_config > 0 and (deudas / ingresos_config) > 0.30:
-        alertas.append(("amarillo", f"Deudas financieras = {fmt_clp(deudas)} ({deudas/ingresos_config*100:.1f}% ingresos). Límite recomendado: 30%."))
+    if ingresos_mes > 0 and (deudas / ingresos_mes) > 0.30:
+        alertas.append(("amarillo", f"Deudas financieras = {fmt_clp(deudas)} ({deudas/ingresos_mes*100:.1f}% ingresos). Límite recomendado: 30%."))
 
     ocio = por_grupo.get("Ocio y Vida Social", 0)
-    if ingresos_config > 0 and (ocio / ingresos_config) > 0.15:
-        alertas.append(("amarillo", f"Ocio y Vida Social = {fmt_clp(ocio)} ({ocio/ingresos_config*100:.1f}% ingresos). Límite recomendado: 15%."))
+    if ingresos_mes > 0 and (ocio / ingresos_mes) > 0.15:
+        alertas.append(("amarillo", f"Ocio y Vida Social = {fmt_clp(ocio)} ({ocio/ingresos_mes*100:.1f}% ingresos). Límite recomendado: 15%."))
 
     if ahorro_info["tasa"] >= 20:
         alertas.append(("verde", f"Excelente tasa de ahorro: {ahorro_info['tasa']}%. ¡Bien hecho!"))
@@ -533,11 +633,11 @@ if pagina == "📊 Dashboard":
             color = "#2ca02c" if ind["estado"] == "verde" else "#ff7f0e" if ind["estado"] == "amarillo" else "#d62728"
             dot   = "🟢" if ind["estado"] == "verde" else "🟡" if ind["estado"] == "amarillo" else "🔴"
             st.markdown(f"""
-<div style="background:#f8f9fa;border-radius:8px;padding:12px;text-align:center;border-top:3px solid {color}">
-<div style="font-size:0.7rem;color:#666;font-weight:600">{ind['nombre'].upper()}</div>
+<div style="background:#111d2e;border-radius:8px;padding:12px;text-align:center;border-top:3px solid {color}">
+<div style="font-size:0.7rem;color:#4a6278;font-weight:600">{ind['nombre'].upper()}</div>
 <div style="font-size:1.3rem;font-weight:700;color:{color};margin:4px 0">{dot} {ind['valor']}</div>
-<div style="font-size:0.65rem;color:#999">Meta: {ind['meta']}</div>
-<div style="font-size:0.7rem;color:#555;margin-top:4px">{ind['accion']}</div>
+<div style="font-size:0.65rem;color:#2d3f55">Meta: {ind['meta']}</div>
+<div style="font-size:0.7rem;color:#94a3b8;margin-top:4px">{ind['accion']}</div>
 </div>""", unsafe_allow_html=True)
 
     # ── Análisis AI ───────────────────────────────────────────────────────────
@@ -624,11 +724,17 @@ elif pagina == "📋 Mis Ingresos":
                                      mode="lines+markers", line=dict(color="#F59E0B", width=3),
                                      marker=dict(size=6)))
         fig_ing.update_layout(
-            title="Evolución de Remuneraciones",
+            title=dict(text="Evolución de Remuneraciones", font=dict(color="#CBD5E1", size=14)),
             barmode="stack",
-            yaxis=dict(tickformat=",.0f"),
-            separators=",.", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Segoe UI, Arial, sans-serif"),
+            separators=",.",
+            paper_bgcolor="#1E293B", plot_bgcolor="#1E293B",
+            font=dict(family="Inter, Segoe UI, Arial, sans-serif", color="#94A3B8", size=12),
+            xaxis=dict(tickfont=dict(color="#64748B", size=10), gridcolor="#1a2535", linecolor="#334155"),
+            yaxis=dict(tickformat=",.0f", tickfont=dict(color="#64748B", size=11), gridcolor="#1a2535", linecolor="#334155"),
+            legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#94A3B8", size=11),
+                        orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            hoverlabel=dict(bgcolor="#0F172A", font=dict(color="#E2E8F0", size=12), bordercolor="#334155"),
+            margin=dict(l=20, r=20, t=48, b=20),
         )
         st.plotly_chart(fig_ing, use_container_width=True)
 
@@ -645,10 +751,17 @@ elif pagina == "📋 Mis Ingresos":
         fig_desc.add_trace(go.Bar(name="Impuesto", x=periodos, y=impuestos, marker_color="#F43F5E"))
         fig_desc.add_trace(go.Bar(name="Seg. Cesantía", x=periodos, y=cesantias, marker_color="#94A3B8"))
         fig_desc.update_layout(
+            title=dict(text="Evolución de Descuentos Legales", font=dict(color="#CBD5E1", size=14)),
             barmode="stack",
-            yaxis=dict(tickformat=",.0f"),
-            separators=",.", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Segoe UI, Arial, sans-serif"),
+            separators=",.",
+            paper_bgcolor="#1E293B", plot_bgcolor="#1E293B",
+            font=dict(family="Inter, Segoe UI, Arial, sans-serif", color="#94A3B8", size=12),
+            xaxis=dict(tickfont=dict(color="#64748B", size=10), gridcolor="#1a2535", linecolor="#334155"),
+            yaxis=dict(tickformat=",.0f", tickfont=dict(color="#64748B", size=11), gridcolor="#1a2535", linecolor="#334155"),
+            legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#94A3B8", size=11),
+                        orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            hoverlabel=dict(bgcolor="#0F172A", font=dict(color="#E2E8F0", size=12), bordercolor="#334155"),
+            margin=dict(l=20, r=20, t=48, b=20),
         )
         st.plotly_chart(fig_desc, use_container_width=True)
 
@@ -669,7 +782,7 @@ elif pagina == "📋 Mis Ingresos":
                                   columns=["Concepto", "Monto"])
             df_hab.loc[len(df_hab)] = ["**TOTAL BRUTO**",
                                         f"**{fmt_clp(sum(datos_hab.values()))}**"]
-            st.dataframe(df_hab, use_container_width=True, hide_index=True)
+            _bi_table(df_hab, right_cols=["Monto"])
 
         with col_b:
             st.markdown("**Descuentos**")
@@ -685,7 +798,7 @@ elif pagina == "📋 Mis Ingresos":
                                        columns=["Descuento", "Monto"])
             df_desc_tab.loc[len(df_desc_tab)] = ["**LÍQUIDO A PAGAR**",
                                                    f"**{fmt_clp(ult.get('liquido') or 0)}**"]
-            st.dataframe(df_desc_tab, use_container_width=True, hide_index=True)
+            _bi_table(df_desc_tab, right_cols=["Monto"])
 
         # ── Tabla historial completo ───────────────────────────────────────────
         st.markdown("---")
@@ -701,7 +814,7 @@ elif pagina == "📋 Mis Ingresos":
                     "Salud":       fmt_clp(l.get("salud") or 0),
                     "Impuesto":    fmt_clp(l.get("impuesto") or 0),
                 })
-            st.dataframe(pd.DataFrame(filas), use_container_width=True, hide_index=True)
+            _bi_table(pd.DataFrame(filas), right_cols=["Sueldo Base","Bono","Líquido","AFP","Salud","Impuesto"])
 
         # ── Análisis AI ───────────────────────────────────────────────────────
         if agente_disponible():
@@ -778,9 +891,24 @@ elif pagina == "📅 Mes Detalle":
     grupo_filtro = st.selectbox("Filtrar por grupo:", grupos_disponibles)
     df_mostrar = df_mes if grupo_filtro == "Todos" else df_mes[df_mes["grupo"] == grupo_filtro]
     df_tabla = df_mostrar[["fecha", "grupo", "concepto", "detalle", "importe"]].copy()
-    df_tabla["fecha"] = df_tabla["fecha"].dt.strftime("%d/%m/%Y").fillna("")
+    df_tabla["fecha"] = df_tabla["fecha"].dt.strftime("%d/%m").fillna("")
+    df_tabla["grupo"] = df_tabla["grupo"].apply(badge_grupo)
+    df_tabla["importe"] = df_tabla["importe"].apply(fmt_clp)
     df_tabla.columns = ["Fecha", "Grupo", "Concepto", "Detalle", "Importe"]
-    _bi_table(df_tabla, money_cols=["Importe"], height=400)
+    html_rows = ""
+    for _, r in df_tabla.iterrows():
+        html_rows += (
+            f"<tr><td>{r['Fecha']}</td><td>{r['Grupo']}</td>"
+            f"<td>{r['Concepto']}</td><td style='color:#64748b'>{r['Detalle']}</td>"
+            f"<td class='col-importe'>{r['Importe']}</td></tr>"
+        )
+    st.markdown(
+        f'<div style="max-height:420px;overflow-y:auto;border-radius:8px;border:1px solid #1e2d45">'
+        f'<table class="badge-table"><thead><tr>'
+        f'<th>Fecha</th><th>Grupo</th><th>Concepto</th><th>Detalle</th><th>Importe</th>'
+        f'</tr></thead><tbody>{html_rows}</tbody></table></div>',
+        unsafe_allow_html=True,
+    )
 
     # Total filtrado
     total_filtrado = df_mostrar["importe"].sum()
@@ -796,7 +924,7 @@ elif pagina == "📅 Mes Detalle":
                 df_gc["total"] = df_gc["total"].apply(fmt_clp)
                 df_gc["por_persona"] = df_gc["por_persona"].apply(fmt_clp)
                 df_gc.columns = ["Concepto", "Total", "Por Persona"]
-                st.dataframe(df_gc, use_container_width=True, hide_index=True)
+                _bi_table(df_gc, right_cols=["Total","Por Persona"])
                 col_g1, col_g2 = st.columns(2)
                 col_g1.metric("Total compartido", fmt_clp(gc["total"]))
                 col_g2.metric("Tu parte", fmt_clp(gc["por_persona"]))
@@ -836,7 +964,8 @@ elif pagina == "📈 Anual":
             # Formatear
             for col in cols_meses:
                 df_show[col] = df_show[col].apply(lambda v: fmt_clp(v) if v > 0 else "-")
-            _bi_table(df_show, height=380)
+            mes_actual_up = NOMBRES_MESES.get(mes_actual, "").upper()
+            _bi_table(df_show, height=380, highlight_cols=[mes_actual_up])
     except Exception as e:
         st.caption(f"Resumen anual no disponible: {e}")
 
@@ -851,7 +980,7 @@ elif pagina == "📈 Anual":
     })
     df_top5["Total"] = df_top5["Total"].apply(fmt_clp)
     df_top5["% del Total"] = df_top5["% del Total"].apply(lambda v: f"{v:.1f}%")
-    st.dataframe(df_top5, use_container_width=True, hide_index=True)
+    _bi_table(df_top5, right_cols=["Total","% del Total"])
     st.metric("Total anual acumulado", fmt_clp(total_anual))
 
 
@@ -867,7 +996,6 @@ elif pagina == "💎 Patrimonio Neto":
     usdt_qty = st.sidebar.number_input("USDT (cantidad)", value=0.0, step=10.0, format="%.2f")
     precio_usdt = get_cfg("precio_usdt_clp")
     dpto505_val = st.sidebar.number_input("Dpto 505 Los Claros (valor mercado)", value=120_000_000, step=1_000_000, format="%d")
-    dpto1803_val = st.sidebar.number_input("Dpto 1803 (valor mercado)", value=80_000_000, step=1_000_000, format="%d")
     afp_val = get_cfg("afp_saldo")
     otros_activos = st.sidebar.number_input("Otros activos (CLP)", value=0, step=100_000, format="%d")
 
@@ -884,7 +1012,6 @@ elif pagina == "💎 Patrimonio Neto":
         "Cta. Ahorro": ca,
         "USDT": usdt_clp,
         "Dpto 505 Los Claros": dpto505_val,
-        "Dpto 1803": dpto1803_val,
         "AFP ProVida": afp_val,
         "Otros activos": otros_activos,
     }
@@ -935,13 +1062,13 @@ elif pagina == "💎 Patrimonio Neto":
         st.subheader("Activos")
         df_act = pd.DataFrame([(k, fmt_clp(v)) for k, v in activos.items() if v > 0],
                               columns=["Item", "Valor"])
-        st.dataframe(df_act, use_container_width=True, hide_index=True)
+        _bi_table(df_act, right_cols=["Valor"])
     with col_p:
         st.subheader("Pasivos")
         df_pas = pd.DataFrame([(k, fmt_clp(v)) for k, v in pasivos.items() if v > 0],
                               columns=["Item", "Valor"])
         if not df_pas.empty:
-            st.dataframe(df_pas, use_container_width=True, hide_index=True)
+            _bi_table(df_pas, right_cols=["Valor"])
         else:
             st.info("Sin pasivos registrados.")
 
@@ -1127,8 +1254,182 @@ elif pagina == "🏦 Deudas":
         st.subheader("📄 Tasas Máximas Convencionales (CMF) — Vigentes")
         st.caption("Ninguna institución puede cobrarte una tasa mayor a estos límites.")
         tmc_data = [{"Segmento": k, "TMC Anual": f"{v:.2f}%"} for k, v in tmc_actual.items()]
-        st.dataframe(pd.DataFrame(tmc_data), use_container_width=True, hide_index=True)
+        _bi_table(pd.DataFrame(tmc_data), right_cols=["TMC Anual"])
         st.caption("Fuente: CMF Chile API. Si tu tasa supera la TMC, puedes reclamar en cmfchile.cl")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PÁGINA: INVERSIONES CRYPTO
+# ═══════════════════════════════════════════════════════════════════════════════
+elif pagina == "₿ Inversiones":
+    from crypto_prices import get_top50_prices_clp, buscar_coin, TOP50_META
+    from charts import chart_portafolio_dona, chart_portafolio_pl, chart_portafolio_evolucion
+    from kraken_client import get_balances, get_recompensas, get_resumen_recompensas, test_conexion
+    import time as _time
+    from datetime import datetime as _dt
+
+    st.title("₿ Inversiones Crypto")
+
+    # ── Cargar precios y saldos Kraken ────────────────────────────────────────
+    col_sp1, col_sp2 = st.columns(2)
+    with col_sp1:
+        with st.spinner("Conectando Kraken..."):
+            kraken_ok, kraken_msg = test_conexion()
+            kraken_balances = get_balances() if kraken_ok else {}
+    with col_sp2:
+        with st.spinner("Obteniendo precios CoinGecko..."):
+            precios = get_top50_prices_clp()
+
+    # Badge estado conexión
+    if kraken_ok:
+        st.success(f"🟢 Kraken PRO conectado — {kraken_msg} • Precios actualizados")
+    else:
+        st.warning(f"🟡 Kraken no disponible: {kraken_msg}")
+
+    if not precios:
+        st.error("No se pudo conectar a CoinGecko. Verifica tu conexión.")
+        st.stop()
+
+    # ── Obtener USD/CLP ───────────────────────────────────────────────────────
+    usd_clp = precios.get("tether", {}).get("price_clp", get_cfg("precio_usdt_clp")) or get_cfg("precio_usdt_clp")
+
+    # ── Construir portafolio desde Kraken o fallback Excel ────────────────────
+    SYMBOL_TO_CG = {
+        "BTC": "bitcoin", "ETH": "ethereum", "USDT": "tether",
+        "SOL": "solana",  "ADA": "cardano",  "DOT": "polkadot",
+        "XRP": "xrp",     "MATIC": "matic-network", "USD": None, "BABY": None,
+    }
+
+    rows = []
+    fuente = "Kraken" if kraken_ok and kraken_balances and "_error" not in kraken_balances else "Excel"
+
+    if fuente == "Kraken":
+        for symbol, cantidad in kraken_balances.items():
+            cg_id = SYMBOL_TO_CG.get(symbol)
+            if cg_id is None:
+                cg_id = buscar_coin(symbol, precios)
+            info = precios.get(cg_id, {}) if cg_id else {}
+            precio_clp = info.get("price_clp", usd_clp if symbol == "USD" else 0)
+            valor_clp  = precio_clp * cantidad
+            rows.append({
+                "activo":            symbol,
+                "cantidad":          cantidad,
+                "precio_actual_clp": precio_clp,
+                "valor_clp":         valor_clp,
+                "change_24h":        info.get("change_24h", 0),
+                "fuente":            "Kraken Live",
+            })
+    else:
+        from data_loader import cargar_inversiones
+        df_inv = cargar_inversiones()
+        for _, r in df_inv.iterrows():
+            cid  = buscar_coin(str(r.get("ticker_cg", "") or r.get("activo", "")), precios)
+            info = precios.get(cid, {}) if cid else {}
+            precio_clp = info.get("price_clp", 0)
+            valor_clp  = precio_clp * r["cantidad"]
+            rows.append({
+                "activo":            r["activo"],
+                "cantidad":          r["cantidad"],
+                "precio_actual_clp": precio_clp,
+                "valor_clp":         valor_clp,
+                "change_24h":        info.get("change_24h", 0),
+                "fuente":            "Excel",
+            })
+
+    df_port = pd.DataFrame(rows) if rows else pd.DataFrame()
+
+    # ── KPIs globales ─────────────────────────────────────────────────────────
+    if not df_port.empty:
+        total_clp   = df_port["valor_clp"].sum()
+        total_usd   = total_clp / usd_clp if usd_clp > 0 else 0
+        recompensas = get_resumen_recompensas() if kraken_ok else {}
+        rew_usdt    = recompensas.get("USDT", 0)
+        rew_clp     = rew_usdt * usd_clp
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.metric("💼 Portafolio Total", fmt_clp(total_clp), delta=f"USD {total_usd:,.0f}")
+        k2.metric("🔢 Activos", str(len(df_port[df_port["valor_clp"] > 0])))
+        k3.metric("🎁 Recompensas USDT (90d)", f"{rew_usdt:.2f} USDT", delta=fmt_clp(rew_clp))
+        k4.metric("💱 USD/CLP", f"${usd_clp:,.0f}")
+
+        st.markdown("---")
+
+        # ── Tabla saldos ──────────────────────────────────────────────────────
+        st.subheader("📋 Saldos en Kraken" if fuente == "Kraken" else "📋 Portafolio Excel")
+        df_tabla = df_port[df_port["valor_clp"] > 0].copy()
+        df_tabla["valor_usd"] = df_tabla["valor_clp"] / usd_clp
+        df_tabla["pct_port"]  = df_tabla["valor_clp"] / total_clp * 100
+        df_show = df_tabla[["activo","cantidad","precio_actual_clp","valor_clp","valor_usd","pct_port","change_24h"]].copy()
+        df_show.columns = ["Activo","Cantidad","Precio CLP","Valor CLP","Valor USD","% Portafolio","24h %"]
+        _bi_table(df_show, money_cols=["Precio CLP","Valor CLP","Valor USD"], pct_cols=["% Portafolio","24h %"])
+
+        st.markdown("---")
+
+        # ── Gráficos ──────────────────────────────────────────────────────────
+        gc1, gc2 = st.columns(2)
+        with gc1:
+            st.plotly_chart(chart_portafolio_dona(df_port[df_port["valor_clp"] > 0]), use_container_width=True)
+        with gc2:
+            # Evolución recompensas USDT (últimos 30d)
+            if kraken_ok:
+                rews = get_recompensas(dias=30)
+                if rews:
+                    import plotly.graph_objects as _go
+                    df_rew = pd.DataFrame(rews)
+                    df_rew_usdt = df_rew[df_rew["activo"] == "USDT"].copy()
+                    if not df_rew_usdt.empty:
+                        df_rew_usdt["fecha_dt"] = pd.to_datetime(df_rew_usdt["fecha"], unit="s")
+                        df_rew_usdt = df_rew_usdt.sort_values("fecha_dt")
+                        fig_rew = _go.Figure(_go.Bar(
+                            x=df_rew_usdt["fecha_dt"].dt.strftime("%d %b"),
+                            y=df_rew_usdt["cantidad"],
+                            marker_color="#26A17B",
+                            hovertemplate="%{x}: +%{y:.4f} USDT<extra></extra>",
+                        ))
+                        fig_rew.update_layout(
+                            title="Recompensas USDT (30 días)",
+                            title_font_color="#CBD5E1",
+                            paper_bgcolor="#1E293B",
+                            plot_bgcolor="#1E293B",
+                            font=dict(color="#94A3B8"),
+                            xaxis=dict(tickfont=dict(color="#94A3B8"), gridcolor="#1a2535"),
+                            yaxis=dict(tickfont=dict(color="#94A3B8"), gridcolor="#1a2535"),
+                            margin=dict(l=20, r=20, t=48, b=20),
+                            separators=",.",
+                        )
+                        st.plotly_chart(fig_rew, use_container_width=True)
+
+        # ── Historial recompensas ─────────────────────────────────────────────
+        if kraken_ok:
+            with st.expander("🎁 Historial de Recompensas (últimos 30 días)"):
+                rews_all = get_recompensas(dias=30)
+                if rews_all:
+                    df_rh = pd.DataFrame(rews_all)
+                    df_rh["Fecha"] = pd.to_datetime(df_rh["fecha"], unit="s").dt.strftime("%d/%m/%Y")
+                    df_rh["Valor CLP"] = df_rh.apply(
+                        lambda r: r["cantidad"] * (precios.get(buscar_coin(r["activo"], precios) or "", {}).get("price_clp", usd_clp) if r["activo"] != "USD" else usd_clp), axis=1
+                    )
+                    df_rh_show = df_rh[["Fecha","activo","cantidad","Valor CLP"]].rename(columns={"activo":"Activo","cantidad":"Cantidad"})
+                    _bi_table(df_rh_show, money_cols=["Valor CLP"])
+                else:
+                    st.info("Sin recompensas en los últimos 30 días.")
+
+    else:
+        st.info("Sin posiciones. Conecta Kraken o agrega hoja **Inversiones** al Excel.")
+
+    # ── Referencia top 50 ─────────────────────────────────────────────────────
+    with st.expander("📖 Referencia — Top 50 Cryptos soportados (Ticker_CG)"):
+        ref_rows = []
+        for cid, (sym, nombre) in TOP50_META.items():
+            info = precios.get(cid, {})
+            ref_rows.append({
+                "Ticker_CG": cid,
+                "Symbol": sym,
+                "Nombre": nombre,
+                "Precio CLP": fmt_clp(info.get("price_clp", 0)) if info else "—",
+                "24h %": f"{info.get('change_24h', 0):+.2f}%" if info else "—",
+            })
+        _bi_table(pd.DataFrame(ref_rows))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1209,7 +1510,7 @@ elif pagina == "🏛️ AFP y Previsión":
         df_reciente_show["FECHA"] = df_reciente_show["FECHA"].dt.strftime("%d/%m/%Y")
         df_reciente_show["APORTES"] = df_reciente_show["APORTES"].apply(fmt_clp)
         df_reciente_show["GIROS"] = df_reciente_show["GIROS"].apply(fmt_clp)
-        st.dataframe(df_reciente_show, use_container_width=True, hide_index=True)
+        _bi_table(df_reciente_show, right_cols=["APORTES","GIROS"])
 
     # Comparativa AFPs Chile
     st.markdown("---")
@@ -1220,7 +1521,7 @@ elif pagina == "🏛️ AFP y Previsión":
     }
     df_afps = pd.DataFrame(data_afps)
     df_afps["Tu AFP"] = df_afps["AFP"].apply(lambda x: "✅ TÚ" if x == "ProVida" else "")
-    st.dataframe(df_afps, use_container_width=True, hide_index=True)
+    _bi_table(df_afps, right_cols=["Comisión (%)"])
     st.caption("Fuente: Superintendencia de Pensiones Chile. ProVida = 1.45% (una de las más altas). Considera Modelo (0.58%) o Uno (0.49%).")
 
 
@@ -1273,7 +1574,7 @@ elif pagina == "📄 Liquidaciones":
             filas_tabla.append({"Campo": label, "Valor": val_str})
 
         df_liq = pd.DataFrame(filas_tabla)
-        st.dataframe(df_liq, use_container_width=True, hide_index=True)
+        _bi_table(df_liq, right_cols=["Valor"])
 
         if st.button("💾 Guardar en historial de sesión"):
             datos["archivo"] = uploaded_pdf.name
@@ -1367,11 +1668,15 @@ elif pagina == "🎯 Simulador":
                                annotation_text=f"Meta: {fmt_clp(meta_monto)}")
             fig_meta.update_layout(
                 title="Proyección hacia la Meta",
+                title_font_color="#CBD5E1",
                 xaxis_title="Meses",
                 yaxis=dict(tickformat=",.0f"),
                 separators=",.",
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94A3B8"),
+                xaxis=dict(tickfont=dict(color="#94A3B8"), gridcolor="#1a2535"),
+                yaxis_tickfont=dict(color="#94A3B8"),
             )
             st.plotly_chart(fig_meta, use_container_width=True)
 
@@ -1464,7 +1769,7 @@ elif pagina == "🎯 Simulador":
                 df_show_amort = df_amort.copy()
                 for col_name in ["Saldo Inicial", "Interés", "Capital", "Cuota", "Saldo Final"]:
                     df_show_amort[col_name] = df_show_amort[col_name].apply(fmt_clp)
-                st.dataframe(df_show_amort.head(24), use_container_width=True, hide_index=True)
+                _bi_table(df_show_amort.head(24), right_cols=["Saldo Inicial","Interés","Capital","Cuota","Saldo Final"])
                 if len(df_amort) > 24:
                     st.caption(f"Mostrando primeros 24 de {len(df_amort)} meses.")
         else:
@@ -1587,6 +1892,27 @@ elif pagina == "⚙️ Ajustes":
         st.success("Configuración guardada en sesión.")
         st.cache_data.clear()
 
+    st.markdown("---")
+    st.subheader("📥 Plantilla Excel")
+    st.caption("Descarga la plantilla base para registrar tus ingresos y gastos.")
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(__file__).replace("main.py", ""))
+        from generar_plantilla import crear_plantilla as _crear_plantilla
+        import io as _io
+        _buf = _io.BytesIO()
+        _wb = _crear_plantilla()
+        _wb.save(_buf)
+        st.download_button(
+            label="⬇️ Descargar Plantilla_FinanzasPersonales.xlsx",
+            data=_buf.getvalue(),
+            file_name="Plantilla_FinanzasPersonales.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    except Exception as _e:
+        st.error(f"No se pudo generar la plantilla: {_e}")
+
+    st.markdown("---")
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
         if st.button("🔄 Recargar datos Excel"):
