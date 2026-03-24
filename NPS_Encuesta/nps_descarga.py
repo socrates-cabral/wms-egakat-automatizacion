@@ -176,6 +176,20 @@ class LimeSurveyAPI:
             self._call("release_session_key", [self.session_key])
             self.session_key = None
 
+    def list_participants(self, survey_id: int, start: int = 0, limit: int = 1000) -> list[dict]:
+        """Lista participantes del survey. Retorna [] si no hay."""
+        result = self._call("list_participants", [
+            self.session_key, survey_id, start, limit, False,
+            ["tid", "token", "email", "firstname", "lastname", "emailstatus"],
+        ])
+        if not result or isinstance(result, dict) and "status" in result:
+            return []
+        return result
+
+    def delete_participants(self, survey_id: int, tids: list[str]) -> dict:
+        """Elimina participantes por tid. Retorna resultado API."""
+        return self._call("delete_participants", [self.session_key, survey_id, tids])
+
     def export_responses(self, survey_id: int) -> list[dict]:
         """Exporta respuestas completas. Retorna [] si no hay datos."""
         result = self._call("export_responses", [

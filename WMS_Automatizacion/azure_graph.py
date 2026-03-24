@@ -25,7 +25,7 @@ GRAPH_BASE    = "https://graph.microsoft.com/v1.0"
 
 SP_HOST      = "egakatcom.sharepoint.com"
 SP_SITE_PATH = "/sites/DatosparaDashboard"
-DOC_LIBRARY  = "Documentos compartidos"
+DOC_LIBRARY  = "Documentos"
 
 
 # ─── AUTH ─────────────────────────────────────────────────────────────────────

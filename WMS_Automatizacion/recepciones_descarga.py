@@ -254,7 +254,9 @@ def descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta):
             log(f"  -> [ADVERTENCIA] Chunk {i} tiene columnas distintas al chunk 1 — revisar WMS")
 
     # Combinar y deduplicar filas exactamente iguales
-    df_total   = pd.concat(dataframes, ignore_index=True)
+    # Excluir chunks vacíos antes del concat (fix FutureWarning pandas — all-NA columns)
+    dataframes_ok = [df for df in dataframes if len(df) > 0]
+    df_total   = pd.concat(dataframes_ok if dataframes_ok else dataframes, ignore_index=True)
     filas_raw  = len(df_total)
     df_total   = df_total.drop_duplicates()
     duplicados = filas_raw - len(df_total)
