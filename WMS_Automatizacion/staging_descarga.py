@@ -1,6 +1,8 @@
 """
-staging_descarga.py — v2.5
+staging_descarga.py — v2.6
 Módulo 3: Descarga automática Reportes Personalizados → Consulta Stock con Staging In y Out
+Cambios v2.6:
+  - Espera 45s entre reintentos cuando WMS devuelve nombre inválido SCABRAL (antes 2s) — da tiempo al servidor a recuperarse
 Cambios v2.5:
   - Detección de reporte fallido por nombre: SCABRAL{timestamp}.csv sin prefijo = WMS no generó el reporte
   - Si nombre fallido O archivo 0 bytes: reintenta desde el click (re-consulta WMS completa)
@@ -11,6 +13,7 @@ Cambios v2.4:
 import os
 import re
 import sys
+from datetime import datetime
 from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
 
@@ -157,7 +160,9 @@ def descargar_cliente(page, context, empresa_wms, carpeta_destino):
 
         os.makedirs(carpeta_destino, exist_ok=True)
 
-        ruta_final = None
+        ruta_final     = None
+        archivo_guardado = False  # True solo si se guardó un archivo con contenido real
+        fallo_wms      = False    # True si WMS devolvió SCABRAL (falla silenciosa del servidor)
 
         for intento in range(1, MAX_REINTENTOS + 1):
             if intento > 1:
@@ -197,10 +202,12 @@ def descargar_cliente(page, context, empresa_wms, carpeta_destino):
             # ── Detectar nombre fallido: SCABRAL{timestamp}.csv sin prefijo ──
             if es_reporte_fallido(nombre_archivo):
                 if intento < MAX_REINTENTOS:
-                    log(f"     ⚠ Nombre inválido ({nombre_archivo}) — WMS no generó el reporte, reintentando...")
+                    log(f"     ⚠ Nombre inválido ({nombre_archivo}) — WMS no generó el reporte, esperando 45s antes de reintentar...")
+                    page.wait_for_timeout(45_000)
                     continue
                 else:
-                    log(f"     ⚠ Nombre inválido tras {MAX_REINTENTOS} intentos — WMS puede tener falla persistente")
+                    log(f"     ⚠ [FALLO] Nombre inválido tras {MAX_REINTENTOS} intentos — WMS no generó el reporte")
+                    fallo_wms = True
 
             ruta_final = os.path.join(carpeta_destino, nombre_archivo)
 
@@ -223,13 +230,17 @@ def descargar_cliente(page, context, empresa_wms, carpeta_destino):
                     os.remove(ruta_final)
                     continue
                 else:
-                    # Agotados los reintentos y sigue vacío — eliminar y registrar sin datos
+                    # Agotados los reintentos y sigue vacío — eliminar
                     os.remove(ruta_final)
-                    log(f"     ℹ Sin datos en WMS tras {MAX_REINTENTOS} intentos — sin stock para este cliente")
+                    if fallo_wms:
+                        log(f"     [FALLO] WMS no generó el reporte tras {MAX_REINTENTOS} intentos")
+                    else:
+                        log(f"     ℹ Sin datos en WMS tras {MAX_REINTENTOS} intentos — sin stock para este cliente")
                     break
 
             log(f"     ✅ Guardado: {ruta_final} ({tamaño} bytes)")
             validar_estructura_csv(ruta_final, empresa_wms)
+            archivo_guardado = True
             break
 
         # Cerrar popup si quedó abierto
@@ -237,14 +248,15 @@ def descargar_cliente(page, context, empresa_wms, carpeta_destino):
             if p != page:
                 try: p.close()
                 except Exception: pass
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(1_000)
 
         try:
             page.select_option("select[name='vEMPRESA']", index=0)
         except Exception:
             pass
-        page.wait_for_timeout(300)
-        return True
+        page.wait_for_timeout(500)
+        # Sin stock real (header only ≥1 byte) = OK. Fallo WMS (SCABRAL) = False.
+        return archivo_guardado or (not fallo_wms)
 
     except Exception as e:
         log(f"     ❌ Error: {e}")
@@ -282,10 +294,33 @@ def main():
             login(page, deposito)
             ir_a_reportes(page, deposito)
 
+            hoy = datetime.now().date()
+
             for empresa_wms in clientes:
                 destino = carpeta_cliente(carpeta_b, empresa_wms)
+
+                # Skip si ya hay un CSV de hoy en la carpeta destino (evitar duplicados)
+                os.makedirs(destino, exist_ok=True)
+                csvs_hoy = [
+                    f for f in os.listdir(destino)
+                    if f.lower().endswith(".csv")
+                    and not re.match(r'^SCABRAL\d+\.csv$', f, re.IGNORECASE)
+                    and datetime.fromtimestamp(os.path.getmtime(os.path.join(destino, f))).date() == hoy
+                ]
+                if csvs_hoy:
+                    log(f"\n  >> [SKIP] {empresa_wms} — ya descargado hoy: {csvs_hoy[0]}")
+                    resultados.append((f"{deposito} | {empresa_wms}", "OK"))
+                    continue
+
                 ok = descargar_cliente(page, context, empresa_wms, destino)
-                resultados.append((f"{deposito} | {empresa_wms}", "✅ OK" if ok else "❌ FALLO"))
+                resultados.append((f"{deposito} | {empresa_wms}", "OK" if ok else "[FALLO]"))
+                if not ok:
+                    # Resetear página tras fallo para no contaminar al siguiente cliente
+                    log(f"     → Reseteando página tras fallo de {empresa_wms}...")
+                    try:
+                        ir_a_reportes(page, deposito)
+                    except Exception as e_reset:
+                        log(f"     → Error al resetear página: {e_reset}")
 
             context.close()
             log(f"\n  Sesión {deposito} completada.")
@@ -296,7 +331,8 @@ def main():
     log("  RESUMEN FINAL")
     log("=" * 60)
     for label, estado in resultados:
-        log(f"  {estado}  {label}")
+        prefijo = "  [FALLO]" if estado == "[FALLO]" else "  [OK]   "
+        log(f"{prefijo}  {label}")
     errores = sum(1 for _, e in resultados if "FALLO" in e)
     log(f"\n  Total: {len(resultados)} reportes | Errores: {errores}")
     log("=" * 60)

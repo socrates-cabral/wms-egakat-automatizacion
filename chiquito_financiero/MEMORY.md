@@ -91,7 +91,54 @@ El negocio de la hermana fabrica y vende muebles (estanterías, closets, muebles
 
 ---
 
-## 5. ENTREGABLES GENERADOS
+## 5. HERRAMIENTAS DESARROLLADAS
+
+### Aplicación Streamlit (`app/` directory)
+**Framework:** Streamlit 1.32.0+ con tema oscuro personalizado
+**Arquitectura modular:** 6 módulos principales + helpers
+
+#### Módulos principales:
+| Módulo | Responsabilidad | Dependencias |
+|--------|----------------|--------------|
+| `main.py` | UI principal, navegación, layout | streamlit, pandas, plotly |
+| `calculators.py` | Lógica financiera (PE, amortización, inyección capital) | pandas, math |
+| `data_loader.py` | Carga datos Excel, manejo .env | pandas, openpyxl, python-dotenv |
+| `charts.py` | Visualizaciones Plotly consistentes | plotly, pandas |
+| `pdf_report.py` | Generación reportes PDF | fpdf2 |
+| `requirements.txt` | Gestión dependencias | pip |
+
+#### Páginas de la aplicación:
+1. **📊 Dashboard** — KPIs principales, alertas, gráficos resumen
+2. **🎛 Simulador** — Escenarios optimista/renegociado/equilibrio, proyección 12m
+3. **💰 Libro de Caja** — Detalle ingresos/gastos por mes
+4. **💳 Deuda** — Análisis deuda por tipo, tabla amortización
+5. **✅ Plan de Acción** — Recomendaciones específicas por causa
+6. **💉 Inyección Capital** — Simulación impacto capital nuevo
+7. **⚙️ Ajustes** — Configuración parámetros, exportar datos
+
+#### Mejores prácticas implementadas:
+- **Tema oscuro consistente** — CSS personalizado con paleta GitHub Dark
+- **Cache inteligente** — `@st.cache_data(ttl=300)` para datos Excel
+- **Manejo robusto de archivos** — Upload desde cualquier dispositivo + fallback local
+- **UI responsive** — Layout adaptable con `st.columns()`
+- **Formatos monetarios** — Función `fmt_clp()` consistente
+- **Validación de datos** — Manejo errores pandas con `errors='coerce'`
+- **Separación de concerns** — Lógica financiera separada de UI
+- **Configuración externa** — Variables de entorno para rutas Excel
+
+#### Dependencias críticas:
+```
+streamlit>=1.32.0    # UI framework
+pandas>=2.2.0        # Data manipulation
+plotly>=5.20.0       # Charts
+openpyxl>=3.1.2      # Excel reading
+fpdf2>=2.7.9         # PDF reports
+python-dotenv>=1.0.0 # Environment variables
+```
+
+---
+
+## 6. ENTREGABLES GENERADOS
 
 ### Sesión 1 — Diagnóstico base:
 | Archivo | Descripción |
@@ -106,11 +153,16 @@ El negocio de la hermana fabrica y vende muebles (estanterías, closets, muebles
 | `MEMORY.md` | Este archivo — documentación del proyecto |
 | `analisis_inyeccion.md` | Análisis crédito BCI + aporte familiar (ver sección 6) |
 
-### Pendiente (Claude Code — próximo sprint):
-- [ ] App Python Streamlit con conexión a carpeta OneDrive del Excel
-- [ ] Actualización automática mensual leyendo `Cajas_2026`
-- [ ] Exportador de reporte PDF mensual
-- [ ] Alertas cuando saldo < umbral configurado
+### Sprint 1 completado (14-Mar-2026):
+- [x] App Python Streamlit completa — 7 páginas, tema oscuro, datos reales
+- [x] Carga automática Excel + upload desde cualquier dispositivo
+- [x] Exportador de reporte PDF mensual (pdf_report.py — fpdf2)
+- [x] Alertas configurables (PE_ALERTA_DEFAULT=70, SALDO_ALERTA_DEFAULT=200K)
+- [x] Simulador BCI con 3 opciones comparadas + recomendación
+- [x] Cards BCI corregidas (bug línea en blanco markdown Streamlit)
+- [x] Logging estructurado + validar_datos_consistentes()
+- [x] Guía de usuario Word (Guia_ChiquitoFinanzas.docx)
+- [x] Presentación ejecutiva PowerPoint 10 slides (Presentacion_ChiquitoFinanzas.pptx)
 
 ---
 

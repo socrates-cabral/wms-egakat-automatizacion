@@ -71,7 +71,7 @@ CLIENTES = {
 }
 
 TIMEOUT          = 60_000
-TIMEOUT_DESCARGA = 300_000   # 5 min por chunk (todos los clientes incluido DERCO por chunk)
+TIMEOUT_DESCARGA = 600_000   # 10 min por chunk (DERCO puede tardar más de 5 min)
 DERCO_CHUNK_DIAS = 5         # tamaño de partición para DERCO
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -316,12 +316,32 @@ def run():
             log(f"  PERIODO: {fd_dt.strftime('%d/%m/%Y')} al {fh_dt.strftime('%d/%m/%Y')}  ({mes_carpeta} {ano_str})")
             log(f"{'='*55}")
 
+            hoy = datetime.now().date()
+            hoy_str = hoy.strftime("%Y%m%d")
+
             for empresa_wms, carpeta_cliente in CLIENTES.items():
                 log(f"\n>> {empresa_wms} -> {carpeta_cliente}")
 
+                archivo_hoy = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
+
                 if empresa_wms == "DERCO":
+                    # DERCO escribe archivo parcial aunque falle → usar marcador .ok_YYYYMMDD
+                    marker_ok = archivo_hoy + f".ok_{hoy_str}"
+                    if os.path.exists(marker_ok):
+                        log(f"  >> [SKIP] DERCO completado hoy (marcador OK)")
+                        resultados.append((empresa_wms, mes_carpeta, True))
+                        continue
                     ok = descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta)
+                    if ok:
+                        open(marker_ok, "w").close()
                 else:
+                    # Clientes normales: solo escriben archivo en éxito → mtime es suficiente
+                    if os.path.exists(archivo_hoy):
+                        mtime = datetime.fromtimestamp(os.path.getmtime(archivo_hoy)).date()
+                        if mtime == hoy:
+                            log(f"  >> [SKIP] Ya descargado hoy: {empresa_wms}")
+                            resultados.append((empresa_wms, mes_carpeta, True))
+                            continue
                     ok = descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta)
 
                 resultados.append((empresa_wms, mes_carpeta, ok))

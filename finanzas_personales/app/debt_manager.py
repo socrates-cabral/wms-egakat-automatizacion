@@ -10,6 +10,7 @@ Soporta: ingreso manual + parsing PDF CMF "Mi Deuda en el Sistema Financiero".
 import os
 import re
 import json
+import uuid
 from pathlib import Path
 from datetime import datetime
 
@@ -79,7 +80,7 @@ def agregar_deuda(
     """Agrega una deuda nueva. Retorna el dict guardado."""
     deudas = _cargar()
     nueva = {
-        "id": f"deuda_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        "id": f"deuda_{uuid.uuid4().hex[:12]}",
         "institucion": institucion,
         "tipo": tipo,
         "saldo_actual": saldo_actual,
@@ -222,82 +223,198 @@ def alertas_tmc(deudas: list, tmc: dict | None = None) -> list:
 #  PARSER PDF CMF "MI DEUDA EN EL SISTEMA FINANCIERO"
 # ══════════════════════════════════════════════════════════════════════════════
 
-def parsear_informe_cmf(pdf_bytes: bytes) -> list:
+def parsear_informe_cmf(pdf_bytes: bytes) -> dict:
     """
-    Parsea el PDF 'Mi Deuda en el Sistema Financiero' de cmfchile.cl.
-    Retorna lista de deudas detectadas (sin guardar en disco).
-    El PDF tiene formato tabular con columnas: Institución | Tipo | Monto | Cuotas | etc.
+    Parsea el PDF oficial 'Informe de Deudas' de CMF Chile.
+    El PDF produce celdas de texto concatenado (no columnas separadas),
+    por lo que se parsean línea por línea buscando patrones conocidos.
+    Retorna dict con: deudas_directas, lineas_credito, total_deuda,
+    total_disponible, fecha_informe, nombre_titular.
     """
+    # Tipos de crédito reconocidos en el PDF CMF — ORDEN IMPORTA
+    # (algunos son prefijo de otros, ej "Comercial" antes de "Comercial Exterior")
+    _TIPOS_CMF = [
+        "Vivienda", "Consumo", "Comercial", "Tarjeta", "Automotriz",
+        "Leasing", "Factoring", "Hipotecario",
+    ]
+
+    def limpiar_monto(texto: str) -> int:
+        limpio = re.sub(r'[^\d]', '', str(texto))
+        return int(limpio) if limpio else 0
+
+    def normalizar_institucion(nombre: str) -> str:
+        _ALIAS = {
+            "de credito e inversiones": "BCI",
+            "banco de credito":         "BCI",
+            "itaú chile":               "Banco Itaú Chile",
+            "itaú":                     "Banco Itaú Chile",
+            "itau":                     "Banco Itaú Chile",
+            "banco estado":             "Banco Estado",
+            "bancoestado":              "Banco Estado",
+            "scotiabank":               "Scotiabank",
+            "banco santander":          "Santander",
+            "santander":                "Santander",
+            "falabella":                "Banco Falabella",
+            "ripley":                   "Banco Ripley",
+            "consorcio":                "Banco Consorcio",
+            "tenpo":                    "Tenpo",
+        }
+        n_low = nombre.strip().lower()
+        for alias, canon in _ALIAS.items():
+            if alias in n_low:
+                return canon
+        return nombre.strip()
+
+    def parsear_linea_deuda(linea: str):
+        """
+        Busca patrón: {Institución} {Tipo} ${monto} ...
+        Retorna (institucion, tipo, monto) o None.
+        """
+        for tipo in _TIPOS_CMF:
+            # Buscar el tipo (case-insensitive) en la línea
+            m = re.search(r'(.+?)\s+' + tipo + r'\s+(\$[\d.]+)', linea, re.IGNORECASE)
+            if m:
+                inst_raw = m.group(1).strip()
+                monto    = limpiar_monto(m.group(2))
+                # Descartar líneas de encabezado o total
+                if monto < 1_000:
+                    return None
+                if any(w in inst_raw.lower() for w in ['tipo', 'instituc', 'total']):
+                    return None
+                return normalizar_institucion(inst_raw), tipo.capitalize(), monto
+        return None
+
+    def parsear_linea_credito(linea: str):
+        """
+        Busca patrón: {Institución} ${monto_directos} ${monto_indirectos}
+        Retorna (institucion, disponible) o None.
+        """
+        montos = re.findall(r'\$([\d.]+)', linea)
+        if not montos:
+            return None
+        # El primer monto es "Directos"
+        disponible = limpiar_monto(montos[0])
+        if disponible < 1_000:
+            return None
+        # La institución es todo lo que está antes del primer $
+        inst_raw = linea[:linea.index('$')].strip()
+        if not inst_raw or any(w in inst_raw.lower() for w in
+                               ['total', 'instituc', 'directos', 'indirectos']):
+            return None
+        return inst_raw, disponible
+
     try:
         import pdfplumber
         import io
 
-        deudas_detectadas = []
+        resultado = {
+            "deudas_directas": [],
+            "lineas_credito": [],
+            "total_deuda": 0,
+            "total_disponible": 0,
+            "fecha_informe": "",
+            "nombre_titular": "",
+        }
 
         with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            # Concatenar TODO el texto de todas las celdas de todas las tablas
+            texto_deudas  = ""
+            texto_lineas  = ""
+
             for page in pdf.pages:
-                texto = page.extract_text() or ""
-                lineas = texto.splitlines()
+                full_text = page.extract_text() or ""
 
-                for linea in lineas:
-                    l = linea.strip()
-                    if not l:
-                        continue
+                # Fecha e informe desde texto libre
+                if not resultado["fecha_informe"]:
+                    fm = re.search(r'(\d{2}/\d{2}/\d{4})', full_text)
+                    if fm:
+                        resultado["fecha_informe"] = fm.group(1)
 
-                    # Detectar líneas con montos CLP
-                    montos = re.findall(r'\$\s*([\d.]+)', l)
-                    if not montos:
-                        continue
+                # Nombre titular (primera línea del PDF)
+                if not resultado["nombre_titular"]:
+                    nm = re.search(r'^([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]{5,})\n', full_text, re.MULTILINE)
+                    if nm:
+                        resultado["nombre_titular"] = nm.group(1).strip()
 
-                    # Intentar identificar institución
-                    inst_detectada = "Desconocida"
-                    for inst in INSTITUCIONES[:-1]:  # excluir "Otro"
-                        if inst.lower() in l.lower():
-                            inst_detectada = inst
-                            break
+                # Recopilar texto de tablas por sección
+                for tabla in (page.extract_tables() or []):
+                    for fila in tabla:
+                        for celda in fila:
+                            if not celda:
+                                continue
+                            c = str(celda)
+                            if "Deuda Directa" in c:
+                                texto_deudas += c + "\n"
+                            elif "Créditos disponibles" in c or "Lineas de credito" in c.replace("í","i"):
+                                texto_lineas += c + "\n"
 
-                    # Intentar identificar tipo de crédito
-                    tipo_detectado = "Otro"
-                    for tipo in TIPOS_DEUDA:
-                        palabras = tipo.lower().split()
-                        if any(p in l.lower() for p in palabras[:2]):
-                            tipo_detectado = tipo
-                            break
+        # ── Parsear Deuda Directa ────────────────────────────────────────────
+        en_directa = False
+        for linea in texto_deudas.splitlines():
+            l = linea.strip()
+            if not l:
+                continue
+            if "Deuda Directa" in l:
+                en_directa = True
+                continue
+            if "Deuda Indirecta" in l or "No registra" in l:
+                en_directa = False
+                continue
+            if not en_directa:
+                continue
 
-                    # Tomar el mayor monto como saldo de deuda
-                    saldos = []
-                    for m in montos:
-                        try:
-                            saldos.append(float(m.replace(".", "")))
-                        except ValueError:
-                            pass
+            parsed = parsear_linea_deuda(l)
+            if parsed:
+                inst, tipo, monto = parsed
+                resultado["deudas_directas"].append({
+                    "institucion":     inst,
+                    "tipo":            tipo,
+                    "saldo_actual":    monto,
+                    "tasa_mensual":    0.0,
+                    "cuota_mensual":   0,
+                    "meses_restantes": 0,
+                    "descripcion":     f"Importado PDF CMF {resultado['fecha_informe']}",
+                })
 
-                    if saldos:
-                        saldo = max(saldos)
-                        if saldo >= 10_000:  # filtrar montos pequeños/irrelevantes
-                            deudas_detectadas.append({
-                                "institucion": inst_detectada,
-                                "tipo":        tipo_detectado,
-                                "saldo_actual": saldo,
-                                "tasa_mensual": 0.0,   # no disponible en el PDF CMF
-                                "cuota_mensual": 0.0,
-                                "meses_restantes": 0,
-                                "descripcion": l[:80],
-                                "fuente": "PDF CMF",
-                            })
+        # ── Parsear Líneas de Crédito ────────────────────────────────────────
+        en_lineas = False
+        for linea in texto_lineas.splitlines():
+            l = linea.strip()
+            if not l:
+                continue
+            if "Líneas de crédito" in l or "Lineas de credito" in l.replace("í","i"):
+                en_lineas = True
+                continue
+            if "Otros créditos" in l or "Total" in l:
+                continue
+            if not en_lineas:
+                continue
+            if "No registra" in l:
+                continue
 
-        # Deduplicar por institución+tipo (quedarse con el mayor saldo)
-        unicos = {}
-        for d in deudas_detectadas:
-            clave = f"{d['institucion']}_{d['tipo']}"
-            if clave not in unicos or d["saldo_actual"] > unicos[clave]["saldo_actual"]:
-                unicos[clave] = d
+            parsed = parsear_linea_credito(l)
+            if parsed:
+                inst, disponible = parsed
+                resultado["lineas_credito"].append({
+                    "institucion": inst,
+                    "disponible":  disponible,
+                })
 
-        return list(unicos.values())
+        resultado["total_deuda"]      = sum(d["saldo_actual"] for d in resultado["deudas_directas"])
+        resultado["total_disponible"] = sum(l["disponible"]   for l in resultado["lineas_credito"])
 
     except Exception as e:
-        print(f"[debt_manager] Error parsing CMF PDF: {e}", file=sys.stderr)
-        return []
+        print(f"[parsear_informe_cmf] Error: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return {
+            "deudas_directas": [], "lineas_credito": [],
+            "total_deuda": 0, "total_disponible": 0,
+            "fecha_informe": "", "nombre_titular": "",
+            "error": str(e),
+        }
+
+    return resultado
 
 
 # ══════════════════════════════════════════════════════════════════════════════

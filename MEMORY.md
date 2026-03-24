@@ -200,15 +200,14 @@ C:\ClaudeWork\
 
 ---
 
-## MÓDULO 5 — NPS Encuesta LimeSurvey (nps_descarga.py v1.0) ✅ VALIDADO 2026-03-10
+## MÓDULO 5 — NPS Encuesta LimeSurvey (nps_descarga.py v2.1) ✅ ACTUALIZADO 2026-03-20
 
 **Carpeta:** `NPS_Encuesta\`
 **URL LimeSurvey:** desde `.env` → `LIMESURVEY_URL`, `LIMESURVEY_USER`, `LIMESURVEY_PASSWORD`
-**Salida:** `C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\Reportes NPS\`
-**Alertas:** subcarpeta `/Alertas/` — archivo vacío si no hay respuestas nuevas
+**Salida fija Power BI:** `OneDrive\Reportes NPS\NPS_PBI_datos.xlsx` (4 hojas: fClientes/fÁreas/fClientes_mes/dClientes)
+**Archivos mapeo:** `tokens_csat.csv` + `Contactos_Clientes.xlsx` en NPS_Encuesta\ — actualizar cada ronda
 
 **Tareas programadas:**
-- `NPS Egakat - Primera descarga` → 28/03/2026 10:00 única vez
 - `NPS Egakat - CSAT Mensual` → día 11 cada mes 10:00
 - `NPS Egakat - NPS Trimestral` → día 16 mar/jun/sep/dic 10:00
 
@@ -217,8 +216,10 @@ C:\ClaudeWork\
 - `NPS Egakat - Nuevo Reporte Disponible` — trigger /Reportes NPS/ → correo con link
 
 **Pendientes NPS:**
-- Franco Pérez (franco.perez@egakat.cl): tokens individuales + skip logic CSAT en LimeSurvey
-- Power BI dashboard NPS — cuando lleguen respuestas 28/03/2026
+- Conectar Power BI al nuevo Excel (antes era Google Sheets)
+- 25/03: descargar tokens NPS 418429 → guardar como `tokens_nps.csv`
+- Agregar contacto NATIVO DRINKS SPA en LimeSurvey (próxima ronda)
+- Rediseño Power BI: mejores visuales + M code documentado (carta blanca del usuario)
 
 ---
 
@@ -493,6 +494,19 @@ def apply_dark_theme(fig):
     return fig
 ```
 
+## MÓDULO 9 — EAN Descarga Derco (ean_descarga.py v1.1)
+- **Validado:** ✅ 2026-03-20 — 36,7 MB en ~19 segundos
+- **URL:** `https://egakatwms.cl/sglwms_EGA_prod/hcodbarra.aspx`
+- **Depósito sesión:** QUILICURA | **Empresa:** DERCO
+- **Selector empresa:** `select[name='vEMPRESA']` label="DERCO" (NO `W0061EMPRESA`)
+- **Buscar:** `input[name='SEARCHBUTTON']`
+- **Excel:** `img#W0061SALIDAEXCEL` (fallback JS click en `<a>` padre)
+- **Descarga:** rápida (~6s) — no requiere espera larga como maestro_articulos
+- **Destino:** `C:\Users\Socrates Cabral\Grupo Planet SpA\José Caceres - Maestro EAN\`
+- **Nombre archivo WMS:** `Codigo+de+Barras{TIMESTAMP}.XLS`
+- **Integrado en:** `maestro_articulos_derco.py` — corre después del Maestro Artículos
+- **Requerido:** click en "Procesos WMS" tras login antes de goto hcodbarra.aspx
+
 ## Dependencias del proyecto
 ```
 py -m pip install streamlit pandas openpyxl plotly python-dotenv requests --break-system-packages
@@ -506,3 +520,307 @@ py -m pip install streamlit pandas openpyxl plotly python-dotenv requests --brea
 5. `COLOR_MAP` definido en `charts.py` — importar desde ahí, nunca redefinir local
 6. Tipo de cambio USDT configurable en Ajustes — nunca hardcodeado
 7. Indicadores económicos desde `mindicador.cl` — manejar timeout con try/except y mostrar valor N/D si falla
+
+---
+
+# PROYECTO 3 — Agente de Apuestas Deportivas
+Última actualización: 2026-03-23
+
+## Contexto
+Agente Python de análisis estadístico deportivo para identificar value bets.
+Construido en sprints. Diseño en Claude.ai → implementación en Claude Code.
+**Carpeta del proyecto:** `C:\ClaudeWork\agente_apuestas\` ✅ (migrado desde `files/` el 2026-03-22)
+**Archivos originales en `files/`:** mantener como backup, NO usar para ejecutar
+
+## APIs configuradas (.env)
+| Variable          | Servicio             | Límite gratuito          |
+|-------------------|----------------------|--------------------------|
+| `API_SPORTS_KEY`  | api-sports.io        | 100 req/día por API      |
+| `ODDS_API_KEY`    | the-odds-api.com     | 500 créditos/mes         |
+| `BALLDONTLIE_KEY` | balldontlie.io       | Tier gratuito disponible |
+| `SPORTMONKS_KEY`  | sportmonks.com       | Free forever (ligas limitadas) |
+
+TheSportsDB V1 no requiere key (`/api/v1/json/123/`). V2 usa header `X-API-KEY`.
+
+## Estructura de carpetas (flat — igual que otros proyectos)
+```
+C:\ClaudeWork\agente_apuestas\          ← Carpeta raíz del proyecto ✅
+├── config.py                           ← Keys, URLs, IDs de ligas, thresholds
+├── run_agent.py                        ← Orquestador principal ✅ Sprint 4
+├── fixtures_collector.py               ← Partidos del día fútbol + basketball ✅ Sprint 1
+├── lineup_collector.py                 ← Equipos probables + lesiones ✅ Sprint 1
+├── stats_collector.py                  ← H2H + forma + stats temporada ✅ Sprint 2
+├── predictions_collector.py            ← Predicciones + Poisson api-sports ✅ Sprint 2
+├── odds_collector.py                   ← Cuotas tiempo real The Odds API ✅ Sprint 2
+├── value_detector.py                   ← Detecta value bets por mercado ✅ Sprint 3
+├── bet_recommender.py                  ← Clasifica tipo de apuesta óptima ✅ Sprint 3
+├── confidence_scorer.py                ← Score final 0-100 por partido ✅ Sprint 3
+├── claude_agent.py                     ← Narrativa Claude + reporte HTML ✅ Sprint 4
+├── telegram_bot.py                     ← 6 funciones Telegram ✅ Sprint 4
+├── nombre_normalizer.py                ← Aliases football-data ↔ Understat ✅ Sprint 9
+├── backtesting\
+│   ├── simulador.py                    ← Apuestas virtuales con bankroll ✅ Sprint 5
+│   ├── resultado_checker.py            ← Verifica resultado real vs predicción ✅ Sprint 5
+│   ├── reporte_performance.py          ← Dashboard precisión + ROI ✅ Sprint 5
+│   ├── run_backtesting.py              ← Orquestador nocturno (Task Scheduler 23:00) ✅ Sprint 5
+│   └── historico_apuestas.json         ← Se crea automáticamente al primer registro
+├── entrenamiento\                      ← Pipeline ML XGBoost ✅ Sprint 7-9
+│   ├── descargador_historico.py        ← football-data.co.uk → CSV por liga/temporada
+│   ├── xg_collector.py                 ← Understat xG por liga/temporada (con cache)
+│   ├── transfermarkt_collector.py      ← Valor plantilla Transfermarkt (cache 30d)
+│   ├── nombre_normalizer.py            ← Normaliza nombres equipos entre fuentes
+│   ├── feature_builder.py              ← Pi-Rating + forma + xG + Transfermarkt
+│   ├── entrenador.py                   ← XGBoost + TimeSeriesSplit + joblib
+│   ├── evaluador.py                    ← Grid ROI por umbral/value + reporte por liga
+│   └── run_entrenamiento.py            ← Orquestador pipeline completo
+├── aprendizaje\                        ← Autolearning del historial ⏳ Sprint 6
+│   └── run_aprendizaje.py              ← Analiza historico_apuestas.json, ajusta thresholds
+├── datos_historicos\
+│   ├── raw\                            ← fd_*.csv (football-data) + understat_xg_*.csv
+│   └── procesados\                     ← features_dataset.csv
+├── modelos\
+│   ├── xgb_model.joblib                ← Modelo entrenado ✅
+│   └── metricas_entrenamiento.json     ← CV accuracy, log_loss, top features
+└── output\                             ← Reportes HTML diarios
+```
+
+## Estado de sprints
+| Sprint | Módulos | Estado |
+|--------|---------|--------|
+| 1 | `fixtures_collector.py` + `lineup_collector.py` + `config.py` | ✅ Validado (2026-03-22) |
+| 2 | `stats_collector.py` v2.0 + basketball NBA + `predictions_collector.py` + `odds_collector.py` | ✅ v2.0 (2026-03-22) |
+| 3 | `value_detector.py` + ensemble + steam move + `bet_recommender.py` + `confidence_scorer.py` | ✅ v2 (2026-03-22) |
+| 4 | `claude_agent.py` + bloque riesgo HTML + `run_agent.py` + stop-loss + Telegram | ✅ v2 (2026-03-22) |
+| 5 | `simulador.py` + `resultado_checker.py` + `reporte_performance.py` + `run_backtesting.py` | ✅ Código generado (2026-03-22) — en `backtesting\` |
+| 6 | `aprendizaje\run_aprendizaje.py` — autolearning historial → ajusta thresholds | ⏳ Pendiente (prerequisito: 30+ partidos con resultado) |
+| 7 | `entrenamiento\` — XGBoost + Pi-Rating + xG Understat + Transfermarkt + TimeSeriesSplit | ✅ Pipeline completo (2026-03-23) |
+| 8 | Fixes: leakage B365 separado de features, Understat (FBref bloqueado), nombre_normalizer | ✅ CV=0.4734, Test=0.5020 |
+| 9 | Grid ROI por umbral/value, evaluador reescrito con reglas selectivas, ROI por liga | ✅ ROI +10.79% Serie A activa (umbral=0.70, value=0.10) |
+| 10 | predictor_tiempo_real.py + test + run_agent ML branch + Telegram fuente_prediccion | ✅ COMPLETO (2026-03-24) |
+
+## Arquitectura Sprint 5 — Backtesting
+```
+HOY (antes del partido)          DESPUÉS DEL PARTIDO (estado FT/AET/PEN)
+────────────────────────         ───────────────────────────────────────
+simulador.py                     resultado_checker.py
+  registrar_apuesta(rec, flat)   → consulta api-sports /fixtures?id=
+  → historico_apuestas.json      → evaluar_apuesta(tipo, seleccion, goles)
+    {resultado_real: null}       → actualiza ganado/retorno en JSON
+                                 ↓
+                                 reporte_performance.py
+                                 → precision/ROI/yield por tipo
+                                 → bankroll chart + calibración Plotly
+                                 → HTML dark theme #0c1422 / teal #14b8a6
+```
+**Bankroll:** $100.000 CLP inicial | Flat: $5.000/apuesta | Kelly: Quarter Kelly, cap 10%
+**Tipos de apuesta soportados:** 1X2, BTTS, OVER_UNDER, DOUBLE_CHANCE
+**Task Scheduler sugerido:** 23:00 diario → `py agente_apuestas\backtesting\run_backtesting.py`
+**Lanzadores escritorio:** `Agente Apuestas.lnk` + `Ver Performance.lnk` → `agente_apuestas\`
+
+## Ligas configuradas (IDs estables api-sports.io)
+**Fútbol:** Premier League=39, La Liga=140, Champions League=2,
+Ligue 1=61, Serie A=135, Bundesliga=78, Primera División CL=265, Copa Libertadores=13
+**Basketball:** NBA=12, Euroliga=120
+
+## Tipos de apuesta por deporte
+**Fútbol:** 1X2, DOUBLE_CHANCE, BTTS, OVER_UNDER, ASIAN_HC, HALF_TIME
+**Basketball:** MONEYLINE, SPREAD, TOTAL, HALF_LINE
+
+## Lógica core: Value Betting
+```python
+value = (prob_modelo * cuota_bookmaker) - 1
+es_value_bet = value > 0.05   # umbral mínimo: +5%
+```
+El agente NO predice ganadores — detecta partidos donde la probabilidad
+del modelo supera la probabilidad implícita en la cuota del bookmaker.
+
+## Sprint 5 — Backtesting: diseño detallado
+
+### simulador.py
+- Recibe recomendaciones del agente (output Sprint 3)
+- Simula apuesta con bankroll virtual configurable (default $100.000 CLP)
+- Dos estrategias paralelas: flat betting (monto fijo) Y Kelly Criterion
+- Guarda cada apuesta en `historico_apuestas.json`:
+```json
+{
+  "fixture_id": 123456,
+  "fecha": "2026-03-22",
+  "deporte": "futbol",
+  "liga": "Premier League",
+  "home": "Arsenal",
+  "away": "Chelsea",
+  "tipo_apuesta": "BTTS",
+  "seleccion": "Si",
+  "cuota": 1.75,
+  "prob_modelo": 0.64,
+  "value": 0.12,
+  "monto_flat": 5000,
+  "monto_kelly": 3200,
+  "resultado_predicho": "Si",
+  "resultado_real": null,
+  "ganado": null,
+  "retorno_flat": null,
+  "retorno_kelly": null,
+  "score_final": null,
+  "ts_registro": "2026-03-22T18:30:00"
+}
+```
+
+### resultado_checker.py
+- Corre una vez al día (23:00 via Task Scheduler, Task: "Agente Apuestas - Backtesting")
+- Lee `historico_apuestas.json`, filtra entradas con `resultado_real: null`
+- Para cada apuesta pendiente: consulta `api-sports /fixtures?id=fixture_id`
+- Si estado == "FT": extrae score, evalúa si la apuesta ganó, llena todos los campos null
+- Lógica de evaluación por tipo:
+  - 1X2/MONEYLINE: compara ganador predicho vs ganador real
+  - BTTS: verifica si ambos equipos anotaron (score_home > 0 AND score_away > 0)
+  - OVER_UNDER: compara total goles vs línea (ej: total > 2.5)
+  - SPREAD: compara diferencia de puntos vs handicap
+- Guarda JSON actualizado
+- Log con prefijo [OK]/[FALLO] compatible con run_todos.py
+
+### reporte_performance.py
+- Lee `historico_apuestas.json` (solo entradas con resultado_real != null)
+- Calcula métricas:
+  - Precisión global y por tipo de apuesta
+  - ROI por tipo: `(ganado - apostado) / apostado * 100`
+  - Yield: `% ganancia promedio por apuesta`
+  - Evolución bankroll flat vs Kelly en el tiempo
+  - Calibración del modelo: cuando predice 60%, ¿ocurre ~60% de las veces?
+  - Mejor y peor racha de aciertos/fallos consecutivos
+  - Value hit rate: % de value_bets que efectivamente ganaron
+- Genera reporte HTML con Plotly
+- Estética heredada de finanzas_personales: fondo #0c1422, teal #14b8a6, COLOR_MAP
+
+### run_backtesting.py
+- Orquestador: resultado_checker → reporte_performance → guarda HTML en output/
+- Compatible con Task Scheduler (23:00 L-V)
+- Log centralizado en `C:\ClaudeWork\logs\backtesting_YYYY-MM-DD.log`
+
+### Métricas clave del modelo
+```python
+METRICAS = {
+    "precision_1X2":        "% aciertos resultado final",
+    "precision_btts":       "% aciertos ambos anotan",
+    "precision_over_under": "% aciertos total goles",
+    "roi_por_tipo":         "(ganado - apostado) / apostado * 100",
+    "yield":                "% ganancia promedio por apuesta (benchmark: >5% = muy bueno)",
+    "calibracion":          "cuando digo 70%, ocurre el 70% de las veces?",
+    "value_hit_rate":       "% value_bets que ganaron",
+    "bankroll_ev":          "evolucion bankroll flat vs Kelly en el tiempo",
+}
+```
+
+## Resultados ML y parámetros de producción
+
+### Modelo activo (Sprint 9)
+| Métrica | Valor |
+|---------|-------|
+| CV accuracy (5-fold TimeSeriesSplit) | 0.4729 ± 0.0248 |
+| Test accuracy (20% cronológico) | 0.5036 |
+| Features totales | 16 |
+| Top features | pi_exp_home, pi_exp_away, pi_diff, pi_diff_abs, pi_rating_home |
+
+### Parámetros producción
+| Parámetro | Valor |
+|-----------|-------|
+| `UMBRAL_CONFIANZA` | 0.70 |
+| `VALUE_MIN` | 0.10 |
+| Archivo modelo | `modelos/xgb_model.joblib` |
+
+### ROI por liga (umbral=0.70) — DESPUÉS de fixes (reentrenado 2026-03-23)
+| Liga | N apuestas | Accuracy | ROI | Estado |
+|------|------------|----------|-----|--------|
+| Serie A | 23 | 82.6% | **+31.65%** | **ACTIVA** ✓ |
+| La Liga | 9 | 88.9% | +25.44% | suspendida (n < 20) |
+| Bundesliga | 16 | 75.0% | +9.69% | suspendida (n < 20) |
+| Premier League | 15 | 66.7% | -4.27% | suspendida |
+| Ligue 1 | 11 | 36.4% | -44.82% | suspendida |
+
+Mejor combinación global: umbral=0.75, value=0.08 → ROI flat +7.50%, 74 apuestas
+
+### Tabla comparativa Sprint 9 → fixes
+| Métrica | Sprint 9 | Post-fixes |
+|---------|----------|------------|
+| CV accuracy | 0.4729 | **0.4888** |
+| Test accuracy | 0.5036 | **0.5226** |
+| ROI Serie A | +10.79% | **+31.65%** |
+| Partidos xG | 1,752 | **10,707** |
+
+Top features post-fix: `pi_exp_home`, `pi_diff`, `pi_exp_away`, `xg_temporada_home`, `xg_temporada_away`
+
+### xG Status
+- 2019-2024: ✅ 10,707 partidos (5 ligas × 6 temporadas) en `raw/understat_xg_*.csv`
+
+### Transfermarkt Status
+- Cache 30 días en `datos_historicos/transfermarkt_cache.json`
+- Fix B integrado: `get_valor_plantilla()` llamado directamente en `build_features_partido()`
+- Features agregadas: `valor_home_mill`, `valor_away_mill`, `ratio_valor`, `log_ratio_valor`, `diff_valor_mill`
+- Si equipo no está en `TRANSFERMARKT_IDS` → features=None, pipeline continúa ([WARN])
+
+### Criterio de expansión de ligas
+- Activar liga cuando n_apuestas (umbral=0.70) ≥ 20 Y ROI > 0
+- La Liga está a 6 apuestas del umbral mínimo
+
+## Sprint 10 COMPLETO ✅ (2026-03-24)
+Archivos creados/modificados:
+- `predictor_tiempo_real.py` — función `predecir_partidos_hoy()` (408 líneas)
+- `run_agent.py` — rama ML integrada (Paso 3b, líneas 794-853)
+- `telegram_bot.py` — campo `fuente_prediccion` con header/footer diferenciado
+- `modelos/feature_columns.json` — 35 columnas del modelo
+- `modelos/pi_ratings_actuales.json` — 29 equipos Serie A, 1900 partidos base
+- `test_sprint10.py` — validación end-to-end (6/6 ✅)
+- `Iniciar_Sprint10.bat` — lanzador con reporte automático
+
+Validación `py test_sprint10.py` — 2026-03-24:
+- Modelo ✅ | Features ✅ (35) | Pi-Ratings ✅ (29 equipos)
+- Predictor ✅ | Formato ✅ | Telegram ✅
+- Pi-Ratings top 5: Inter 1.43, Milan 1.10, Atalanta 0.92, Napoli 0.75, Juve 0.62
+
+Flujo producción (Task Scheduler 08:00 L-V):
+  `py run_agent.py` → Paso 3b: `predecir_partidos_hoy()` → Telegram ML card → registra en historico_apuestas.json
+
+Task Scheduler (documentado, NO creado):
+  Nombre: "Agente Apuestas - Prediccion Diaria"
+  Script: C:\ClaudeWork\agente_apuestas\run_agent.py
+  Hora: 08:00 L-V | Ejecutable: ruta completa python.exe
+
+## Reglas del agente (heredadas de ClaudeWork)
+1. `py` y `py -m pip` siempre
+2. `.env` con `parent.parent` desde subcarpetas
+3. `sys.stdout.reconfigure(encoding="utf-8")` en cada script
+4. Nunca eliminar código — comentar con `#`
+5. `if __name__ == "__main__"` en cada módulo para test individual
+6. Logs con prefijo `[OK]`, `[FALLO]`, `[INFO]` — compatible con `run_todos.py`
+7. `check_quota()` antes de secuencias de llamadas — límite 100 req/día api-sports
+8. `historico_apuestas.json` es la fuente de verdad del backtesting — nunca eliminar entradas, solo actualizar campos null
+
+
+## Casa de apuestas: Betano Chile
+URL: https://lat.betano.com/
+Moneda: CLP (pesos chilenos)
+Contexto: Todas las apuestas reales se ejecutan manualmente en Betano Chile.
+El agente recomienda — el usuario decide y apuesta en Betano.
+
+### Mapeo de mercados internos → nombre en Betano Chile
+| Nombre interno agente | Nombre en Betano Chile         |
+|-----------------------|-------------------------------|
+| 1X2                   | 1X2                            |
+| DOUBLE_CHANCE         | Doble Oportunidad              |
+| BTTS                  | Ambos Equipos Marcan           |
+| OVER_UNDER            | Más/Menos [línea] Goles        |
+| ASIAN_HC              | Hándicap Asiático              |
+| HALF_TIME             | Resultado al Descanso          |
+| MONEYLINE             | Ganador del Partido            |
+| SPREAD                | Hándicap                       |
+| TOTAL                 | Total Puntos Más/Menos         |
+
+### Sección "Simulación de Retorno" en reporte HTML (Sprint 4)
+Agregada a cada apuesta recomendada en el reporte HTML generado por claude_agent.py.
+Funciona con JavaScript inline (sin dependencias externas — archivo HTML autocontenido).
+Campos interactivos:
+- Input monto a apostar (CLP)
+- Slider bankroll (default $200.000, min $50.000, max $2.000.000, paso $50.000)
+- Cálculo en tiempo real: ganancia neta, retorno total, pérdida, monto Kelly
+- Semáforo value: verde >10%, amarillo 5-10%, rojo <5%
+Estética: fondo #0c1422, teal #14b8a6, borde #1e2d45

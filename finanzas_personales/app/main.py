@@ -219,16 +219,22 @@ input, textarea, select {
 input:focus, textarea:focus { border-color: #14b8a6 !important; }
 
 /* ── Botones globales ─────────────────────────────────────────────────────── */
-.stButton > button {
-    background: #14b8a6 !important;
-    color: #021b18 !important;
+.stButton > button,
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-secondary"] {
     font-weight: 700 !important;
-    border: none !important;
     border-radius: 6px !important;
     padding: 8px 20px !important;
     transition: all 0.2s ease;
 }
-.stButton > button:hover { background: #0d9488 !important; transform: translateY(-1px); }
+.stButton > button,
+[data-testid="stBaseButton-primary"] {
+    background: #14b8a6 !important;
+    color: #021b18 !important;
+    border: none !important;
+}
+.stButton > button:hover,
+[data-testid="stBaseButton-primary"]:hover { background: #0d9488 !important; transform: translateY(-1px); }
 .stButton > button[kind="secondary"] {
     background: #1E293B !important;
     color: #94A3B8 !important;
@@ -252,6 +258,9 @@ details summary { color: #CBD5E1 !important; font-weight: 600 !important; }
 hr { border-color: #1E293B !important; }
 .stCaption, small { color: #94A3B8 !important; }
 [data-testid="stAlert"] { border-radius: 8px !important; }
+[data-testid="stAlert"] p,
+[data-testid="stAlert"] span,
+[data-testid="stAlert"] div { color: #F1F5F9 !important; font-weight: 500; }
 
 /* ── Tablas BI ────────────────────────────────────────────────────────────── */
 [data-testid="stDataFrame"] {
@@ -496,7 +505,8 @@ if pagina == "📊 Dashboard":
     # Patrimonio neto básico (desde config)
     afp_saldo = get_cfg("afp_saldo")
     activos_base = {"AFP ProVida": afp_saldo}
-    pasivos_base = {"Dividendo hipotecario restante": get_cfg("dividendo_mensual") * 240}
+    hipoteca_dash = get_cfg("hipoteca_saldo") or 0
+    pasivos_base = {"Hipoteca": hipoteca_dash}
     patr = calc_patrimonio_neto(activos_base, pasivos_base)
 
     # ── KPI Cards ────────────────────────────────────────────────────────────
@@ -548,9 +558,33 @@ if pagina == "📊 Dashboard":
         st.plotly_chart(chart_barras_gastos_mes(df_mes_actual), use_container_width=True)
     with col_b:
         por_tipo = resumen.get("por_tipo", {})
-        if not por_tipo and "tipo" in df_mes_actual.columns:
-            por_tipo = df_mes_actual.groupby("tipo")["importe"].sum().to_dict()
-        st.plotly_chart(chart_dona_tipos(por_tipo), use_container_width=True)
+        if not por_tipo and "tipo_tx" in df_mes_actual.columns:
+            por_tipo = df_mes_actual.groupby("tipo_tx")["importe"].sum().to_dict()
+        tipos_con_datos = {k: v for k, v in por_tipo.items() if v > 0}
+        if len(tipos_con_datos) <= 1:
+            # Sin desglose por tipo: mostrar dona por categoría de gasto
+            por_grupo_dona = resumen.get("por_grupo", {})
+            if por_grupo_dona:
+                _labels = list(por_grupo_dona.keys())
+                _values = list(por_grupo_dona.values())
+                _fig_dona = go.Figure(go.Pie(
+                    labels=_labels, values=_values,
+                    hole=0.45, textinfo="percent",
+                    hovertemplate="%{label}<br>%{value:,.0f}<extra></extra>",
+                    marker_colors=[COLOR_MAP.get(g, "#64748B") for g in _labels],
+                ))
+                _fig_dona.update_layout(
+                    title="Distribución por Categoría",
+                    title_font_color="#CBD5E1", title_font_size=14,
+                    paper_bgcolor="#1E293B", plot_bgcolor="#1E293B",
+                    font=dict(color="#94A3B8"),
+                    legend=dict(font=dict(color="#94A3B8"), bgcolor="rgba(0,0,0,0)"),
+                    margin=dict(l=20, r=20, t=48, b=20),
+                    separators=",.",
+                )
+                st.plotly_chart(_fig_dona, use_container_width=True)
+        else:
+            st.plotly_chart(chart_dona_tipos(por_tipo), use_container_width=True)
 
     # ── Row 3: Evolución mensual ──────────────────────────────────────────────
     st.plotly_chart(chart_evolucion_mensual(df_tx), use_container_width=True)
@@ -956,14 +990,18 @@ elif pagina == "📈 Anual":
     try:
         df_resumen = cargar_resumen_anual(excel_path)
         if not df_resumen.empty:
-            # Mostrar solo grupos (sin conceptos detalle)
+            # Normalizar: si el índice tiene los grupos (formato antiguo), convertirlo a columna
+            if df_resumen.index.dtype == object or df_resumen.index.name in ("concepto", "Grupo"):
+                df_resumen = df_resumen.reset_index()
+                df_resumen.rename(columns={df_resumen.columns[0]: "Grupo"}, inplace=True)
             cols_meses = [c for c in df_resumen.columns if c in
                           ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO",
                            "JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"]]
-            df_show = df_resumen[cols_meses].copy()
-            # Formatear
+            col_grupo = next((c for c in df_resumen.columns if "grupo" in c.lower()), None)
+            cols_show = ([col_grupo] if col_grupo else []) + cols_meses
+            df_show = df_resumen[cols_show].copy()
             for col in cols_meses:
-                df_show[col] = df_show[col].apply(lambda v: fmt_clp(v) if v > 0 else "-")
+                df_show[col] = df_show[col].apply(lambda v: fmt_clp(v) if isinstance(v, (int, float)) and v > 0 else "-")
             mes_actual_up = NOMBRES_MESES.get(mes_actual, "").upper()
             _bi_table(df_show, height=380, highlight_cols=[mes_actual_up])
     except Exception as e:
@@ -990,38 +1028,122 @@ elif pagina == "📈 Anual":
 elif pagina == "💎 Patrimonio Neto":
     st.title("💎 Patrimonio Neto")
 
+    # ── Auto-cargar pasivos desde deudas.json ────────────────────────────────
+    _deudas_json = obtener_deudas()
+    _auto_hipoteca  = sum(d["saldo_actual"] for d in _deudas_json if d.get("tipo","").lower() in ["vivienda","hipotecario"])
+    _auto_consumo   = sum(d["saldo_actual"] for d in _deudas_json if d.get("tipo","").lower() in ["consumo","comercial","automotriz"])
+    _auto_tarjetas  = sum(d["saldo_actual"] for d in _deudas_json if d.get("tipo","").lower() in ["tarjeta"])
+    _auto_linea     = sum(d["saldo_actual"] for d in _deudas_json if d.get("tipo","").lower() in ["línea de crédito","linea de credito","línea","linea"])
+
+    if _deudas_json:
+        st.sidebar.caption("📌 Pasivos cargados automáticamente desde Gestión de Deudas.")
+
+    # ── Auto-cargar crypto desde Kraken (session_state cache 5 min) ──────────
+    import time as _time
+    _cache_key  = "patrimonio_crypto_cache"
+    _cache_time = "patrimonio_crypto_time"
+    _now        = _time.time()
+    if (_cache_key not in st.session_state or
+            _now - st.session_state.get(_cache_time, 0) > 300):
+        try:
+            from kraken_client import get_balances as _gb
+            from crypto_prices import get_top50_prices_clp as _gp
+            _bal = _gb()
+            if "_error" not in _bal:
+                _prices = _gp()
+                _MAP    = {"BTC": "bitcoin", "ETH": "ethereum", "USDT": "tether", "XBT": "bitcoin"}
+                _total  = sum(
+                    _qty * (_prices.get(_MAP.get(_s.upper(), _s.lower()), {}) or {}).get("price_clp", 0)
+                    for _s, _qty in _bal.items()
+                )
+                st.session_state[_cache_key] = (_total, "Kraken Live")
+            else:
+                st.session_state[_cache_key] = (0, "manual")
+        except Exception:
+            st.session_state[_cache_key] = (0, "manual")
+        st.session_state[_cache_time] = _now
+
+    _crypto_clp_total, _crypto_fuente = st.session_state[_cache_key]
+
     st.sidebar.markdown("### Activos")
-    cc = st.sidebar.number_input("Cuenta Corriente/Vista (CLP)", value=0, step=100_000, format="%d")
-    ca = st.sidebar.number_input("Cuenta Ahorro (CLP)", value=0, step=100_000, format="%d")
-    usdt_qty = st.sidebar.number_input("USDT (cantidad)", value=0.0, step=10.0, format="%.2f")
-    precio_usdt = get_cfg("precio_usdt_clp")
-    dpto505_val = st.sidebar.number_input("Dpto 505 Los Claros (valor mercado)", value=120_000_000, step=1_000_000, format="%d")
-    afp_val = get_cfg("afp_saldo")
-    otros_activos = st.sidebar.number_input("Otros activos (CLP)", value=0, step=100_000, format="%d")
+    cc          = st.sidebar.number_input("Cuenta Corriente/Vista (CLP)", value=get_cfg("patrimonio_cc"),            step=100_000,   format="%d")
+    ca          = st.sidebar.number_input("Cuenta Ahorro (CLP)",          value=get_cfg("patrimonio_ca"),            step=100_000,   format="%d")
+    dpto505_val = st.sidebar.number_input("Dpto 505 Los Claros (valor mercado)", value=get_cfg("patrimonio_dpto505"), step=1_000_000, format="%d")
+    afp_val     = get_cfg("afp_saldo")
+    # USDT manual solo si Kraken no conecta
+    usdt_qty = get_cfg("patrimonio_usdt")  # fallback siempre definido
+    if _crypto_fuente == "manual":
+        usdt_qty    = st.sidebar.number_input("USDT (cantidad)",           value=get_cfg("patrimonio_usdt"),          step=10.0,      format="%.2f")
+        precio_usdt = get_cfg("precio_usdt_clp")
+        _crypto_clp_total = usdt_qty * precio_usdt
+    else:
+        st.sidebar.caption(f"₿ Crypto: {fmt_clp(int(_crypto_clp_total))} (Kraken Live)")
+    otros_activos = st.sidebar.number_input("Otros activos (CLP)",         value=get_cfg("patrimonio_otros_activos"),step=100_000,   format="%d")
 
     st.sidebar.markdown("### Pasivos")
-    hipoteca_saldo = st.sidebar.number_input("Hipoteca saldo (CLP)", value=get_cfg("dividendo_mensual") * 240, step=1_000_000, format="%d")
-    tarjetas = st.sidebar.number_input("Deuda tarjetas (CLP)", value=0, step=10_000, format="%d")
-    linea_credito = st.sidebar.number_input("Línea de crédito (CLP)", value=0, step=10_000, format="%d")
-    otros_pasivos = st.sidebar.number_input("Otros pasivos (CLP)", value=0, step=10_000, format="%d")
+    hipoteca_saldo = st.sidebar.number_input("Hipoteca (CLP)",        value=int(_auto_hipoteca or get_cfg("hipoteca_saldo") or 0), step=1_000_000, format="%d",
+        help="Auto-cargado desde Gestión de Deudas (tipo Vivienda). Editable.")
+    tarjetas       = st.sidebar.number_input("Tarjetas (CLP)",         value=int(_auto_tarjetas),  step=10_000,    format="%d")
+    consumo        = st.sidebar.number_input("Crédito Consumo (CLP)",  value=int(_auto_consumo),   step=10_000,    format="%d")
+    linea_credito  = st.sidebar.number_input("Línea de crédito (CLP)", value=int(_auto_linea),     step=10_000,    format="%d")
+    otros_pasivos  = st.sidebar.number_input("Otros pasivos (CLP)",    value=0,                    step=10_000,    format="%d")
 
-    usdt_clp = usdt_qty * precio_usdt
+    if st.sidebar.button("💾 Guardar activos"):
+        set_cfg("patrimonio_cc",            cc)
+        set_cfg("patrimonio_ca",            ca)
+        set_cfg("patrimonio_usdt",          usdt_qty)
+        set_cfg("patrimonio_dpto505",       dpto505_val)
+        set_cfg("patrimonio_otros_activos", otros_activos)
+        _env_path = Path(__file__).parent.parent.parent / ".env"
+        _lineas = _env_path.read_text(encoding="utf-8").splitlines()
+        _map = {
+            "PATRIMONIO_CC":            str(cc),
+            "PATRIMONIO_CA":            str(ca),
+            "PATRIMONIO_USDT":          str(usdt_qty),
+            "PATRIMONIO_DPTO505":       str(dpto505_val),
+            "PATRIMONIO_OTROS_ACTIVOS": str(otros_activos),
+        }
+        _nuevas = []
+        _escritas = set()
+        for _l in _lineas:
+            _k = _l.split("=")[0] if "=" in _l else ""
+            if _k in _map:
+                _nuevas.append(f"{_k}={_map[_k]}")
+                _escritas.add(_k)
+            else:
+                _nuevas.append(_l)
+        for _k, _v in _map.items():
+            if _k not in _escritas:
+                _nuevas.append(f"{_k}={_v}")
+        _env_path.write_text("\n".join(_nuevas), encoding="utf-8")
+        # Guardar snapshot histórica del mes
+        from patrimonio_historico import guardar_snapshot as _snap
+        _snap(
+            cc=cc, ca=ca, crypto_clp=int(_crypto_clp_total),
+            dpto505=dpto505_val, afp=int(afp_val), otros_activos=otros_activos,
+            hipoteca=hipoteca_saldo, tarjetas=tarjetas, consumo=consumo,
+            linea_credito=linea_credito, otros_pasivos=otros_pasivos,
+        )
+        st.sidebar.success("✅ Activos guardados y snapshot del mes registrada.")
+
 
     activos = {
         "Cta. Corriente/Vista": cc,
-        "Cta. Ahorro": ca,
-        "USDT": usdt_clp,
-        "Dpto 505 Los Claros": dpto505_val,
-        "AFP ProVida": afp_val,
-        "Otros activos": otros_activos,
+        "Cta. Ahorro":          ca,
+        f"Crypto ({_crypto_fuente})": int(_crypto_clp_total),
+        "Dpto 505 Los Claros":  dpto505_val,
+        "AFP ProVida":          afp_val,
+        "Otros activos":        otros_activos,
     }
     pasivos = {
-        "Hipoteca": hipoteca_saldo,
-        "Tarjetas": tarjetas,
-        "Línea crédito": linea_credito,
-        "Otros pasivos": otros_pasivos,
+        "Hipoteca":        hipoteca_saldo,
+        "Tarjetas":        tarjetas,
+        "Consumo":         consumo,
+        "Línea crédito":   linea_credito,
+        "Otros pasivos":   otros_pasivos,
     }
 
+    set_cfg("hipoteca_saldo", hipoteca_saldo)
     patr = calc_patrimonio_neto(activos, pasivos)
 
     # KPIs
@@ -1045,7 +1167,7 @@ elif pagina == "💎 Patrimonio Neto":
         st.markdown(f'<div class="alert-verde">🟢 Ratio de endeudamiento saludable: {ratio:.1f}%.</div>', unsafe_allow_html=True)
 
     # Activos líquidos
-    activos_liquidos = cc + ca + usdt_clp
+    activos_liquidos = cc + ca + int(_crypto_clp_total)
     st.metric("💧 Activos Líquidos", fmt_clp(activos_liquidos),
               delta=f"{activos_liquidos/patr['total_activos']*100:.1f}% del total" if patr["total_activos"] > 0 else "0%")
 
@@ -1072,8 +1194,48 @@ elif pagina == "💎 Patrimonio Neto":
         else:
             st.info("Sin pasivos registrados.")
 
-    if usdt_clp > 0:
-        st.caption(f"USDT calculado: {usdt_qty:.2f} × {fmt_clp(precio_usdt)} = {fmt_clp(usdt_clp)}. Precio editable en ⚙️ Ajustes.")
+    if _crypto_fuente == "manual" and _crypto_clp_total > 0:
+        st.caption(f"USDT calculado: {usdt_qty:.2f} × {fmt_clp(get_cfg('precio_usdt_clp'))} = {fmt_clp(int(_crypto_clp_total))}. Precio editable en ⚙️ Ajustes.")
+    elif _crypto_fuente == "Kraken Live":
+        st.caption(f"₿ Crypto desde Kraken Live: {fmt_clp(int(_crypto_clp_total))} (USDT + ETH + otros)")
+
+    # ── Evolución histórica del patrimonio ───────────────────────────────────
+    st.markdown("---")
+    st.subheader("📈 Evolución del Patrimonio en el Año")
+    from patrimonio_historico import obtener_historico as _get_hist
+    _hist = _get_hist()
+    if len(_hist) < 2:
+        st.info("Guarda activos al menos 2 meses para ver la evolución. Cada vez que hagas clic en '💾 Guardar activos' se registra una snapshot del mes.")
+    else:
+        _df_hist = pd.DataFrame(_hist)
+        import plotly.graph_objects as _go
+        _fig_hist = _go.Figure()
+        _fig_hist.add_trace(_go.Scatter(
+            x=_df_hist["mes"], y=_df_hist["patrimonio_neto"],
+            name="Patrimonio Neto", line=dict(color="#14b8a6", width=3),
+            fill="tozeroy", fillcolor="rgba(20,184,166,0.08)",
+            hovertemplate="<b>%{x}</b><br>Patrimonio: $%{y:,.0f}<extra></extra>"
+        ))
+        _fig_hist.add_trace(_go.Bar(
+            x=_df_hist["mes"], y=_df_hist["total_activos"],
+            name="Total Activos", marker_color="rgba(74,222,128,0.4)",
+            hovertemplate="<b>%{x}</b><br>Activos: $%{y:,.0f}<extra></extra>"
+        ))
+        _fig_hist.add_trace(_go.Bar(
+            x=_df_hist["mes"], y=[-v for v in _df_hist["total_pasivos"]],
+            name="Total Pasivos", marker_color="rgba(248,113,113,0.4)",
+            hovertemplate="<b>%{x}</b><br>Pasivos: $%{y:,.0f}<extra></extra>"
+        ))
+        _layout = {**_LAYOUT_BASE, "barmode": "overlay", "title": "Activos vs Pasivos vs Patrimonio Neto"}
+        _fig_hist.update_layout(**_layout)
+        st.plotly_chart(_fig_hist, use_container_width=True)
+
+        # Tabla resumen histórico
+        _df_tabla = _df_hist[["mes","total_activos","total_pasivos","patrimonio_neto"]].copy()
+        _df_tabla.columns = ["Mes", "Total Activos", "Total Pasivos", "Patrimonio Neto"]
+        for _col in ["Total Activos", "Total Pasivos", "Patrimonio Neto"]:
+            _df_tabla[_col] = _df_tabla[_col].apply(fmt_clp)
+        _bi_table(_df_tabla, right_cols=["Total Activos", "Total Pasivos", "Patrimonio Neto"])
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1120,7 +1282,7 @@ elif pagina == "🏦 Deudas":
 
     # ── Tabs: Ver / Agregar / Estrategia ─────────────────────────────────────
     tab_ver, tab_add, tab_est, tab_cmf = st.tabs([
-        "📋 Mis Deudas", "➕ Agregar Deuda", "🎯 Estrategia de Pago", "📄 Import PDF CMF"
+        "📋 Mis Deudas", "➕ Agregar Deuda", "🎯 Estrategia de Pago", "📄 Import PDF CMF / TMC"
     ])
 
     with tab_ver:
@@ -1187,30 +1349,6 @@ elif pagina == "🏦 Deudas":
                 else:
                     st.error("El saldo debe ser mayor a 0.")
 
-        # Upload PDF CMF (acceso rápido)
-        st.markdown("---")
-        st.subheader("O importa desde PDF CMF")
-        st.caption("Descarga tu informe en cmfchile.cl → Mi Deuda en el Sistema Financiero")
-        pdf_cmf_add = st.file_uploader("PDF CMF Mi Deuda", type=["pdf"], key="pdf_cmf_add")
-        if pdf_cmf_add:
-            detectadas = parsear_informe_cmf(pdf_cmf_add.read())
-            if detectadas:
-                st.success(f"Se detectaron {len(detectadas)} deudas. Revisa y confirma:")
-                for i, d in enumerate(detectadas):
-                    with st.expander(f"{d['institucion']} — {d['tipo']} | {fmt_clp(d['saldo_actual'])}"):
-                        st.write(f"Saldo: {fmt_clp(d['saldo_actual'])}")
-                        st.caption(f"Línea original: {d.get('descripcion', '')}")
-                        tasa_manual = st.number_input(f"Tasa mensual % (completar manual)", key=f"t_{i}",
-                                                      min_value=0.0, max_value=10.0, value=1.5, step=0.1)
-                        cuota_manual = st.number_input(f"Cuota mensual", key=f"c_{i}",
-                                                       min_value=0, step=5000, format="%d")
-                        if st.button(f"✅ Confirmar y guardar", key=f"ok_{i}"):
-                            agregar_deuda(d["institucion"], d["tipo"], d["saldo_actual"],
-                                          tasa_manual, cuota_manual, 0, f"Importado PDF CMF")
-                            st.success("Guardada.")
-                            st.rerun()
-            else:
-                st.warning("No se detectaron deudas en el PDF. Intenta ingreso manual.")
 
     with tab_est:
         if not deudas:
@@ -1251,7 +1389,157 @@ elif pagina == "🏦 Deudas":
                 st.metric("💸 Total intereses a pagar (pagando mínimos)", fmt_clp(total_intereses))
 
     with tab_cmf:
-        st.subheader("📄 Tasas Máximas Convencionales (CMF) — Vigentes")
+        st.subheader("📄 Importar PDF — Mi Deuda en el Sistema Financiero")
+        st.caption("Descarga el PDF en **cmfchile.cl** → Mi Deuda en el Sistema Financiero (requiere Clave Única)")
+
+        pdf_cmf = st.file_uploader(
+            "📄 Sube tu PDF del CMF",
+            type=["pdf"],
+            key="pdf_cmf_tab",
+            help="Descárgalo en cmfchile.cl → Mi Deuda en el Sistema Financiero"
+        )
+
+        if pdf_cmf:
+            raw_cmf = pdf_cmf.getvalue()
+            _cmf_key = f"cmf_resultado_{hash(raw_cmf)}"
+            if _cmf_key not in st.session_state:
+                with st.spinner("Parseando PDF CMF..."):
+                    st.session_state[_cmf_key] = parsear_informe_cmf(raw_cmf)
+            resultado_cmf = st.session_state[_cmf_key]
+
+            if resultado_cmf.get("error"):
+                st.error(f"Error al parsear el PDF: {resultado_cmf['error']}")
+                st.caption("Verifica que sea el PDF oficial de CMF Chile (cmfchile.cl → Mi Deuda).")
+
+            elif not resultado_cmf["deudas_directas"]:
+                st.warning("No se detectaron deudas directas. Intenta ingreso manual en ➕ Agregar Deuda.")
+                # Debug: mostrar tablas crudas para diagnóstico
+                with st.expander("🔍 Debug — estructura del PDF"):
+                    import pdfplumber, io as _io
+                    with pdfplumber.open(_io.BytesIO(pdf_cmf.getvalue())) as _pdf:
+                        for _i, _pg in enumerate(_pdf.pages[:3]):
+                            _tbls = _pg.extract_tables()
+                            st.caption(f"Página {_i+1}: {len(_tbls)} tabla(s)")
+                            for _j, _t in enumerate(_tbls[:2]):
+                                st.caption(f"  Tabla {_j+1}: {len(_t)} filas")
+                                st.code(str(_t[:5]))
+
+            else:
+                detectadas = resultado_cmf["deudas_directas"]
+                lineas     = resultado_cmf["lineas_credito"]
+                fecha      = resultado_cmf.get("fecha_informe", "")
+                titular    = resultado_cmf.get("nombre_titular", "")
+
+                st.success(f"✅ PDF parseado — {len(detectadas)} deuda(s) detectada(s)")
+                if titular:
+                    st.caption(f"Titular: **{titular}** | Informe: {fecha}")
+
+                col_r1, col_r2, col_r3 = st.columns(3)
+                col_r1.metric("💳 Deuda total CMF", fmt_clp(resultado_cmf["total_deuda"]))
+                col_r2.metric("🏦 N° deudas",       len(detectadas))
+                col_r3.metric("💳 Crédito disponible", fmt_clp(resultado_cmf["total_disponible"]))
+
+                st.markdown("---")
+                st.subheader("📋 Deudas detectadas — confirmar y guardar")
+                st.caption("Completa tasa y cuota mensual antes de guardar (el PDF CMF no incluye esa información).")
+
+                tmc_ref = tmc_actual.get("LP_pequeño (>=90d, <50UF)", 40.9)
+
+                # Recopilar valores de tasa/cuota/meses para "Guardar todas"
+                _cmf_inputs = []
+
+                for i, d in enumerate(detectadas):
+                    _saved_key = f"cmf_saved_{_cmf_key}_{i}"
+                    ya_guardada = st.session_state.get(_saved_key, False)
+                    with st.expander(
+                        f"{'✅' if ya_guardada else '🏦'} {d['institucion']} — {d['tipo']} | {fmt_clp(d['saldo_actual'])}",
+                        expanded=not ya_guardada
+                    ):
+                        cc1, cc2, cc3 = st.columns(3)
+                        cc1.metric("Saldo",       fmt_clp(d["saldo_actual"]))
+                        cc2.metric("Tipo",        d["tipo"])
+                        cc3.metric("Institución", d["institucion"])
+
+                        cf1, cf2, cf3 = st.columns(3)
+                        default_tasa = 0.35 if d["tipo"] == "Vivienda" else 1.5
+                        tasa_m  = cf1.number_input(
+                            "Tasa mensual (%)", key=f"cmf_tasa_{i}",
+                            min_value=0.0, max_value=10.0,
+                            value=float(default_tasa), step=0.01, format="%.2f",
+                            help="Hipoteca típica: 0.3-0.5%/mes | Consumo: 1.0-2.0%/mes"
+                        )
+                        cuota_m = cf2.number_input(
+                            "Cuota mensual (CLP)", key=f"cmf_cuota_{i}",
+                            min_value=0, step=10_000, format="%d"
+                        )
+                        meses_m = cf3.number_input(
+                            "Meses restantes", key=f"cmf_meses_{i}",
+                            min_value=0, max_value=600,
+                            value=240 if d["tipo"] == "Vivienda" else 12, step=1
+                        )
+
+                        tasa_anual = tasa_m * 12
+                        color_tasa = "🔴" if tasa_anual > tmc_ref else "🟢"
+                        st.caption(f"{color_tasa} Tasa anual: {tasa_anual:.2f}% | TMC referencia: {tmc_ref:.1f}%")
+
+                        if ya_guardada:
+                            st.success(f"✅ {d['institucion']} ya guardada.")
+                        elif st.button(f"✅ Guardar — {d['institucion']}", key=f"cmf_ok_{i}"):
+                            agregar_deuda(
+                                d["institucion"], d["tipo"], d["saldo_actual"],
+                                tasa_m, cuota_m, meses_m,
+                                f"Importado PDF CMF {fecha}"
+                            )
+                            st.session_state[_saved_key] = True
+                            st.rerun()
+
+                        _cmf_inputs.append((d, tasa_m, cuota_m, meses_m))
+
+                # Botón "Guardar todas" al final
+                st.markdown("---")
+                n_pendientes = sum(1 for i in range(len(detectadas)) if not st.session_state.get(f"cmf_saved_{_cmf_key}_{i}", False))
+                if n_pendientes > 0:
+                    if st.button(f"💾 Guardar todas ({n_pendientes} pendiente{'s' if n_pendientes > 1 else ''})"):
+                        guardadas = 0
+                        for i, (d, tasa_m, cuota_m, meses_m) in enumerate(_cmf_inputs):
+                            if not st.session_state.get(f"cmf_saved_{_cmf_key}_{i}", False):
+                                agregar_deuda(
+                                    d["institucion"], d["tipo"], d["saldo_actual"],
+                                    tasa_m, cuota_m, meses_m,
+                                    f"Importado PDF CMF {fecha}"
+                                )
+                                st.session_state[f"cmf_saved_{_cmf_key}_{i}"] = True
+                                guardadas += 1
+                        st.rerun()
+                else:
+                    st.success("✅ Todas las deudas del PDF han sido guardadas.")
+
+                # Líneas de crédito disponibles
+                if lineas:
+                    st.markdown("---")
+                    st.subheader("💳 Líneas de crédito disponibles (no usadas)")
+                    st.caption("Estos montos son crédito disponible — NO son deuda. Solo referencia.")
+
+                    df_lineas = pd.DataFrame(lineas)
+                    df_lineas.columns = ["Institución", "Disponible (CLP)"]
+                    df_lineas["Disponible (CLP)"] = df_lineas["Disponible (CLP)"].apply(lambda x: f"${x:,.0f}".replace(",", "."))
+                    _bi_table(df_lineas, right_cols=["Disponible (CLP)"])
+
+                    col_tot1, col_tot2 = st.columns(2)
+                    col_tot1.metric(
+                        "💰 Total crédito disponible",
+                        fmt_clp(resultado_cmf["total_disponible"]),
+                        help="Suma de todas las líneas no utilizadas"
+                    )
+                    col_tot2.metric(
+                        "⚠️ Si se usara todo",
+                        fmt_clp(resultado_cmf["total_deuda"] + resultado_cmf["total_disponible"]),
+                        delta="Deuda máxima posible",
+                        delta_color="inverse"
+                    )
+
+        st.markdown("---")
+        st.subheader("📊 Tasas Máximas Convencionales (CMF) — Vigentes")
         st.caption("Ninguna institución puede cobrarte una tasa mayor a estos límites.")
         tmc_data = [{"Segmento": k, "TMC Anual": f"{v:.2f}%"} for k, v in tmc_actual.items()]
         _bi_table(pd.DataFrame(tmc_data), right_cols=["TMC Anual"])
@@ -1271,14 +1559,10 @@ elif pagina == "₿ Inversiones":
     st.title("₿ Inversiones Crypto")
 
     # ── Cargar precios y saldos Kraken ────────────────────────────────────────
-    col_sp1, col_sp2 = st.columns(2)
-    with col_sp1:
-        with st.spinner("Conectando Kraken..."):
-            kraken_ok, kraken_msg = test_conexion()
-            kraken_balances = get_balances() if kraken_ok else {}
-    with col_sp2:
-        with st.spinner("Obteniendo precios CoinGecko..."):
-            precios = get_top50_prices_clp()
+    with st.spinner("Conectando Kraken y obteniendo precios..."):
+        kraken_ok, kraken_msg = test_conexion()
+        kraken_balances = get_balances() if kraken_ok else {}
+        precios = get_top50_prices_clp()
 
     # Badge estado conexión
     if kraken_ok:
@@ -1384,6 +1668,9 @@ elif pagina == "₿ Inversiones":
                             x=df_rew_usdt["fecha_dt"].dt.strftime("%d %b"),
                             y=df_rew_usdt["cantidad"],
                             marker_color="#26A17B",
+                            text=df_rew_usdt["cantidad"],
+                            texttemplate="%{text:.4f}",
+                            textposition="outside",
                             hovertemplate="%{x}: +%{y:.4f} USDT<extra></extra>",
                         ))
                         fig_rew.update_layout(
@@ -1454,7 +1741,7 @@ elif pagina == "🏛️ AFP y Previsión":
         try:
             import tempfile
             with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-                tmp.write(uploaded_afp.read())
+                tmp.write(uploaded_afp.getvalue())
                 tmp_path = tmp.name
             df_afp = cargar_afp_movimientos(tmp_path)
             os.unlink(tmp_path)
@@ -1543,7 +1830,7 @@ elif pagina == "📄 Liquidaciones":
         st.session_state.historial_liquidaciones = []
 
     if uploaded_pdf:
-        pdf_bytes = uploaded_pdf.read()
+        pdf_bytes = uploaded_pdf.getvalue()
         with st.spinner("Procesando liquidación..."):
             datos = parsear_liquidacion(pdf_bytes)
 
@@ -1809,7 +2096,30 @@ elif pagina == "⚙️ Ajustes":
             help="Si arriendas una propiedad"
         )
 
-    total_calc = nuevo_sueldo + nuevo_amipass + nuevo_arriendo
+    col3b, col4b, col5b = st.columns(3)
+    with col3b:
+        nuevo_ingreso_variable = st.number_input(
+            "Ingresos variables (CLP)",
+            value=get_cfg("ingreso_variable"),
+            step=10_000, format="%d",
+            help="Comisiones, horas extra, freelance, etc."
+        )
+    with col4b:
+        nuevo_bono = st.number_input(
+            "Bono mensual (CLP)",
+            value=get_cfg("bono_mensual"),
+            step=10_000, format="%d",
+            help="Bono promedio mensual si aplica"
+        )
+    with col5b:
+        nuevo_otros_ingresos = st.number_input(
+            "Otros ingresos (CLP)",
+            value=get_cfg("otros_ingresos"),
+            step=10_000, format="%d",
+            help="Cualquier otro ingreso recurrente"
+        )
+
+    total_calc = nuevo_sueldo + nuevo_amipass + nuevo_arriendo + nuevo_ingreso_variable + nuevo_bono + nuevo_otros_ingresos
     st.metric("Total ingresos calculado", fmt_clp(total_calc))
 
     st.markdown("---")
@@ -1876,12 +2186,15 @@ elif pagina == "⚙️ Ajustes":
             st.error("Archivo no encontrado. Verifica la ruta.")
 
     st.markdown("---")
-    if st.button("💾 Guardar configuración", type="primary"):
+    if st.button("💾 Guardar configuración"):
         set_cfg("liquidaciones_carpeta", nueva_ruta_liq)
         set_cfg("sueldo_liquido", nuevo_sueldo)
         set_cfg("anticipo", nuevo_anticipo)
         set_cfg("amipass", nuevo_amipass)
         set_cfg("arriendo_cobrado", nuevo_arriendo)
+        set_cfg("ingreso_variable", nuevo_ingreso_variable)
+        set_cfg("bono_mensual", nuevo_bono)
+        set_cfg("otros_ingresos", nuevo_otros_ingresos)
         set_cfg("total_ingresos", total_calc)
         set_cfg("afp_saldo", nuevo_afp_saldo)
         set_cfg("afp_aporte_mensual", nuevo_aporte_afp)
@@ -1889,7 +2202,30 @@ elif pagina == "⚙️ Ajustes":
         set_cfg("dividendo_mensual", nuevo_dividendo)
         set_cfg("precio_usdt_clp", nuevo_usdt)
         set_cfg("excel_path", nueva_ruta)
-        st.success("Configuración guardada en sesión.")
+        # Persistir en .env para que sobrevivan reinicios
+        _env_path = Path(__file__).parent.parent.parent / ".env"
+        _lineas = _env_path.read_text(encoding="utf-8").splitlines()
+        _env_map = {
+            "EXCEL_FP_PATH":     nueva_ruta,
+            "LIQUIDACIONES_PATH":nueva_ruta_liq,
+            "INGRESO_VARIABLE":  str(nuevo_ingreso_variable),
+            "BONO_MENSUAL":      str(nuevo_bono),
+            "OTROS_INGRESOS":    str(nuevo_otros_ingresos),
+        }
+        _nuevas = []
+        _escritas = set()
+        for _l in _lineas:
+            _k = _l.split("=")[0] if "=" in _l else ""
+            if _k in _env_map:
+                _nuevas.append(f"{_k}={_env_map[_k]}")
+                _escritas.add(_k)
+            else:
+                _nuevas.append(_l)
+        for _k, _v in _env_map.items():
+            if _k not in _escritas:
+                _nuevas.append(f"{_k}={_v}")
+        _env_path.write_text("\n".join(_nuevas), encoding="utf-8")
+        st.success("✅ Configuración guardada — actualizada en .env (permanente).")
         st.cache_data.clear()
 
     st.markdown("---")
@@ -1970,7 +2306,7 @@ elif pagina == "⚙️ Ajustes":
             if st.session_state.get(f"_be_last_{tipo_sel}") != _nombre:
                 with st.spinner("Procesando Excel..."):
                     try:
-                        _res = cargar_excel_manual(archivo_be.read(), tipo_cuenta=_tipos_label[tipo_sel])
+                        _res = cargar_excel_manual(archivo_be.getvalue(), tipo_cuenta=_tipos_label[tipo_sel])
                     except Exception as _ex:
                         _res = {"ok": False, "error": str(_ex), "total": 0, "nuevos": 0}
                 st.session_state[_res_key] = _res

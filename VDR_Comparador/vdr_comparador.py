@@ -19,6 +19,8 @@ Flujo:
 import sys
 import os
 import re
+import io
+import zipfile
 from datetime import datetime
 from pathlib import Path
 
@@ -156,9 +158,25 @@ def cargar_datos(ruta_xlsx):
     """
     Carga columnas requeridas de un archivo Base VDR.
     Retorna dict: {Material_WMS_str: {col: valor, ...}}
+    Lee el archivo como bytes primero para evitar errores de encoding en rutas
+    con acentos (Errno 22 en Windows) y valida que sea un ZIP/XLSX válido.
     """
     log(f"  Cargando: {os.path.basename(ruta_xlsx)}")
-    wb = openpyxl.load_workbook(ruta_xlsx, read_only=True, data_only=True)
+
+    # Leer bytes directamente (evita [Errno 22] en rutas con caracteres especiales)
+    try:
+        with open(ruta_xlsx, "rb") as fh:
+            raw = fh.read()
+    except OSError as e:
+        raise RuntimeError(f"No se pudo leer el archivo ({e}) — puede estar sincronizando") from e
+
+    # Validar ZIP antes de pasarlo a openpyxl
+    if not zipfile.is_zipfile(io.BytesIO(raw)):
+        raise RuntimeError(
+            f"Archivo no es XLSX válido (corrupto o sincronizando): {os.path.basename(ruta_xlsx)}"
+        )
+
+    wb = openpyxl.load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
     ws = wb.active
 
     # Detectar indices de columnas por nombre en fila 1
@@ -367,10 +385,18 @@ def main():
     # 6. Cargar datos
     log("\n  Cargando datos...")
     try:
-        datos_ant   = cargar_datos(ruta_ant)
+        datos_ant = cargar_datos(ruta_ant)
+    except Exception as e:
+        log(f"  [AVISO] Archivo anterior no se pudo leer: {e}")
+        log(f"  [AVISO] Saltando {archivo_ant} — actualizando estado para no quedar atascado.")
+        escribir_estado(nombre_mes, archivo_ant)
+        return
+
+    try:
         datos_nuevo = cargar_datos(ruta_nuevo)
     except Exception as e:
-        log(f"  [ERROR] Fallo al leer archivos: {e}")
+        log(f"  [ERROR] Archivo nuevo no se pudo leer: {e}")
+        log(f"  [AVISO] Se reintentará en la próxima ejecución.")
         return
 
     # 7. Identificar SKUs nuevos y eliminados

@@ -263,10 +263,13 @@ def chart_patrimonio_waterfall(activos: dict, pasivos: dict) -> go.Figure:
             values.append(-val)
             measures.append("relative")
             colors.append(COLOR_NEGATIVO)
+    patrimonio_neto = sum(values)  # suma real antes de agregar el total
     names.append("Patrimonio Neto")
     values.append(0)
     measures.append("total")
     colors.append(COLOR_INVERSION)
+    texts = [fmt_clp(abs(v)) if v != 0 else "" for v in values]
+    texts[-1] = fmt_clp(abs(patrimonio_neto))  # valor real en la barra total
     fig = go.Figure(
         go.Waterfall(
             name="Patrimonio",
@@ -278,7 +281,7 @@ def chart_patrimonio_waterfall(activos: dict, pasivos: dict) -> go.Figure:
             decreasing=dict(marker_color=COLOR_NEGATIVO),
             increasing=dict(marker_color=COLOR_BRAND),
             totals=dict(marker_color=COLOR_INVERSION),
-            text=[fmt_clp(abs(v)) if v != 0 else "" for v in values],
+            text=texts,
             textposition="outside",
         )
     )

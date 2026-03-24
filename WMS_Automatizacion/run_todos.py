@@ -51,9 +51,11 @@ SCRIPTS = [
 ]
 
 # ─── Log file ────────────────────────────────────────────────────────
-LOGDIR  = os.path.join(os.path.dirname(BASE), "logs")  # C:\ClaudeWork\logs
+LOGDIR   = os.path.join(os.path.dirname(BASE), "logs")  # C:\ClaudeWork\logs
 os.makedirs(LOGDIR, exist_ok=True)
-LOGFILE = os.path.join(LOGDIR, f"wms_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+LOGFILE      = os.path.join(LOGDIR, f"wms_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+LOCKFILE     = os.path.join(LOGDIR, "wms_run.lock")
+CHECKPOINT   = os.path.join(LOGDIR, f"wms_checkpoint_{datetime.now().strftime('%Y%m%d')}.json")
 
 EMAIL_TO       = os.getenv("SHAREPOINT_USER", "")   # socrates.cabral@egakat.cl
 ONEDRIVE_NOTIF = os.path.join(
@@ -63,8 +65,73 @@ ONEDRIVE_NOTIF = os.path.join(
 )
 
 
+def cargar_checkpoint():
+    """Retorna el set de módulos ya completados exitosamente hoy."""
+    try:
+        if os.path.exists(CHECKPOINT):
+            with open(CHECKPOINT, "r", encoding="utf-8") as f:
+                return set(json.load(f).get("completados", []))
+    except Exception:
+        pass
+    return set()
+
+
+def guardar_checkpoint(nombre_modulo):
+    """Registra un módulo como completado en el checkpoint del día."""
+    completados = cargar_checkpoint()
+    completados.add(nombre_modulo)
+    with open(CHECKPOINT, "w", encoding="utf-8") as f:
+        json.dump({"completados": sorted(completados)}, f, ensure_ascii=False)
+
+
+def adquirir_lock():
+    """Crea lock file con el PID actual. Retorna False si ya hay una instancia corriendo."""
+    if os.path.exists(LOCKFILE):
+        try:
+            with open(LOCKFILE, "r") as f:
+                pid = int(f.read().strip())
+            result = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV"],
+                capture_output=True, text=True
+            )
+            if str(pid) in result.stdout:
+                print(f"[LOCK] Ya hay una instancia corriendo (PID {pid}). Abortando.")
+                return False
+            print(f"[LOCK] Lock obsoleto (PID {pid} no existe). Limpiando y continuando.")
+        except Exception:
+            pass  # lock corrupto — continuamos
+    with open(LOCKFILE, "w") as f:
+        f.write(str(os.getpid()))
+    return True
+
+
+def liberar_lock():
+    try:
+        if os.path.exists(LOCKFILE):
+            os.remove(LOCKFILE)
+    except Exception:
+        pass
+
+
 def enviar_notificacion(asunto, cuerpo_html):
-    """Envía correo HTML via Outlook Desktop (win32com). Fallo silencioso — no interrumpe el proceso."""
+    """Envía correo HTML. Intenta Graph API primero; Outlook Desktop como fallback."""
+    # Canal 1: Graph API (app-only — funciona sin Outlook abierto)
+    try:
+        from azure_graph import enviar_email
+        ok = enviar_email(
+            from_email=EMAIL_TO,
+            to_email=EMAIL_TO,
+            asunto=asunto,
+            html_body=cuerpo_html,
+        )
+        if ok:
+            log("  [NOTIF] Correo enviado via Graph API.")
+            return
+        log("  [NOTIF] Graph API retorno False — intentando Outlook Desktop...")
+    except Exception as e:
+        log(f"  [NOTIF] Graph API no disponible: {e} — intentando Outlook Desktop...")
+
+    # Canal 2: Outlook Desktop (fallback)
     try:
         import win32com.client
         outlook = win32com.client.Dispatch("Outlook.Application")
@@ -73,9 +140,9 @@ def enviar_notificacion(asunto, cuerpo_html):
         mail.Subject  = asunto
         mail.HTMLBody = cuerpo_html
         mail.Send()
-        log("  [NOTIF] Correo de notificacion enviado.")
+        log("  [NOTIF] Correo enviado via Outlook Desktop.")
     except Exception as e:
-        log(f"  [NOTIF] No se pudo enviar correo via Outlook: {e}")
+        log(f"  [NOTIF] No se pudo enviar correo (Graph ni Outlook): {e}")
 
 
 def log(msg):
@@ -101,8 +168,16 @@ def _ejecutar_una_vez(ruta):
     )
 
 
+def _extraer_fallos(stdout):
+    return [
+        l.strip() for l in (stdout or "").splitlines()
+        if "[FALLO]" in l and "Errores: 0" not in l
+    ]
+
+
 def correr_script(nombre, archivo):
-    """Ejecuta un script Python con 1 reintento automático si falla.
+    """Ejecuta un script Python con hasta 2 reintentos automáticos si falla o tiene fallos internos.
+    El anti-duplicado en cada módulo garantiza que los clientes/centros ya OK se saltean.
     Retorna (ok, duracion, fallos_internos, reintentos)."""
     import time
     ruta   = os.path.join(BASE, archivo)
@@ -117,31 +192,40 @@ def correr_script(nombre, archivo):
         for linea in result.stdout.splitlines():
             log(linea)
 
-    ok = (result.returncode == 0)
-    reintentos = 0
+    ok              = (result.returncode == 0)
+    fallos_internos = _extraer_fallos(result.stdout)
+    reintentos      = 0
 
-    if not ok:
-        log(f"\n  --> [FALLO codigo {result.returncode}] — reintentando en {PAUSA_REINTENTO}s...")
+    # Reintento automático: si falló el proceso O si hay fallos internos (módulo parcial)
+    MAX_REINTENTOS = 2
+    while reintentos < MAX_REINTENTOS and (not ok or fallos_internos):
+        reintentos += 1
+        motivo = f"codigo {result.returncode}" if not ok else f"{len(fallos_internos)} fallo(s) interno(s)"
+        log(f"\n  --> [{motivo}] — reintentando en {PAUSA_REINTENTO}s (intento {reintentos}/{MAX_REINTENTOS})...")
         time.sleep(PAUSA_REINTENTO)
-        reintentos = 1
-        log(f"\n  --- REINTENTO 1 ---  {datetime.now().strftime('%H:%M:%S')}")
+        log(f"\n  --- REINTENTO {reintentos} ---  {datetime.now().strftime('%H:%M:%S')}")
         result2 = _ejecutar_una_vez(ruta)
         if result2.stdout:
             for linea in result2.stdout.splitlines():
                 log(linea)
-        ok = (result2.returncode == 0)
-        estado_reintento = "[REINTENTO_OK]" if ok else "[REINTENTO_FALLO]"
+        ok              = (result2.returncode == 0)
+        fallos_internos = _extraer_fallos(result2.stdout)
+        result          = result2
+
+    estado_reintento = ""
+    if reintentos > 0:
+        if ok and not fallos_internos:
+            estado_reintento = "[REINTENTO_OK]"
+        elif ok and fallos_internos:
+            estado_reintento = "[REINTENTO_PARCIAL]"
+        else:
+            estado_reintento = "[REINTENTO_FALLO]"
         log(f"\n  --> {estado_reintento}")
-        result = result2  # usar stdout del reintento para detectar fallos internos
 
     duracion = int((datetime.now() - inicio).total_seconds())
-    estado   = "[OK]" if ok else "[FALLO]"
+    estado   = "[OK]" if (ok and not fallos_internos) else "[PARCIAL]" if (ok and fallos_internos) else "[FALLO]"
     log(f"\n  --> {estado}  |  Duracion: {duracion}s")
 
-    fallos_internos = [
-        l.strip() for l in (result.stdout or "").splitlines()
-        if "[FALLO]" in l and "Errores: 0" not in l
-    ]
     return ok, duracion, fallos_internos, reintentos
 
 
@@ -249,43 +333,65 @@ def construir_email(inicio_total, resultados, dur_total):
 
 
 def main():
-    inicio_total = datetime.now()
-    log("=" * 60)
-    log("  WMS Egakat - Ejecucion Automatica Diaria")
-    log(f"  {inicio_total.strftime('%d/%m/%Y %H:%M:%S')}")
-    log("=" * 60)
-    log(f"  Log: {LOGFILE}")
+    # ── Anti-colisión: solo una instancia a la vez ────────────────────
+    if not adquirir_lock():
+        sys.exit(0)
 
-    resultados = []
-    for nombre, archivo in SCRIPTS:
-        ok, dur, fallos, reintentos = correr_script(nombre, archivo)
-        resultados.append((nombre, ok, dur, fallos, reintentos))
+    try:
+        inicio_total = datetime.now()
+        log("=== INICIANDO run_todos.py ===")   # Primera línea — si no existe = crash en arranque
+        log("=" * 60)
+        log("  WMS Egakat - Ejecucion Automatica Diaria")
+        log(f"  {inicio_total.strftime('%d/%m/%Y %H:%M:%S')}")
+        log("=" * 60)
+        log(f"  Log: {LOGFILE}")
 
-    log("\n" + "=" * 60)
-    log("  RESUMEN FINAL")
-    log("=" * 60)
-    errores = 0
-    for nombre, ok, dur, fallos, reintentos in resultados:
-        sufijo_reintento = " (reintento exitoso)" if (reintentos > 0 and ok) else \
-                           " (fallo tras reintento)" if (reintentos > 0 and not ok) else ""
-        estado = "[OK]" if ok else "[FALLO]"
-        log(f"  {estado}  {nombre}  ({dur // 60}m {dur % 60}s){sufijo_reintento}")
-        if not ok:
-            errores += 1
-        for f in fallos:
-            log(f"    !! Fallo interno: {f}")
+        completados_hoy = cargar_checkpoint()
+        if completados_hoy:
+            log(f"  [CHECKPOINT] Modulos ya completados hoy: {', '.join(sorted(completados_hoy))}")
 
-    dur_total = int((datetime.now() - inicio_total).total_seconds())
-    log(f"\n  Total: {len(resultados)} modulos | Errores: {errores} | Duracion: {dur_total // 60}m {dur_total % 60}s")
-    log("=" * 60)
+        resultados = []
+        for nombre, archivo in SCRIPTS:
+            if nombre in completados_hoy:
+                log(f"\n  [SKIP] {nombre} — ya completado hoy (checkpoint), omitiendo.")
+                resultados.append((nombre, True, 0, [], 0))
+                continue
+            ok, dur, fallos, reintentos = correr_script(nombre, archivo)
+            resultados.append((nombre, ok, dur, fallos, reintentos))
+            if ok:
+                guardar_checkpoint(nombre)
 
-    cuerpo_html, hay_errores = construir_email(inicio_total, resultados, dur_total)
-    if hay_errores:
-        asunto = f"[WMS Egakat] Fallo en descarga {inicio_total.strftime('%d/%m/%Y')}"
-    else:
-        asunto = f"[WMS Egakat] Descarga exitosa {inicio_total.strftime('%d/%m/%Y')}"
-    enviar_notificacion(asunto, cuerpo_html)          # Canal 1: Outlook Desktop
-    escribir_estado_onedrive(inicio_total, resultados, dur_total, hay_errores)  # Canal 2: Power Automate
+        log("\n" + "=" * 60)
+        log("  RESUMEN FINAL")
+        log("=" * 60)
+        errores = 0
+        for nombre, ok, dur, fallos, reintentos in resultados:
+            if dur == 0 and ok and reintentos == 0 and not fallos and nombre in completados_hoy:
+                log(f"  [SKIP] {nombre}  (ya ejecutado anteriormente hoy)")
+                continue
+            sufijo_reintento = " (reintento exitoso)" if (reintentos > 0 and ok) else \
+                               " (fallo tras reintento)" if (reintentos > 0 and not ok) else ""
+            estado = "[OK]" if ok else "[FALLO]"
+            log(f"  {estado}  {nombre}  ({dur // 60}m {dur % 60}s){sufijo_reintento}")
+            if not ok:
+                errores += 1
+            for f in fallos:
+                log(f"    !! Fallo interno: {f}")
+
+        dur_total = int((datetime.now() - inicio_total).total_seconds())
+        log(f"\n  Total: {len(resultados)} modulos | Errores: {errores} | Duracion: {dur_total // 60}m {dur_total % 60}s")
+        log("=" * 60)
+
+        cuerpo_html, hay_errores = construir_email(inicio_total, resultados, dur_total)
+        if hay_errores:
+            asunto = f"[WMS Egakat] Fallo en descarga {inicio_total.strftime('%d/%m/%Y')}"
+        else:
+            asunto = f"[WMS Egakat] Descarga exitosa {inicio_total.strftime('%d/%m/%Y')}"
+        enviar_notificacion(asunto, cuerpo_html)
+        escribir_estado_onedrive(inicio_total, resultados, dur_total, hay_errores)
+
+    finally:
+        liberar_lock()
 
 
 if __name__ == "__main__":

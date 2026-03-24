@@ -248,14 +248,14 @@ def cargar_resumen_anual(ruta_str: str = None) -> pd.DataFrame:
         concepto = row[concepto_col_idx] if len(row) > concepto_col_idx else None
         if concepto is None:
             continue
-        fila = {"concepto": str(concepto).strip()}
+        fila = {"Grupo": str(concepto).strip()}
         for mes, idx in col_indices.items():
             val = row[idx] if len(row) > idx else 0
             fila[mes] = float(val) if isinstance(val, (int, float)) and val else 0.0
         filas.append(fila)
     if not filas:
         return pd.DataFrame()
-    return pd.DataFrame(filas).set_index("concepto")
+    return pd.DataFrame(filas)  # Grupo queda como columna normal
 
 
 _MESES_ES = {

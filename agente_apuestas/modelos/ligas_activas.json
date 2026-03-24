@@ -1,0 +1,47 @@
+{
+  "135": {
+    "nombre": "Serie A",
+    "activa": true,
+    "umbral": 0.70,
+    "value_min": 0.10,
+    "n_apuestas": 0,
+    "roi": 0.0,
+    "activada_fecha": "2026-03-24"
+  },
+  "140": {
+    "nombre": "La Liga",
+    "activa": false,
+    "umbral": 0.70,
+    "value_min": 0.10,
+    "n_apuestas": 0,
+    "roi": 0.0,
+    "activada_fecha": null
+  },
+  "78": {
+    "nombre": "Bundesliga",
+    "activa": false,
+    "umbral": 0.70,
+    "value_min": 0.10,
+    "n_apuestas": 0,
+    "roi": 0.0,
+    "activada_fecha": null
+  },
+  "61": {
+    "nombre": "Ligue 1",
+    "activa": false,
+    "umbral": 0.70,
+    "value_min": 0.10,
+    "n_apuestas": 0,
+    "roi": 0.0,
+    "activada_fecha": null
+  },
+  "39": {
+    "nombre": "Premier League",
+    "activa": false,
+    "umbral": 0.70,
+    "value_min": 0.10,
+    "n_apuestas": 0,
+    "roi": 0.0,
+    "activada_fecha": null
+  }
+}

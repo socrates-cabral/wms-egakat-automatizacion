@@ -445,11 +445,22 @@ COLOR_MAP = {
 7. **Área rellena Dashboard** — `fill='tozeroy'` con `rgba(20,184,166,0.08)` ya activo
 8. **Semáforo Financiero** — cards oscuras `#111d2e` en lugar de `#f8f9fa`
 
-### 🔜 Pendientes Sprint 3
+### ✅ Aplicadas (Sprint 3 — 2026-03-17)
+9. **CMF PDF parser reescrito** — `parsear_informe_cmf()` en `debt_manager.py`
+   - Retorna `dict` (antes `list`): `deudas_directas`, `lineas_credito`, `total_deuda`, `total_disponible`, `fecha_informe`, `nombre_titular`
+   - Insight crítico: `extract_tables()` en pdfplumber devuelve celdas de texto concatenado (no columnas separadas). Solución: parsear línea por línea con regex `{Institución} {Tipo} ${monto}`
+   - Tipos reconocidos: Vivienda, Consumo, Comercial, Tarjeta, Automotriz
+   - Líneas de crédito: patrón `{Institución} ${directos} ${indirectos}`
+   - Tab "📄 Import PDF CMF / TMC" con UI completa: KPIs 3 columnas + cards expandibles por deuda + tabla líneas crédito
+   - Resultado validado con PDF real (RUT 25.647.358-5, 17/03/2026): 3 deudas + 5 líneas OK
+
+### 🔜 Pendientes Sprint 4
+- Confirmar CMF PDF parser OK en app con PDF real subido
 - Badges en otras tablas (Anual, Patrimonio)
-- BCI scraper parser Excel
-- ITAÚ scraper
+- BCI scraper parser Excel (captcha → modo visible)
+- ITAÚ scraper (confirmar descarga nativa Excel)
 - Recargar saldo API Anthropic (AI Insights)
+- playwright-stealth para BancoEstado automático
 
 ## Dependencias del proyecto
 ```

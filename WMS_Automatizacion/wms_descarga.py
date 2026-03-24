@@ -41,7 +41,7 @@ CENTROS = [
 ]
 
 TIMEOUT              = 60_000
-TIMEOUT_DESCARGA     = 180_000  # 3 min — Quilicura puede demorar ~75s
+TIMEOUT_DESCARGA     = 360_000  # 6 min — Quilicura puede tardar hasta 5 min en generar el xlsx
 PAUSA_REINTENTO      = 60       # segundos de espera antes de reintentar un centro
 MAX_INTENTOS_CENTRO  = 2        # 1 intento normal + 1 reintento
 
@@ -130,8 +130,22 @@ def run():
         context = browser.new_context(accept_downloads=True)
         page    = context.new_page()
 
+        hoy_prefijo = datetime.now().strftime("%Y%m%d")
+
         for centro_nombre, carpeta_destino in CENTROS:
             log(f"\n>> Procesando: {centro_nombre}")
+
+            # Skip si ya hay archivo de hoy (evitar duplicados en re-ejecución)
+            os.makedirs(carpeta_destino, exist_ok=True)
+            ya_descargado = [
+                f for f in os.listdir(carpeta_destino)
+                if f.startswith(hoy_prefijo) and centro_nombre.replace(" ", "_") in f
+            ]
+            if ya_descargado:
+                log(f"  >> [SKIP] Ya descargado hoy: {ya_descargado[0]}")
+                resultados.append((centro_nombre, True))
+                continue
+
             ok = procesar_centro(page, centro_nombre, carpeta_destino)
 
             if not ok:

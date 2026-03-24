@@ -252,7 +252,8 @@
       </div>
       <div class="card">
         <div class="card-title">Composición de costos fijos mensuales</div>
-        <div class="chart-wrap" style="height: 220px;"><canvas id="chart-costos"></canvas></div>
+        <div class="chart-wrap" style="height: 200px;"><canvas id="chart-costos"></canvas></div>
+        <div id="legend-costos" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);"></div>
       </div>
     </div>
 
@@ -409,7 +410,8 @@
     <div class="grid-2 mb-16">
       <div class="card">
         <div class="card-title">Deuda por tipo de instrumento</div>
-        <div class="chart-wrap" style="height:200px;"><canvas id="chart-deuda-tipo"></canvas></div>
+        <div class="chart-wrap" style="height:185px;"><canvas id="chart-deuda-tipo"></canvas></div>
+        <div id="legend-deuda" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);"></div>
       </div>
       <div class="card">
         <div class="card-title">Editar / Actualizar deudas</div>
@@ -788,9 +790,24 @@ function initDashboard() {
     type:'doughnut',
     data:{ labels:costoLabels, datasets:[{ data:costoData, backgroundColor:costoColors, borderWidth:1, borderColor:'#161b22' }] },
     options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+fmt(ctx.raw)}} }
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:ctx=>' '+ctx.label+': '+fmt(ctx.raw) }}
+      }
     }
   });
+  // Leyenda manual (Chart.js legend nativa no se adapta bien al tema oscuro)
+  const legendCostos = document.getElementById('legend-costos');
+  if (legendCostos) {
+    costoLabels.forEach((lbl, i) => {
+      const pct = Math.round(costoData[i] / costoData.reduce((a,b)=>a+b,0) * 100);
+      const item = document.createElement('span');
+      item.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)';
+      item.innerHTML = '<span style="width:10px;height:10px;border-radius:2px;background:' + costoColors[i] + ';display:inline-block;flex-shrink:0"></span>'
+        + lbl + ' <span style="color:var(--text);font-weight:600">' + pct + '%</span>';
+      legendCostos.appendChild(item);
+    });
+  }
 
   // Causas
   const causas = [
@@ -1032,6 +1049,23 @@ function initDeuda() {
       plugins:{ legend:{position:'bottom', labels:{color:'#8b949e',font:{size:10},padding:8}}, tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+fmt(ctx.raw)}} }
     }
   });
+  // Leyenda manual deuda
+  const legendDeuda = document.getElementById('legend-deuda');
+  if (legendDeuda) {
+    const deudaByTipo = {};
+    DATOS.deudas.forEach(d => { if(d.saldo>0) deudaByTipo[d.tipo]=(deudaByTipo[d.tipo]||0)+d.saldo; });
+    const TIPO_LABEL_D = {banco:'Crédito banco',tc:'Tarjeta crédito',linea:'Línea crédito',auto:'Crédito auto',seguro:'Seguro',familiar:'Familiar'};
+    const TIPO_COLOR_D = {banco:'#58a6ff',tc:'#f85149',linea:'#d29922',auto:'#3fb950',seguro:'#8b949e',familiar:'#a371f7'};
+    const totalDeuda = Object.values(deudaByTipo).reduce((a,b)=>a+b,0);
+    Object.entries(deudaByTipo).forEach(([tipo, saldo]) => {
+      const pct = Math.round(saldo/totalDeuda*100);
+      const item = document.createElement('span');
+      item.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)';
+      item.innerHTML = '<span style="width:10px;height:10px;border-radius:2px;background:'+(TIPO_COLOR_D[tipo]||'#888')+';display:inline-block;flex-shrink:0"></span>'
+        + (TIPO_LABEL_D[tipo]||tipo) + ' <span style="color:var(--text);font-weight:600">'+pct+'%</span>';
+      legendDeuda.appendChild(item);
+    });
+  }
 
   // Edit form
   document.getElementById('deuda-edit-form').innerHTML = deudas.map((d,i)=>`
