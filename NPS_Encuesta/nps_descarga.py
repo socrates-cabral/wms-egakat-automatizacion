@@ -125,6 +125,61 @@ class LimeSurveyAPI:
         decoded = base64.b64decode(result).decode("utf-8")
         return json.loads(decoded).get("responses",[])
 
+    def list_participants(self, survey_id: int) -> list[dict]:
+        """Descarga lista completa de participantes (tokens) de una encuesta."""
+        attrs = ["email", "firstname", "lastname", "emailstatus", "token",
+                 "language", "validfrom", "validuntil", "invited",
+                 "reminded", "remindercount", "completed", "usesleft"]
+        result = self._call("list_participants", [
+            self.session_key,
+            survey_id,
+            0,      # start
+            99999,  # limit
+            False,  # unused only = False → todos
+            attrs,
+        ])
+        if not result or isinstance(result, dict):
+            return []
+        return result
+
+
+# ── SINCRONIZACIÓN AUTOMÁTICA DE TOKENS ───────────────────────────────────────
+def sincronizar_tokens(api: "LimeSurveyAPI", survey_id: int, csv_path: Path) -> int:
+    """
+    Descarga participantes desde LimeSurvey y actualiza el CSV local de tokens.
+    Se llama al inicio de cada ejecución para mantener tokens siempre al día.
+    Retorna la cantidad de tokens guardados (0 si falla).
+    """
+    log.info(f"Sincronizando tokens survey {survey_id} → {csv_path.name}")
+    try:
+        participantes = api.list_participants(survey_id)
+    except Exception as e:
+        log.warning(f"No se pudieron obtener participantes survey {survey_id}: {e}")
+        return 0
+
+    if not participantes:
+        log.warning(f"Survey {survey_id}: sin participantes o tabla no inicializada en LimeSurvey")
+        return 0
+
+    campos = ["tid", "firstname", "lastname", "email", "emailstatus",
+              "token", "language", "validfrom", "validuntil",
+              "invited", "reminded", "remindercount", "completed", "usesleft"]
+
+    with open(csv_path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=campos, extrasaction="ignore")
+        writer.writeheader()
+        for p in participantes:
+            # LimeSurvey anida firstname/lastname/email dentro de participant_info
+            info = p.get("participant_info", {})
+            fila = {k: p.get(k, "") for k in campos}
+            fila["firstname"] = info.get("firstname", p.get("firstname", ""))
+            fila["lastname"]  = info.get("lastname",  p.get("lastname",  ""))
+            fila["email"]     = info.get("email",     p.get("email",     ""))
+            writer.writerow(fila)
+
+    log.info(f"[OK] {len(participantes)} tokens guardados → {csv_path.name}")
+    return len(participantes)
+
 
 # ── MAPEO TOKEN → CLIENTE ──────────────────────────────────────────────────────
 def cargar_contactos() -> dict:
@@ -306,21 +361,27 @@ def main():
         log.error("Falta usuario de LimeSurvey en .env")
         sys.exit(1)
 
-    contactos  = cargar_contactos()
-    token_csat = cargar_tokens(TOKENS_CSAT, contactos)
-    token_nps  = cargar_tokens(TOKENS_NPS,  contactos)
-
     api = LimeSurveyAPI(LIMESURVEY_URL)
     try:
         api.open(LIMESURVEY_USER, LIMESURVEY_PASSWORD)
+
+        # Sincronizar tokens desde LimeSurvey antes de procesar respuestas
+        log.info("── Sincronizando tokens ──")
+        sincronizar_tokens(api, SURVEY_ID_CSAT, TOKENS_CSAT)
+        sincronizar_tokens(api, SURVEY_ID_NPS,  TOKENS_NPS)
+
+        contactos  = cargar_contactos()
+        token_csat = cargar_tokens(TOKENS_CSAT, contactos)
+        token_nps  = cargar_tokens(TOKENS_NPS,  contactos)
+
         log.info(f"── CSAT ({SURVEY_ID_CSAT}) ──")
         resp_csat = api.export_responses(SURVEY_ID_CSAT)
-        f_cli_csat, f_areas, f_mes_csat = procesar_csat(resp_csat, token_csat) if resp_csat else ([], [],[])
-        
+        f_cli_csat, f_areas, f_mes_csat = procesar_csat(resp_csat, token_csat) if resp_csat else ([], [], [])
+
         log.info(f"── NPS ({SURVEY_ID_NPS}) ──")
         resp_nps = api.export_responses(SURVEY_ID_NPS)
-        f_cli_nps, f_mes_nps = procesar_nps(resp_nps, token_nps) if resp_nps else ([],[])
-        
+        f_cli_nps, f_mes_nps = procesar_nps(resp_nps, token_nps) if resp_nps else ([], [])
+
     finally:
         api.close()
 
