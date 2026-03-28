@@ -22,6 +22,25 @@ sys.path.insert(0, str(Path(__file__).parent))
 from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
+# ─── SDK flags (importados una vez para no repetir try/except en cada llamada) ─
+try:
+    import anthropic as _anthropic_sdk
+    _HAS_ANTHROPIC = True
+except ImportError:
+    _HAS_ANTHROPIC = False
+
+try:
+    from openai import OpenAI as _OpenAI
+    _HAS_OPENAI = True
+except ImportError:
+    _HAS_OPENAI = False
+
+try:
+    from google import genai as _genai
+    _HAS_GEMINI = True
+except ImportError:
+    _HAS_GEMINI = False
+
 OUTPUT_DIR = Path(__file__).parent / "output"
 
 # Colores dark theme (mismo que finanzas_personales)
@@ -37,33 +56,70 @@ C_BORDER  = "#1e2d3d"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CLAUDE API
+# LLM BACKENDS — Claude → OpenAI → Gemini → template
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _get_client():
-    """Inicializa cliente Anthropic. Retorna None si no hay API key."""
+def _try_claude(prompt: str) -> str | None:
+    """Intenta análisis con Claude Haiku. Retorna texto o None si falla."""
+    if not _HAS_ANTHROPIC:
+        return None
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         return None
     try:
-        import anthropic
-        return anthropic.Anthropic(api_key=api_key)
-    except ImportError:
-        print("[AVISO] anthropic no instalado: py -m pip install anthropic")
+        client = _anthropic_sdk.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=180,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.content[0].text.strip()
+    except Exception as e:
+        print(f"[AVISO] Claude API error: {e} — intentando OpenAI")
         return None
 
 
-def analizar_con_claude(partido_data: dict) -> str:
-    """
-    Genera análisis narrativo de un partido en 2-3 frases.
-    Destaca: señal más fuerte, riesgo principal, veredicto.
+def _try_openai(prompt: str) -> str | None:
+    """Intenta análisis con GPT-4o-mini. Retorna texto o None si falla."""
+    if not _HAS_OPENAI:
+        return None
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    try:
+        client = _OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            max_tokens=180,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"[AVISO] OpenAI API error: {e} — intentando Gemini")
+        return None
 
-    Retorna string con el análisis, o análisis template si falla la API.
-    """
-    client = _get_client()
-    if client is None:
-        return _analisis_template(partido_data)
 
+def _try_gemini(prompt: str) -> str | None:
+    """Intenta análisis con Gemini 2.5 Flash. Retorna texto o None si falla."""
+    if not _HAS_GEMINI:
+        return None
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return None
+    try:
+        client = _genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="models/gemini-2.5-flash",
+            contents=prompt,
+        )
+        return response.text.strip()
+    except Exception as e:
+        print(f"[AVISO] Gemini API error: {e} — usando template")
+        return None
+
+
+def _build_prompt(partido_data: dict) -> str:
+    """Construye el prompt de análisis a partir de los datos del partido."""
     fixture = partido_data["fixture"]
     stats   = partido_data.get("stats", {})
     pred    = partido_data.get("prediccion", {})
@@ -72,11 +128,9 @@ def analizar_con_claude(partido_data: dict) -> str:
     home = fixture.get("home_nombre", "?")
     away = fixture.get("away_nombre", "?")
     liga = fixture.get("liga_nombre", "?")
-
-    h2h    = stats.get("resumen_h2h", {})
-    sh     = stats.get("stats_home", {})
-    sa     = stats.get("stats_away", {})
-    advice = pred.get("advice", "")
+    h2h  = stats.get("resumen_h2h", {})
+    sh   = stats.get("stats_home", {})
+    sa   = stats.get("stats_away", {})
 
     recs_texto = "; ".join(
         f"{r['tipo_apuesta']} {r['seleccion']} @ {r['cuota']} "
@@ -84,25 +138,38 @@ def analizar_con_claude(partido_data: dict) -> str:
         for r in recs
     ) or "ninguna"
 
-    prompt = f"""Analiza este partido deportivo para apuestas. Responde en español, máximo 3 frases concisas.
-Estructura: [señal más fuerte] → [riesgo principal] → [veredicto].
+    return (
+        f"Analiza este partido deportivo para apuestas. Responde en español, máximo 3 frases concisas.\n"
+        f"Estructura: [señal más fuerte] → [riesgo principal] → [veredicto].\n\n"
+        f"Partido: {home} vs {away} | {liga}\n"
+        f"H2H ({h2h.get('total', 0)} partidos): {home} ganó {h2h.get('home_wins', 0)}, "
+        f"empates {h2h.get('draws', 0)}, {away} ganó {h2h.get('away_wins', 0)}\n"
+        f"Forma {home}: {sh.get('forma', 'N/A')} | Forma {away}: {sa.get('forma', 'N/A')}\n"
+        f"Consejos API-Sports: {pred.get('advice') or 'no disponible'}\n"
+        f"Value bets detectadas: {recs_texto}"
+    )
 
-Partido: {home} vs {away} | {liga}
-H2H ({h2h.get('total', 0)} partidos): {home} ganó {h2h.get('home_wins', 0)}, empates {h2h.get('draws', 0)}, {away} ganó {h2h.get('away_wins', 0)}
-Forma {home}: {sh.get('forma', 'N/A')} | Forma {away}: {sa.get('forma', 'N/A')}
-Consejos API-Sports: {advice or 'no disponible'}
-Value bets detectadas: {recs_texto}"""
 
-    try:
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=180,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.content[0].text.strip()
-    except Exception as e:
-        print(f"[AVISO] Claude API error: {e}")
-        return _analisis_template(partido_data)
+def analizar_con_claude(partido_data: dict) -> str:
+    """
+    Genera análisis narrativo de un partido en 2-3 frases.
+    Orden de intento: Claude Haiku → GPT-4o-mini → Gemini 2.5 Flash → template.
+    """
+    prompt = _build_prompt(partido_data)
+
+    resultado = _try_claude(prompt)
+    if resultado:
+        return resultado
+
+    resultado = _try_openai(prompt)
+    if resultado:
+        return resultado
+
+    resultado = _try_gemini(prompt)
+    if resultado:
+        return resultado
+
+    return _analisis_template(partido_data)
 
 
 def _analisis_template(partido_data: dict) -> str:

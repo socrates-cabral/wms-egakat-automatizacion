@@ -2,7 +2,7 @@
   "135": {
     "nombre": "Serie A",
     "activa": true,
-    "umbral": 0.70,
+    "umbral": 0.60,
     "value_min": 0.10,
     "n_apuestas": 0,
     "roi": 0.0,
