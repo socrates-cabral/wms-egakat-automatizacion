@@ -185,6 +185,9 @@ def build_features_partido(
         "pi_exp_away":     exp_away,
         "pi_diff_abs":     abs(pi_diff),
         "ghost_game":      int(ghost_game),
+        # Sprint 16: contexto UCL — eliminatorias tienen dinámica distinta
+        "liga_ucl":        1 if row.get("liga_id") == 2 else 0,
+        "es_vuelta":       int(row.get("es_vuelta", 0) or 0),
     }
 
     # ── Forma reciente (últimos 5 partidos) ──────────────────────────────────

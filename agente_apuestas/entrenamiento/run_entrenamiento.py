@@ -85,6 +85,21 @@ def run(forzar: bool = False, solo_eval: bool = False):
     else:
         log("[INFO] Solo-eval: omitiendo descarga de datos")
 
+    # ── PASO 1b: UCL (Champions League) — Sprint 16 ──────────────────────────
+    if not solo_eval:
+        titulo(f"PASO 1b/{PASOS_TOTAL} — UCL Champions League (api-sports)")
+        try:
+            from entrenamiento.ucl_descargador import descargar_ucl_completo
+            df_ucl = descargar_ucl_completo()
+            if df_ucl.empty:
+                log("[WARN] UCL sin datos — se omite Champions del histórico (no crítico)")
+                paso_fallo("UCL Champions", "1b", PASOS_TOTAL, "sin datos — api-sports")
+            else:
+                paso_ok(f"UCL: {len(df_ucl):,} partidos ({df_ucl['temporada'].nunique()} temporadas)", "1b", PASOS_TOTAL)
+        except Exception as e:
+            log(f"[WARN] UCL omitido (no crítico): {e}")
+            paso_fallo("UCL Champions", "1b", PASOS_TOTAL, f"no crítico — {e}")
+
     # ── PASO 2: xG desde FBref ────────────────────────────────────────────────
     if not solo_eval:
         titulo(f"PASO 2/{PASOS_TOTAL} — xG desde FBref (opcional)")

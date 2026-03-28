@@ -287,6 +287,26 @@ def consolidar_historico(forzar: bool = False) -> pd.DataFrame:
         log("[FALLO] No se consolidó ningún archivo")
         return pd.DataFrame()
 
+    # Sprint 16: agregar datos UCL si están disponibles
+    ucl_csv = RAW_DIR / "ucl_consolidado.csv"
+    if ucl_csv.exists():
+        try:
+            df_ucl = pd.read_csv(ucl_csv, parse_dates=["Date"])
+            if not df_ucl.empty:
+                # es_vuelta puede no existir en ligas domésticas — rellenar con 0
+                for df_dom in dfs:
+                    if "es_vuelta" not in df_dom.columns:
+                        df_dom["es_vuelta"] = 0
+                dfs.append(df_ucl)
+                log(f"[OK] UCL agregado: {len(df_ucl):,} partidos")
+        except Exception as e:
+            log(f"[WARN] UCL no cargado (no crítico): {e}")
+    else:
+        # Rellenar columna es_vuelta con 0 para ligas domésticas igualmente
+        for df_dom in dfs:
+            if "es_vuelta" not in df_dom.columns:
+                df_dom["es_vuelta"] = 0
+
     df_total = pd.concat(dfs, ignore_index=True)
     df_total = df_total.sort_values(["liga_id", "Date"]).reset_index(drop=True)
 

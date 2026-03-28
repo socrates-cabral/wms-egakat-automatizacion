@@ -6,8 +6,11 @@ Fix: selector botón "Consulta Excel" con múltiples fallbacks + JS click
 
 import os
 import sys
+from pathlib import Path
 from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
+sys.path.insert(0, str(Path(__file__).parent))
+from azure_graph import get_token, get_drive_id, subir_archivo_sp
 
 sys.stdout.reconfigure(encoding="utf-8")
 load_dotenv()
@@ -46,6 +49,12 @@ REPORTES = [
 ]
 
 TIMEOUT_DESCARGA = 120_000  # ms
+
+# SharePoint Graph API — carpeta destino por centro (relativa a biblioteca "Documentos")
+SP_POSICIONES = {
+    CARPETA_QUILI: "Inventario/Consulta de Posiciones/Quilicura",
+    CARPETA_PUDA:  "Inventario/Consulta de Posiciones/Pudahuel",
+}
 
 
 # ─────────────────────────────────────────────
@@ -217,6 +226,15 @@ def main():
     log("  WMS Egakat — Consulta de Posiciones v1.2")
     log("=" * 60)
 
+    # Graph API init (una sola vez para todos los reportes)
+    _sp_token, _sp_drive_id = None, None
+    try:
+        _sp_token    = get_token()
+        _sp_drive_id = get_drive_id(_sp_token)
+        log("[Graph API] Token + Drive ID OK")
+    except Exception as e:
+        log(f"[WARN] Graph API init falló — sin subida SP directa: {e}")
+
     resultados = []
 
     with sync_playwright() as p:
@@ -235,6 +253,15 @@ def main():
                 nombre_archivo  = r["nombre"],
                 carpeta_destino = r["carpeta"],
             )
+            if ok and _sp_token:
+                folder_sp = SP_POSICIONES.get(r["carpeta"], "")
+                if folder_sp:
+                    try:
+                        ok_sp = subir_archivo_sp(_sp_token, _sp_drive_id, folder_sp,
+                                                 Path(r["carpeta"]) / r["nombre"])
+                        log(f"     [SP] {'OK' if ok_sp else 'WARN'} -> {folder_sp}/{r['nombre']}")
+                    except Exception as e_sp:
+                        log(f"     [WARN SP] Graph API: {e_sp}")
             resultados.append((r["nombre"], "✅ OK" if ok else "❌ FALLO"))
 
         context.close()

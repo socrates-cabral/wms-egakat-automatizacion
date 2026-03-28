@@ -18,10 +18,13 @@ import sys
 import os
 import time
 from datetime import datetime
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, str(Path(__file__).parent))
+from azure_graph import get_token, get_drive_id, subir_archivo_sp
 
 # ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
 load_dotenv()
@@ -30,15 +33,21 @@ WMS_LOGIN    = "https://egakatwms.cl/sglwms_EGA_prod/hinicio.aspx"
 WMS_USER     = "SCABRAL"
 WMS_PASSWORD = os.getenv("WMS_PASSWORD", "")
 
-# Destino: carpetas OneDrive sincronizadas con SharePoint
+# Destino local: carpetas OneDrive (también sirven como cache local)
 ONEDRIVE_BASE = r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\Datos para Dashboard - Stock WMS Semanal"
 
-# Centros: (nombre en WMS, subcarpeta destino)
+# Centros: (nombre en WMS, subcarpeta destino local)
 CENTROS = [
     ("QUILICURA",         os.path.join(ONEDRIVE_BASE, "Quilicura")),
     ("PUDAHUEL",          os.path.join(ONEDRIVE_BASE, "Pudahuel")),
     ("PUDAHUEL UNITARIO", os.path.join(ONEDRIVE_BASE, "Pudahuel")),  # misma carpeta
 ]
+
+# SharePoint Graph API — carpeta destino por centro (relativa a biblioteca "Documentos")
+SP_CENTROS = {
+    os.path.join(ONEDRIVE_BASE, "Quilicura"): "Inventario/Stock WMS Semanal/Quilicura",
+    os.path.join(ONEDRIVE_BASE, "Pudahuel"):  "Inventario/Stock WMS Semanal/Pudahuel",
+}
 
 TIMEOUT              = 60_000
 TIMEOUT_DESCARGA     = 360_000  # 6 min — Quilicura puede tardar hasta 5 min en generar el xlsx
@@ -57,7 +66,8 @@ def nombre_archivo(centro_nombre: str) -> str:
 
 # ── FLUJO POR CENTRO ──────────────────────────────────────────────────────────
 
-def procesar_centro(page, centro_nombre: str, carpeta_destino: str) -> bool:
+def procesar_centro(page, centro_nombre: str, carpeta_destino: str):
+    """Retorna ruta del archivo descargado (str) si OK, None si falla."""
     try:
         # PASO 1: Login
         page.goto(WMS_LOGIN, wait_until="load", timeout=TIMEOUT)
@@ -109,12 +119,11 @@ def procesar_centro(page, centro_nombre: str, carpeta_destino: str) -> bool:
         download = dl_info.value
         download.save_as(ruta_final)
         log(f"  ✓ Guardado: {ruta_final}")
-        log(f"  ✓ OneDrive sincronizará con SharePoint automáticamente")
-        return True
+        return ruta_final
 
     except Exception as e:
         log(f"  ✗ Error en {centro_nombre}: {e}")
-        return False
+        return None
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 
@@ -122,6 +131,15 @@ def run():
     if not WMS_PASSWORD:
         print("ERROR: WMS_PASSWORD vacío en .env")
         return
+
+    # Graph API init (una sola vez para todos los centros)
+    _sp_token, _sp_drive_id = None, None
+    try:
+        _sp_token    = get_token()
+        _sp_drive_id = get_drive_id(_sp_token)
+        log("Graph API: Token + Drive ID OK")
+    except Exception as e:
+        log(f"[WARN] Graph API init falló — sin subida SP directa: {e}")
 
     resultados = []
 
@@ -146,22 +164,34 @@ def run():
                 resultados.append((centro_nombre, True))
                 continue
 
-            ok = procesar_centro(page, centro_nombre, carpeta_destino)
+            ruta_descargada = procesar_centro(page, centro_nombre, carpeta_destino)
 
-            if not ok:
+            if ruta_descargada is None:
                 log(f"  >> Reintentando {centro_nombre} en {PAUSA_REINTENTO}s...")
                 time.sleep(PAUSA_REINTENTO)
                 try:
                     page.goto(WMS_LOGIN, wait_until="load", timeout=TIMEOUT)
                     page.wait_for_timeout(2000)
                 except Exception:
-                    pass  # si el reset falla, procesar_centro hará su propio goto
+                    pass
                 log(f"  >> Reintento {centro_nombre}...")
-                ok = procesar_centro(page, centro_nombre, carpeta_destino)
-                if ok:
+                ruta_descargada = procesar_centro(page, centro_nombre, carpeta_destino)
+                if ruta_descargada:
                     log(f"  >> [REINTENTO OK] {centro_nombre}")
                 else:
                     log(f"  >> [REINTENTO FALLO] {centro_nombre}")
+
+            ok = (ruta_descargada is not None)
+
+            if ok and _sp_token:
+                folder_sp = SP_CENTROS.get(carpeta_destino, "")
+                if folder_sp:
+                    try:
+                        ok_sp = subir_archivo_sp(_sp_token, _sp_drive_id, folder_sp,
+                                                 Path(ruta_descargada))
+                        log(f"  -> [SP] {'OK' if ok_sp else 'WARN'} SharePoint: {folder_sp}")
+                    except Exception as e_sp:
+                        log(f"  -> [WARN SP] {e_sp}")
 
             resultados.append((centro_nombre, ok))
 

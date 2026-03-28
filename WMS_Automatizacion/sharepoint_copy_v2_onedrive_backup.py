@@ -1,34 +1,31 @@
-# sharepoint_copy.py v3.0
-# Módulo 6 — Copia Staging IN-OUT → Clientes EK (SharePoint directo vía Graph API)
-# Autor: generado Claude Code 2026-03-24
-# Flujo: OneDrive local Stagin IN-OUT (origen) → SharePoint Clientes EK (Graph API directo)
-# v3.0: migrado de shutil+OneDrive sync a Graph API — independiente del estado de sync
-# Respaldo v2.1 (OneDrive sync): sharepoint_copy_v2_onedrive_backup.py
-# Anti-duplicado: compara nombres en SP antes de subir
-# Año y mes son DINÁMICOS — no hardcodear. Graph API crea carpetas intermedias automáticamente.
+# sharepoint_copy.py v2.1
+# Módulo 6 — Copia Staging IN-OUT → Clientes EK (OneDrive local sync)
+# Autor: generado Claude Code 2026-03-11
+# Flujo: OneDrive Stagin IN-OUT (origen) → OneDrive Clientes EK sincronizada (destino)
+# OneDrive sincroniza automáticamente el destino con SharePoint
+# Anti-duplicado: verifica si el archivo ya existe en destino antes de copiar
+# Año y mes son DINÁMICOS — no hardcodear. Carpeta destino creada automáticamente.
 # Modo: BACKFILL (mes actual completo) o DAILY (solo archivos de hoy)
+# Nota: sharepoint_copy_API_v1.py = versión con Office365 REST API (pendiente auth IT)
 
 import os
 import re
 import sys
-import requests
+import shutil
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
 sys.stdout.reconfigure(encoding="utf-8")
+
 load_dotenv(r"C:\ClaudeWork\.env")
-
-sys.path.insert(0, str(Path(__file__).parent))
-from azure_graph import get_token, get_drive_id, listar_archivos_sp
-
-GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 
-ONEDRIVE    = Path(os.getenv("ONEDRIVE_PATH", r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA"))
-ORIGEN_BASE = ONEDRIVE / "Datos para Dashboard - Stagin IN- OUT" / "Quilicura"
-SP_BASE     = "Clientes EK"
+ONEDRIVE = Path(os.getenv("ONEDRIVE_PATH", r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA"))
+
+ORIGEN_BASE  = ONEDRIVE / "Datos para Dashboard - Stagin IN- OUT" / "Quilicura"
+DESTINO_BASE = ONEDRIVE / "Datos para Dashboard - Clientes EK"
 
 MESES_ES = {
     1: "01 Enero",    2: "02 Febrero",   3: "03 Marzo",    4: "04 Abril",
@@ -41,11 +38,11 @@ MES_ACTUAL = MESES_ES[hoy.month]
 ANO_ACTUAL = str(hoy.year)
 HOY_STR    = hoy.strftime("%d%m%Y")
 
+# Modo: "daily" = solo hoy | "backfill" = todo el mes actual
 MODO = sys.argv[1] if len(sys.argv) > 1 else "daily"
 
-# Clientes Quilicura: {carpeta_origen_local: carpeta_destino_SP}
-# PUDAHUEL: vacío por ahora — agregar aquí cuando se habilite y exista carpeta destino en Clientes EK
-# DAIKIN CLIENTES: excluido — no corresponde a Clientes EK/Inventario
+# Clientes Quilicura: {carpeta_origen: carpeta_destino}
+# PUDAHUEL: vacío por ahora — agregar cuando se habilite
 CLIENTES = {
     "ABINBEV":          "ABINBEV",
     "DAIKIN":           "DAIKIN",
@@ -74,7 +71,7 @@ def log(msg: str):
 RE_FECHA = re.compile(r"(\d{2})(\d{2})(\d{4})\d{6}\.csv$")
 
 def nombre_destino(archivo: Path) -> str:
-    """Prefija YYYY-MM-DD_ al nombre para ordenar descendente en SharePoint."""
+    """Prefija YYYY-MM-DD_ al nombre para ordenar descendente (más reciente arriba)."""
     m = RE_FECHA.search(archivo.name)
     if not m:
         return archivo.name
@@ -96,43 +93,17 @@ def filtrar_archivos(archivos: list) -> list:
                 resultado.append(f)
     return resultado
 
-# ─── SHAREPOINT VÍA GRAPH API ────────────────────────────────────────────────
-
-def subir_con_nombre(token: str, drive_id: str, folder_sp: str, ruta_local: Path, nombre_sp: str) -> bool:
-    """
-    PUT directo a SharePoint con nombre personalizado (permite prefijo YYYY-MM-DD_).
-    Graph API crea automáticamente las carpetas intermedias si no existen.
-    Soporta archivos hasta ~4 MB (suficiente para CSVs staging).
-    """
-    url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{folder_sp}/{nombre_sp}:/content"
-    with open(ruta_local, "rb") as f:
-        data = f.read()
-    resp = requests.put(url, data=data, headers={
-        "Authorization": f"Bearer {token}",
-        "Content-Type":  "application/octet-stream",
-    }, timeout=120)
-    return resp.status_code in (200, 201)
-
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 
 def main():
     log("=" * 60)
-    log(f"sharepoint_copy.py v3.0 | MODO={MODO} | {hoy.strftime('%d/%m/%Y')}")
+    log(f"sharepoint_copy.py v2.1 | MODO={MODO} | {hoy.strftime('%d/%m/%Y')}")
     log(f"Mes destino: {MES_ACTUAL} {ANO_ACTUAL}")
     log("=" * 60)
 
-    # ── Graph API: token + drive_id (una vez para todos los clientes) ──────────
-    try:
-        token    = get_token()
-        drive_id = get_drive_id(token)
-        log("[Graph API] Token + Drive ID OK")
-    except Exception as e:
-        log(f"[FALLO] Graph API init: {e}")
-        raise SystemExit(1)
-
-    total_subidos = 0
-    total_skip    = 0
-    total_errores = 0
+    total_copiados = 0
+    total_skip     = 0
+    total_errores  = 0
 
     for cliente_origen, cliente_destino in CLIENTES.items():
         log(f"\n>> Cliente: {cliente_origen}")
@@ -150,35 +121,28 @@ def main():
             log(f"  Sin archivos para copiar en modo {MODO}")
             continue
 
-        folder_sp = f"{SP_BASE}/{cliente_destino}/Inventario/{ANO_ACTUAL}/{MES_ACTUAL}"
-
-        # Anti-duplicado: listar archivos ya en SP
-        existentes = listar_archivos_sp(token, drive_id, folder_sp)
-        log(f"  Archivos ya en SP: {len(existentes)}")
+        # Carpeta destino dinámica — creada automáticamente si no existe
+        destino = DESTINO_BASE / cliente_destino / "Inventario" / ANO_ACTUAL / MES_ACTUAL
+        destino.mkdir(parents=True, exist_ok=True)
 
         for archivo in candidatos:
-            nombre_sp = nombre_destino(archivo)
-            if nombre_sp in existentes:
-                log(f"  [SKIP] Duplicado: {nombre_sp}")
+            dest_nombre  = nombre_destino(archivo)   # YYYY-MM-DD_original.csv
+            dest_archivo = destino / dest_nombre
+            if dest_archivo.exists():
+                log(f"  [SKIP] Duplicado: {dest_nombre}")
                 total_skip += 1
                 continue
 
             try:
-                ok = subir_con_nombre(token, drive_id, folder_sp, archivo, nombre_sp)
-                if ok:
-                    log(f"  [OK] Subido: {nombre_sp}")
-                    total_subidos += 1
-                else:
-                    log(f"  [ERROR] Subida retornó False: {nombre_sp}")
-                    total_errores += 1
+                shutil.copy2(archivo, dest_archivo)
+                log(f"  [OK] Copiado: {dest_nombre}")
+                total_copiados += 1
             except Exception as e:
-                log(f"  [ERROR] {nombre_sp}: {e}")
+                log(f"  [ERROR] {dest_nombre}: {e}")
                 total_errores += 1
 
     log("\n" + "=" * 60)
-    log(f"RESUMEN | Subidos: {total_subidos} | Duplicados omitidos: {total_skip} | Errores: {total_errores}")
-    if total_errores > 0:
-        log(f"[FALLO] {total_errores} error(es) en subida SharePoint")
+    log(f"RESUMEN | Copiados: {total_copiados} | Duplicados omitidos: {total_skip} | Errores: {total_errores}")
     log("=" * 60)
 
 if __name__ == "__main__":

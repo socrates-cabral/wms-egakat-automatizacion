@@ -1,7 +1,11 @@
 """
-run_todos.py — v1.7
+run_todos.py — v1.8
 Orquestador WMS Egakat: ejecuta los módulos en secuencia y envía notificación por correo.
 Uso: py run_todos.py
+Cambios v1.8:
+  - JSON de estado guardado en logs/ (no en OneDrive) — evita correo duplicado de Power Automate
+  - Un solo correo: enviado directamente via Graph API (Outlook Desktop como fallback)
+  - PA flow "WMS Egakat - Notificacion Descarga Diaria" ya no se dispara (JSON fuera de OneDrive)
 Cambios v1.7:
   - Reintento automático de módulos fallidos (1 intento extra con pausa de 60s)
   - Estado "REINTENTO_OK" / "REINTENTO_FALLO" en log y JSON para trazabilidad
@@ -57,12 +61,35 @@ LOGFILE      = os.path.join(LOGDIR, f"wms_run_{datetime.now().strftime('%Y%m%d_%
 LOCKFILE     = os.path.join(LOGDIR, "wms_run.lock")
 CHECKPOINT   = os.path.join(LOGDIR, f"wms_checkpoint_{datetime.now().strftime('%Y%m%d')}.json")
 
-EMAIL_TO       = os.getenv("SHAREPOINT_USER", "")   # socrates.cabral@egakat.cl
-ONEDRIVE_NOTIF = os.path.join(
-    os.path.expanduser("~"),
-    "OneDrive - EGA KAT LOGISTICA SPA",
-    "Datos para Dashboard - Notificaciones WMS",
-)
+EMAIL_FROM = os.getenv("SHAREPOINT_USER", "").strip()   # socrates.cabral@egakat.cl
+DESTINOS = [
+    EMAIL_FROM,
+    "franco.perez@egakat.cl",
+    "jonathan.castro@egakat.cl",
+    "inventario.quilicura@egakat.cl",
+    "analista.inv.pudahuel@egakat.cl",
+    "analista.pudahuel@egakat.cl",
+    "analista.inv.quilicura@egakat.cl",
+    "jaed.escobar@egakat.cl",
+]
+# JSON de estado se guarda en logs/ — no en OneDrive, para evitar que PA dispare un segundo correo.
+# PA flow "WMS Egakat - Notificacion Descarga Diaria" ya no es necesario (Graph API envía el correo directo).
+
+
+def obtener_destinos():
+    """Retorna lista de destinatarios sin vacíos ni duplicados, preservando el orden."""
+    vistos = set()
+    salida = []
+    for correo in DESTINOS:
+        correo = (correo or "").strip()
+        if not correo:
+            continue
+        clave = correo.lower()
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        salida.append(correo)
+    return salida
 
 
 def cargar_checkpoint():
@@ -115,19 +142,35 @@ def liberar_lock():
 
 def enviar_notificacion(asunto, cuerpo_html):
     """Envía correo HTML. Intenta Graph API primero; Outlook Desktop como fallback."""
+    destinos = obtener_destinos()
+    if not EMAIL_FROM:
+        log("  [NOTIF] SHAREPOINT_USER no está configurado; no se enviará correo.")
+        return
+    if not destinos:
+        log("  [NOTIF] No hay destinatarios configurados; no se enviará correo.")
+        return
+
     # Canal 1: Graph API (app-only — funciona sin Outlook abierto)
     try:
         from azure_graph import enviar_email
-        ok = enviar_email(
-            from_email=EMAIL_TO,
-            to_email=EMAIL_TO,
-            asunto=asunto,
-            html_body=cuerpo_html,
-        )
-        if ok:
-            log("  [NOTIF] Correo enviado via Graph API.")
+        enviados = 0
+        for destino in destinos:
+            ok = enviar_email(
+                from_email=EMAIL_FROM,
+                to_email=destino,
+                asunto=asunto,
+                html_body=cuerpo_html,
+            )
+            if ok:
+                enviados += 1
+                log(f"  [NOTIF] Correo enviado via Graph API a: {destino}")
+            else:
+                log(f"  [NOTIF] Graph API retornó False para: {destino}")
+
+        if enviados == len(destinos):
             return
-        log("  [NOTIF] Graph API retorno False — intentando Outlook Desktop...")
+
+        log("  [NOTIF] Uno o más envíos por Graph API fallaron — intentando Outlook Desktop...")
     except Exception as e:
         log(f"  [NOTIF] Graph API no disponible: {e} — intentando Outlook Desktop...")
 
@@ -136,11 +179,11 @@ def enviar_notificacion(asunto, cuerpo_html):
         import win32com.client
         outlook = win32com.client.Dispatch("Outlook.Application")
         mail          = outlook.CreateItem(0)
-        mail.To       = EMAIL_TO
+        mail.To       = "; ".join(destinos)
         mail.Subject  = asunto
         mail.HTMLBody = cuerpo_html
         mail.Send()
-        log("  [NOTIF] Correo enviado via Outlook Desktop.")
+        log("  [NOTIF] Correo enviado via Outlook Desktop a: " + ", ".join(destinos))
     except Exception as e:
         log(f"  [NOTIF] No se pudo enviar correo (Graph ni Outlook): {e}")
 
@@ -273,11 +316,10 @@ def generar_tabla_html(resultados):
     </table>"""
 
 
-def escribir_estado_onedrive(inicio_total, resultados, dur_total, hay_errores):
-    """Escribe JSON de estado en OneDrive → dispara el flujo Power Automate.
-    El campo tabla_html contiene el HTML preformateado — PA lo inyecta directo, sin loops."""
+def guardar_estado_json(inicio_total, resultados, dur_total, hay_errores):
+    """Guarda JSON de estado en logs/ para referencia e historial.
+    No escribe en OneDrive — el correo va directo via Graph API (un solo correo)."""
     try:
-        os.makedirs(ONEDRIVE_NOTIF, exist_ok=True)
         payload = {
             "fecha":          inicio_total.strftime("%d/%m/%Y"),
             "hora_inicio":    inicio_total.strftime("%H:%M:%S"),
@@ -287,13 +329,13 @@ def escribir_estado_onedrive(inicio_total, resultados, dur_total, hay_errores):
             "log":            LOGFILE,
             "tabla_html":     generar_tabla_html(resultados),
         }
-        nombre_archivo = f"notificacion_{inicio_total.strftime('%Y%m%d_%H%M%S')}.json"
-        ruta = os.path.join(ONEDRIVE_NOTIF, nombre_archivo)
+        nombre_archivo = f"estado_{inicio_total.strftime('%Y%m%d_%H%M%S')}.json"
+        ruta = os.path.join(LOGDIR, nombre_archivo)
         with open(ruta, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
-        log(f"  [NOTIF] JSON escrito en OneDrive: {nombre_archivo}")
+        log(f"  [NOTIF] Estado guardado: {nombre_archivo}")
     except Exception as e:
-        log(f"  [NOTIF] No se pudo escribir JSON en OneDrive: {e}")
+        log(f"  [NOTIF] No se pudo guardar JSON: {e}")
 
 
 def construir_email(inicio_total, resultados, dur_total):
@@ -322,7 +364,7 @@ def construir_email(inicio_total, resultados, dur_total):
                 Duraci&oacute;n total: {dur_total // 60}m {dur_total % 60}s &nbsp;|&nbsp;
                 M&oacute;dulos: {len(resultados)}
               </p>
-              <p style="color:#aaa;font-size:11px;margin-top:4px">&#128196; Log: {LOGFILE}</p>
+              <p style="color:#6b7280;font-size:11px;margin-top:10px">Notificaci&oacute;n autom&aacute;tica generada por Sistema Automatizado WMS Egakat.</p>
             </td>
           </tr>
         </table>
@@ -388,7 +430,7 @@ def main():
         else:
             asunto = f"[WMS Egakat] Descarga exitosa {inicio_total.strftime('%d/%m/%Y')}"
         enviar_notificacion(asunto, cuerpo_html)
-        escribir_estado_onedrive(inicio_total, resultados, dur_total, hay_errores)
+        guardar_estado_json(inicio_total, resultados, dur_total, hay_errores)
 
     finally:
         liberar_lock()

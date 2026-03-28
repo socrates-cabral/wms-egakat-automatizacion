@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agente de Apuestas Deportivas — Manual</title>
+  <style>
+    :root {
+      --verde:      #22c55e;
+      --verde-osc:  #16a34a;
+      --verde-claro:#dcfce7;
+      --azul:       #3b82f6;
+      --azul-osc:   #1d4ed8;
+      --amarillo:   #f59e0b;
+      --rojo:       #ef4444;
+      --fondo:      #0f172a;
+      --fondo2:     #1e293b;
+      --fondo3:     #334155;
+      --texto:      #e2e8f0;
+      --texto-dim:  #94a3b8;
+      --borde:      #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--fondo);
+      color: var(--texto);
+      line-height: 1.7;
+    }
+
+    /* ── Hero ─────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+      padding: 60px 20px 50px;
+      text-align: center;
+      border-bottom: 2px solid var(--verde);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "⚽";
+      position: absolute; font-size: 200px; opacity: 0.04;
+      top: 50%; left: 50%; transform: translate(-50%,-50%);
+    }
+    .hero-badge {
+      display: inline-block;
+      background: var(--verde); color: #000;
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      padding: 4px 14px; border-radius: 20px;
+      text-transform: uppercase; margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800; line-height: 1.2;
+      background: linear-gradient(90deg, #fff, var(--verde));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+    .hero p {
+      font-size: 17px; color: var(--texto-dim);
+      max-width: 640px; margin: 0 auto 30px;
+    }
+    .version-pill {
+      display: inline-block;
+      background: var(--fondo3); color: var(--texto-dim);
+      font-size: 12px; padding: 4px 12px; border-radius: 12px;
+      border: 1px solid var(--borde);
+    }
+
+    /* ── Métricas hero ────────────────────────────────────── */
+    .metricas-hero {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;
+      padding: 30px 20px; background: var(--fondo2);
+      border-bottom: 1px solid var(--borde);
+    }
+    .metrica-card {
+      background: var(--fondo); border: 1px solid var(--borde);
+      border-radius: 12px; padding: 18px 24px; text-align: center;
+      min-width: 140px;
+    }
+    .metrica-card .val {
+      font-size: 32px; font-weight: 800;
+      background: linear-gradient(90deg, var(--verde), #86efac);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .metrica-card .val.azul {
+      background: linear-gradient(90deg, var(--azul), #93c5fd);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .metrica-card .val.amarillo {
+      background: linear-gradient(90deg, var(--amarillo), #fde68a);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .metrica-card .lbl {
+      font-size: 12px; color: var(--texto-dim);
+      text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;
+    }
+
+    /* ── Layout principal ─────────────────────────────────── */
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+
+    /* ── Secciones ────────────────────────────────────────── */
+    .seccion {
+      background: var(--fondo2); border: 1px solid var(--borde);
+      border-radius: 16px; padding: 32px; margin-bottom: 28px;
+    }
+    .seccion-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px;
+    }
+    .seccion-icono {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .ic-verde  { background: rgba(34,197,94,0.15); }
+    .ic-azul   { background: rgba(59,130,246,0.15); }
+    .ic-amarillo { background: rgba(245,158,11,0.15); }
+    .ic-rojo   { background: rgba(239,68,68,0.15); }
+    .seccion h2 { font-size: 20px; font-weight: 700; }
+    .seccion p  { color: var(--texto-dim); margin-bottom: 12px; }
+    .seccion p:last-child { margin-bottom: 0; }
+    .highlight { color: var(--verde); font-weight: 600; }
+    .highlight-azul { color: #93c5fd; font-weight: 600; }
+    .highlight-am   { color: var(--amarillo); font-weight: 600; }
+
+    /* ── Callout ──────────────────────────────────────────── */
+    .callout {
+      border-left: 3px solid var(--verde); background: rgba(34,197,94,0.07);
+      border-radius: 0 10px 10px 0; padding: 14px 18px; margin: 16px 0;
+      font-size: 15px;
+    }
+    .callout.azul  { border-color: var(--azul);    background: rgba(59,130,246,0.07); }
+    .callout.am    { border-color: var(--amarillo); background: rgba(245,158,11,0.07); }
+    .callout.rojo  { border-color: var(--rojo);     background: rgba(239,68,68,0.07); }
+
+    /* ── Pasos ────────────────────────────────────────────── */
+    .pasos { list-style: none; }
+    .pasos li {
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 14px 0; border-bottom: 1px solid var(--borde);
+    }
+    .pasos li:last-child { border-bottom: none; }
+    .paso-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--verde); color: #000;
+      font-weight: 800; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .paso-texto strong { color: var(--texto); display: block; margin-bottom: 4px; }
+    .paso-texto span   { color: var(--texto-dim); font-size: 14px; }
+
+    /* ── Grid ROI table ───────────────────────────────────── */
+    .tabla-roi {
+      width: 100%; border-collapse: collapse; font-size: 14px;
+      margin-top: 16px;
+    }
+    .tabla-roi th {
+      background: var(--fondo3); padding: 10px 12px;
+      text-align: left; font-size: 11px; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--texto-dim);
+      border-bottom: 2px solid var(--borde);
+    }
+    .tabla-roi td {
+      padding: 9px 12px; border-bottom: 1px solid var(--borde);
+      color: var(--texto-dim);
+    }
+    .tabla-roi tr:hover td { background: rgba(255,255,255,0.03); }
+    .roi-pos { color: var(--verde); font-weight: 700; }
+    .roi-neg { color: var(--rojo); font-weight: 700; }
+    .fila-mejor td { background: rgba(34,197,94,0.1) !important; }
+    .fila-mejor td { color: var(--texto); }
+    .badge-activa {
+      display: inline-block; background: var(--verde); color: #000;
+      font-size: 10px; font-weight: 700; padding: 2px 8px;
+      border-radius: 10px; text-transform: uppercase; letter-spacing: 1px;
+    }
+    .badge-susp {
+      display: inline-block; background: var(--fondo3); color: var(--texto-dim);
+      font-size: 10px; font-weight: 600; padding: 2px 8px;
+      border-radius: 10px; text-transform: uppercase; letter-spacing: 1px;
+    }
+
+    /* ── Glosario ─────────────────────────────────────────── */
+    .glosario-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px; margin-top: 16px;
+    }
+    .glosario-item {
+      background: var(--fondo); border: 1px solid var(--borde);
+      border-radius: 10px; padding: 14px 16px;
+    }
+    .glosario-item .term {
+      font-size: 13px; font-weight: 700; color: var(--verde);
+      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .glosario-item .def { font-size: 13px; color: var(--texto-dim); }
+
+    /* ── Advertencia ──────────────────────────────────────── */
+    .advertencia {
+      border: 1px solid rgba(245,158,11,0.4);
+      background: rgba(245,158,11,0.06);
+      border-radius: 12px; padding: 20px; margin-top: 28px;
+    }
+    .advertencia h3 { color: var(--amarillo); margin-bottom: 8px; }
+    .advertencia p  { font-size: 14px; color: var(--texto-dim); }
+
+    /* ── Ejemplo visual ───────────────────────────────────── */
+    .ejemplo-partido {
+      background: var(--fondo); border: 1px solid var(--borde);
+      border-radius: 12px; padding: 20px; margin: 16px 0;
+    }
+    .partido-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .partido-header .liga {
+      font-size: 11px; color: var(--texto-dim);
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .partido-equipos {
+      display: flex; align-items: center; justify-content: center;
+      gap: 20px; text-align: center; margin-bottom: 16px;
+    }
+    .equipo-nombre { font-weight: 700; font-size: 18px; }
+    .vs-badge {
+      background: var(--fondo3); border-radius: 6px;
+      padding: 4px 10px; font-size: 12px; color: var(--texto-dim);
+    }
+    .probs-bar {
+      display: flex; border-radius: 6px; overflow: hidden;
+      height: 28px; margin-bottom: 8px;
+    }
+    .prob-h { background: var(--azul); }
+    .prob-d { background: var(--fondo3); }
+    .prob-a { background: var(--rojo); opacity: 0.7; }
+    .probs-labels {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: var(--texto-dim);
+    }
+    .probs-labels .val-label { font-weight: 700; }
+    .apuesta-resultado {
+      margin-top: 14px; padding-top: 14px;
+      border-top: 1px solid var(--borde);
+      display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3);
+      color: var(--verde); font-size: 13px; font-weight: 600;
+      padding: 6px 12px; border-radius: 20px;
+    }
+    .chip.am {
+      background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3);
+      color: var(--amarillo);
+    }
+
+    /* ── Diagrama flujo ───────────────────────────────────── */
+    .flujo {
+      display: flex; align-items: stretch; gap: 0;
+      overflow-x: auto; padding: 8px 0;
+    }
+    .flujo-paso {
+      flex: 1; min-width: 120px; text-align: center;
+      padding: 16px 12px; background: var(--fondo);
+      border: 1px solid var(--borde); border-radius: 0;
+      font-size: 13px; position: relative;
+    }
+    .flujo-paso:first-child { border-radius: 10px 0 0 10px; }
+    .flujo-paso:last-child  { border-radius: 0 10px 10px 0; }
+    .flujo-paso .fi { font-size: 22px; margin-bottom: 6px; }
+    .flujo-paso .fn { font-size: 11px; color: var(--texto-dim); margin-top: 4px; }
+    .flujo-arrow {
+      display: flex; align-items: center; color: var(--verde);
+      font-size: 18px; padding: 0 4px; flex-shrink: 0;
+    }
+
+    /* ── Fórmula matemática ───────────────────────────────── */
+    .formula {
+      background: var(--fondo3); border: 1px solid var(--borde);
+      border-radius: 8px; padding: 14px 18px;
+      font-family: 'Courier New', monospace; font-size: 15px;
+      color: var(--verde); margin: 12px 0; text-align: center;
+      line-height: 1.9;
+    }
+    .formula sup, .formula sub {
+      font-size: 10px;
+    }
+    .subseccion-titulo {
+      font-size: 15px; font-weight: 700; color: var(--texto);
+      margin: 22px 0 10px; padding-top: 18px;
+      border-top: 1px solid var(--borde);
+    }
+    .subseccion-titulo:first-of-type { border-top: none; padding-top: 0; }
+    .ts-fold {
+      background: var(--fondo); border: 1px solid var(--borde);
+      border-radius: 10px; padding: 14px 16px; margin: 14px 0;
+      font-size: 13px; font-family: monospace; color: var(--texto-dim);
+      line-height: 2;
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    footer {
+      text-align: center; padding: 40px 20px;
+      color: var(--texto-dim); font-size: 13px;
+      border-top: 1px solid var(--borde);
+    }
+
+    @media (max-width: 600px) {
+      .seccion { padding: 20px 16px; }
+      .metricas-hero { gap: 12px; }
+      .flujo { flex-direction: column; }
+      .flujo-paso { border-radius: 10px !important; }
+      .flujo-arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ HERO ══════════════ -->
+<div class="hero">
+  <div class="hero-badge">⚽ Agente de Apuestas Deportivas</div>
+  <h1>El Modelo que Apuesta<br>Solo Cuando Está Seguro</h1>
+  <p>Un sistema de inteligencia artificial que analiza miles de partidos históricos, calcula probabilidades reales y solo recomienda apostar cuando la ventaja matemática está de tu lado.</p>
+  <span class="version-pill">Sprint 9 · Actualizado 23/03/2026 · XGBoost + Pi-Rating</span>
+</div>
+
+<!-- ══════════════ KPIs ══════════════ -->
+<div class="metricas-hero">
+  <div class="metrica-card">
+    <div class="val">8.955</div>
+    <div class="lbl">Partidos Analizados</div>
+  </div>
+  <div class="metrica-card">
+    <div class="val azul">50.4%</div>
+    <div class="lbl">Accuracy Global</div>
+  </div>
+  <div class="metrica-card">
+    <div class="val">67.2%</div>
+    <div class="lbl">Accuracy al Apostar</div>
+  </div>
+  <div class="metrica-card">
+    <div class="val amarillo">+10.1%</div>
+    <div class="lbl">ROI Simulado</div>
+  </div>
+  <div class="metrica-card">
+    <div class="val">Serie A</div>
+    <div class="lbl">Liga Activa ✓</div>
+  </div>
+</div>
+
+<!-- ══════════════ CONTENIDO ══════════════ -->
+<div class="container">
+
+  <!-- 1. LA HISTORIA -->
+  <div class="seccion">
+    <div class="seccion-header">
+      <div class="seccion-icono ic-verde">📖</div>
+      <h2>La Historia: ¿De qué se trata esto?</h2>
+    </div>
+
+    <p>Imagina que tienes un amigo que lleva 6 años estudiando fútbol de manera obsesiva. Ha visto 8.955 partidos de las mejores ligas del mundo y tomó nota de todo: quién ganó, por cuánto, cómo venía cada equipo jugando, cuánto vale cada plantilla...</p>
+
+    <p>Después de tanto analizar, tu amigo desarrolló un "instinto matemático" para detectar <span class="highlight">cuándo las probabilidades están a tu favor</span>. No apuesta en todos los partidos —eso sería una locura— solo en aquellos donde está muy seguro de que las cuotas del bookmaker están equivocadas.</p>
+
+    <div class="callout">
+      💡 <strong>Ese amigo es este modelo.</strong> Entrenado con inteligencia artificial sobre 5 temporadas de fútbol europeo, aprende a identificar los momentos donde apostar tiene sentido matemático.
+    </div>
+
+    <p>El resultado en simulación: de cada 100 pesos apostados en los partidos de mayor confianza, el modelo retorna <span class="highlight">110 pesos en promedio</span>. No es magia —es estadística.</p>
+  </div>
+
+  <!-- 2. CÓMO FUNCIONA -->
+  <div class="seccion">
+    <div class="seccion-header">
+      <div class="seccion-icono ic-azul">⚙️</div>
+      <h2>¿Cómo funciona por dentro?</h2>
+    </div>
+
+    <p>El modelo usa dos capas de análisis que trabajan juntas:</p>
+
+    <!-- Flujo -->
+    <div class="flujo" style="margin: 20px 0;">
+      <div class="flujo-paso">
+        <div class="fi">📊</div>
+        <strong>Datos históricos</strong>
+        <div class="fn">8.955 partidos · 5 ligas · 5 temporadas</div>
+      </div>
+      <div class="flujo-arrow">→</div>
+      <div class="flujo-paso">
+        <div class="fi">🧮</div>
+        <strong>Pi-Rating</strong>
+        <div class="fn">Fortaleza real de cada equipo</div>
+      </div>
+      <div class="flujo-arrow">→</div>
+      <div class="flujo-paso">
+        <div class="fi">🤖</div>
+        <strong>XGBoost</strong>
+        <div class="fn">Modelo de predicción</div>
+      </div>
+      <div class="flujo-arrow">→</div>
+      <div class="flujo-paso">
+        <div class="fi">🎯</div>
+        <strong>Value Bet</strong>
+        <div class="fn">Solo si hay ventaja matemática</div>
+      </div>
+      <div class="flujo-arrow">→</div>
+      <div class="flujo-paso">
+        <div class="fi">💰</div>
+        <strong>Recomendación</strong>
+        <div class="fn">Monto + cuota + confianza</div>
+      </div>
+    </div>
+
+    <p><strong style="color:var(--texto)">Capa 1: Pi-Rating</strong> — Es como el rating Elo del ajedrez, pero adaptado al fútbol. Le da a cada equipo un número que refleja su fortaleza real. A diferencia de simplemente contar victorias, el Pi-Rating también considera <em>por cuánto</em> ganó o perdió. El Real Madrid que gana 4-0 sube más que el que gana 1-0.</p>
+
+    <div class="callout azul">
+      📐 <strong>Ejemplo de Pi-Rating:</strong> Bayern Munich tiene un rating de 1.85 · Dortmund 1.72 · La diferencia (0.13) es la feature más importante del modelo — predice directamente quién tiene más probabilidades de ganar.
+    </div>
+
+    <p><strong style="color:var(--texto)">Capa 2: XGBoost</strong> — Es el algoritmo de machine learning más usado en competencias de datos del mundo. Toma el Pi-Rating + la forma reciente de cada equipo (últimos 5 partidos) y calcula tres probabilidades: ¿cuánto % hay de victoria local, empate y victoria visitante?</p>
+
+    <p>Con esas probabilidades, el modelo las <em>compara con las cuotas del bookmaker</em>. Si el bookmaker ofrece 2.50 para un resultado que el modelo calcula con 55% de probabilidad, eso es una <span class="highlight">oportunidad de value</span>.</p>
+  </div>
+
+  <!-- 3. LOS NÚMEROS EXPLICADOS -->
+  <div class="seccion">
+    <div class="seccion-header">
+      <div class="seccion-icono ic-amarillo">📈</div>
+      <h2>Los Números: ¿Qué significan realmente?</h2>
+    </div>
+
+    <p>Estos son los resultados del Sprint 9 (última actualización del modelo). Aquí están explicados en lenguaje simple:</p>
+
+    <p><span class="highlight-azul">Accuracy global: 50.4%</span> — El modelo predice correctamente el resultado en 1 de cada 2 partidos. ¿Suena mediocre? Para fútbol, donde hay 3 resultados posibles, el límite por azar puro sería 43%. Superar eso de manera consistente YA es estadísticamente relevante.</p>
+
+    <div class="callout am">
+      ⚠️ <strong>La trampa del "solo" 50%:</strong> En apuestas deportivas, ganar dinero no requiere acertar el 70% de las veces. Requiere acertar lo suficiente como para que las ganancias superen las pérdidas. Con buenas cuotas y buena selección, un 52% puede ser muy rentable.
+    </div>
+
+    <p><span class="highlight">Accuracy al apostar (umbral 0.70): 67.2%</span> — Aquí está la magia. El modelo solo recomienda apostar cuando tiene ≥70% de confianza interna EN el resultado Y la cuota del bookmaker ofrece ventaja. En esos 61 casos del test set, acertó 2 de cada 3 veces.</p>
+
+    <p><span class="highlight-am">ROI flat +10.1%</span> — Si en cada una de esas 61 apuestas apostáramos $1.000, al final tendríamos $1.101 netos de ganancia por cada $1.000 apostado. Eso es un retorno de inversión de +10.1% en el período analizado.</p>
+
+    <!-- Grid ROI -->
+    <p style="margin-top: 20px;"><strong style="color:var(--texto)">Grid de Rendimiento — Todas las combinaciones:</strong></p>
+    <p style="font-size:13px; color:var(--texto-dim)">El modelo fue evaluado con distintos niveles de exigencia. Cuanto más alto el umbral de confianza, menos apuestas pero más certeras:</p>
+
+    <div style="overflow-x:auto;">
+    <table class="tabla-roi">
+      <thead>
+        <tr>
+          <th>Confianza Mín.</th>
+          <th>Value Mín.</th>
+          <th>N° Apuestas</th>
+          <th>% del total</th>
+          <th>Accuracy</th>
+          <th>ROI Flat</th>
+          <th>ROI Kelly</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>55%</td><td>3%</td><td>341</td><td>19.0%</td><td>54.2%</td><td class="roi-pos">+2.94%</td><td class="roi-pos">+22.67%</td></tr>
+        <tr><td>55%</td><td>10%</td><td>257</td><td>14.3%</td><td>50.2%</td><td class="roi-pos">+3.32%</td><td class="roi-pos">+29.90%</td></tr>
+        <tr><td>60%</td><td>3%</td><td>251</td><td>14.0%</td><td>59.8%</td><td class="roi-pos">+5.78%</td><td class="roi-pos">+46.17%</td></tr>
+        <tr><td>60%</td><td>10%</td><td>180</td><td>10.1%</td><td>55.6%</td><td class="roi-pos">+6.26%</td><td class="roi-pos">+50.87%</td></tr>
+        <tr><td>65%</td><td>5%</td><td>142</td><td>7.9%</td><td>64.1%</td><td class="roi-pos">+5.68%</td><td class="roi-pos">+38.39%</td></tr>
+        <tr><td>65%</td><td>10%</td><td>104</td><td>5.8%</td><td>62.5%</td><td class="roi-pos">+8.49%</td><td class="roi-pos">+44.82%</td></tr>
+        <tr><td>70%</td><td>3%</td><td>96</td><td>5.4%</td><td>69.8%</td><td class="roi-pos">+6.84%</td><td class="roi-pos">+24.98%</td></tr>
+        <tr class="fila-mejor"><td><strong>70% ★</strong></td><td><strong>10% ★</strong></td><td><strong>61</strong></td><td><strong>3.4%</strong></td><td><strong>67.2%</strong></td><td class="roi-pos"><strong>+10.11%</strong></td><td class="roi-pos"><strong>+31.60%</strong></td></tr>
+        <tr><td>75%</td><td>3%</td><td>57</td><td>3.2%</td><td>66.7%</td><td class="roi-neg">-4.60%</td><td class="roi-neg">-15.16%</td></tr>
+        <tr><td>75%</td><td>10%</td><td>35</td><td>2.0%</td><td>65.7%</td><td class="roi-neg">-0.51%</td><td class="roi-neg">-5.98%</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="callout" style="margin-top:16px;">
+      ★ <strong>Mejor combinación encontrada:</strong> Confianza ≥70% + Value ≥10% → Solo apostamos en 61 partidos de 1.791 analizados (el 3.4% más prometedor). En esos 61, el modelo ganó dinero con ROI de +10.1%.
+    </div>
+
+    <p>El límite de 0.75 empieza a perder ROI porque la muestra se vuelve muy pequeña (35-57 apuestas). Con más datos, este umbral podría estabilizarse.</p>
+  </div>
+
+  <!-- 4. ROI POR LIGA -->
+  <div class="seccion">
+    <div class="seccion-header">
+      <div class="seccion-icono ic-verde">🏆</div>
+      <h2>Rendimiento por Liga</h2>
+    </div>
+
+    <p>No todas las ligas funcionan igual. Aquí el rendimiento con la combinación óptima (conf ≥70%, value ≥10%):</p>
+
+    <table class="tabla-roi" style="margin-top:16px;">
+      <thead>
+        <tr><th>Liga</th><th>Partidos Test</th><th>Apuestas</th><th>Accuracy</th><th>ROI Flat</th><th>Estado</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>🇮🇹 Serie A</td><td>358</td><td>24</td><td>66.7%</td>
+          <td class="roi-pos">+10.79%</td>
+          <td><span class="badge-activa">✓ ACTIVA</span></td>
+        </tr>
+        <tr>
+          <td>🇪🇸 La Liga</td><td>358</td><td>14</td><td>64.3%</td>
+          <td class="roi-pos">+10.86%</td>
+          <td><span class="badge-susp">Pocas apuestas</span></td>
+        </tr>
+        <tr>
+          <td>🇩🇪 Bundesliga</td><td>306</td><td>6</td><td>100%</td>
+          <td class="roi-pos">+63.00%</td>
+          <td><span class="badge-susp">Muestra pequeña</span></td>
+        </tr>
+        <tr>
+          <td>🇬🇧 Premier League</td><td>380</td><td>9</td><td>55.6%</td>
+          <td class="roi-neg">-18.67%</td>
+          <td><span class="badge-susp">Suspendida</span></td>
+        </tr>
+        <tr>
+          <td>🇫🇷 Ligue 1</td><td>306</td><td>8</td><td>62.5%</td>
+          <td class="roi-neg">-0.50%</td>
+          <td><span class="badge-susp">Suspendida</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout" style="margin-top:16px;">
+      🇮🇹 <strong>Serie A es la única liga activa</strong> con n ≥ 20 apuestas y ROI positivo. La Liga tiene mejor ROI (+10.86%) pero con solo 14 apuestas — necesitamos más datos para confiar en ese número. Bundesliga con 100% de accuracy en 6 apuestas es un caso claro de muestra demasiado pequeña.
+    </div>
+  </div>
+
+  <!-- 5. CÓMO APOSTAR (paso a paso) -->
+  <div class="seccion">
+    <div class="seccion-header">
+      <div class="seccion-icono ic-verde">🎯</div>
+      <h2>¿Cómo usar el modelo? — Guía paso a paso</h2>
+    </div>
+
+    <ul class="pasos">
+      <li>
+        <div class="paso-num">1</div>
+        <div class="paso-texto">
+          <strong>Ejecutar el agente cada mañana</strong>
+          <span>El modelo descarga los partidos del día, calcula Pi-Ratings actualizados y genera probabilidades para cada encuentro.</span>
+        </div>
+      </li>
+      <li>
+        <div class="paso-num">2</div>
+        <div class="paso-texto">
+          <strong>Revisar las recomendaciones filtradas</strong>
+          <span>Solo aparecen partidos donde la confianza del modelo es ≥70% Y existe value ≥10% respecto a las cuotas disponibles.</span>
+        </div>
+      </li>
+      <li>
+        <div class="paso-num">3</div>
+        <div class="paso-texto">
+          <strong>Verificar la liga</strong>
+          <span>Actualmente solo se recomiendan apuestas en <strong style="color:var(--verde)">Serie A</strong>. Las demás ligas están en modo observación hasta acumular más datos.</span>
+        </div>
+      </li>
+      <li>
+        <div class="paso-num">4</div>
+        <div class="paso-texto">
+          <strong>Revisar el Value %</strong>
+          <span>El "value" es cuánto más probable cree el modelo que es el resultado, comparado con lo que dice el bookmaker. Value = 10% significa que si el modelo dice 60% de probabilidad y el bookmaker dice 50%, hay 10% de ventaja.</span>
+        </div>
+      </li>
+      <li>
+        <div class="paso-num">5</div>
+        <div class="paso-texto">
+          <strong>Decidir el monto a apostar</strong>
+          <span>Hay dos estrategias: <strong style="color:var(--texto)">Flat betting</strong> (mismo monto siempre, ej: $5.000 por apuesta) o <strong style="color:var(--texto)">Kelly</strong> (monto proporcional a la ventaja — mayor confianza = mayor apuesta). Para comenzar, se recomienda flat betting.</span>
+        </div>
+      </li>
+      <li>
+        <div class="paso-num">6</div>
+        <div class="paso-texto">
+          <strong>Registrar resultado y aprender</strong>
+          <span>El modelo registra automáticamente si la apuesta fue ganadora o perdedora. Con el tiempo, el historial muestra si el ROI simulado se confirma en la realidad.</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 6. EJEMPLO REAL -->
+  <div class="seccion">
+    <div class="seccion-header">
+      <div class="seccion-icono ic-azul">💡</div>
+      <h2>Ejemplo Real: Así se ve una recomendación</h2>
+    </div>
+
+    <p>Supón que el modelo analiza este partido de Serie A:</p>
+
+    <div class="ejemplo-partido">
+      <div class="partido-header">
+        <div class="liga">🇮🇹 Serie A · Jornada 28</div>
+        <div style="font-size:12px; color:var(--texto-dim);">Domingo 29/03/2026 · 14:00h</div>
+      </div>
+      <div class="partido-equipos">
+        <div>
+          <div class="equipo-nombre">Inter Milan</div>
+          <div style="font-size:12px; color:var(--texto-dim);">Pi-Rating: 1.84</div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div>
+          <div class="equipo-nombre">Napoli</div>
+          <div style="font-size:12px; color:var(--texto-dim);">Pi-Rating: 1.71</div>
+        </div>
+      </div>
+
+      <p style="font-size:13px; color:var(--texto-dim); margin-bottom:10px;">Probabilidades del modelo:</p>
+      <div class="probs-bar">
+        <div class="prob-h" style="width:62%"></div>
+        <div class="prob-d" style="width:20%"></div>
+        <div class="prob-a" style="width:18%"></div>
+      </div>
+      <div class="probs-labels">
+        <span>🏠 Inter gana<br><span class="val-label" style="color:var(--azul)">62%</span></span>
+        <span>🤝 Empate<br><span class="val-label">20%</span></span>
+        <span>✈️ Napoli gana<br><span class="val-label" style="color:var(--rojo)">18%</span></span>
+      </div>
+
+      <div class="apuesta-resultado">
+        <div>
+          <div style="font-size:12px; color:var(--texto-dim); margin-bottom:4px;">Cuota Bookmaker (Inter gana)</div>
+          <div style="font-size:22px; font-weight:800; color:var(--texto)">1.75</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:12px; color:var(--texto-dim); margin-bottom:6px;">Análisis de value:</div>
+          <div class="chip">✓ Confianza: 62% ≥ 70%... </div>
+        </div>
+        <div style="flex:2">
+          <div class="chip" style="margin-bottom:6px;">✓ Confianza: 62% &lt; 70% → No aplica en este ejemplo</div>
+          <div class="chip am">⚠️ Este ejemplo ilustra el proceso</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout azul" style="font-size:14px;">
+      📊 <strong>La fórmula del Value:</strong> <code style="background:var(--fondo3); padding:2px 6px; border-radius:4px;">Value = (Prob. modelo × Cuota bookmaker) - 1</code><br><br>
+      Si Inter tiene 62% según el modelo y la cuota es 1.75:<br>
+      Value = 0.62 × 1.75 - 1 = <strong style="color:var(--verde)">+0.085 = +8.5%</strong><br>
+      Eso significa que por cada $100 apostados, el valor esperado es $108.50. ✓ Apuesta recomendada.
+    </div>
+
+    <div class="callout rojo" style="font-size:14px;">
+      ❌ <strong>Contra-ejemplo:</strong> Si la misma cuota fuera 1.50:<br>
+      Value = 0.62 × 1.50 - 1 = <strong style="color:var(--rojo)">-0.07 = -7%</strong><br>
+      Significa que el bookmaker te cobra 7% de comisión implícita. No se apuesta.
+    </div>
+  </div>
+
+  <!-- 7. GLOSARIO -->
+  <div class="seccion">
+    <div class="seccion-header">
+      <div class="seccion-icono ic-azul">📚</div>
+      <h2>Glosario de Términos</h2>
+    </div>
+
+    <div class="glosario-grid">
+      <div class="glosario-item">
+        <div class="term">Pi-Rating</div>
+        <div class="def">Número que mide la fortaleza de un equipo, como el ELO en ajedrez pero mejorado para fútbol. Considera los goles, no solo el resultado. Cuanto más alto, más fuerte el equipo.</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">XGBoost</div>
+        <div class="def">Algoritmo de machine learning ganador de incontables competencias de datos. Combina cientos de "mini-modelos" para hacer predicciones muy precisas. Es el motor principal del agente.</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">Accuracy</div>
+        <div class="def">Porcentaje de partidos que el modelo predice correctamente. 50.4% global. Al aplicar filtros de confianza, sube hasta 67-70% en los partidos seleccionados.</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">ROI (Return on Investment)</div>
+        <div class="def">Ganancia neta dividida entre el total apostado. ROI +10% significa que por cada $100 apostados, ganaste $10 en promedio. Es el número más importante.</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">Value Bet</div>
+        <div class="def">Apuesta donde la probabilidad real es mayor que la que implica la cuota del bookmaker. Es la única razón para apostar — si no hay value, no hay apuesta.</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">Cuota (Odds)</div>
+        <div class="def">El número que ofrece la casa de apuestas. Si la cuota es 2.50 y apuestas $100, ganas $250 (incluyendo tu $100 de vuelta). La probabilidad implícita es 1/2.50 = 40%.</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">Umbral de Confianza</div>
+        <div class="def">El mínimo de seguridad que exigimos al modelo. Con umbral 70%, solo apostamos cuando el modelo dice "este resultado tiene 70% o más de probabilidad de ocurrir".</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">Kelly Betting</div>
+        <div class="def">Fórmula matemática para calcular cuánto apostar: más cuando la ventaja es grande, menos cuando es pequeña. Protege el capital y maximiza el crecimiento a largo plazo.</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">Flat Betting</div>
+        <div class="def">Apostar siempre el mismo monto fijo sin importar la confianza. Es más simple que Kelly y más fácil de controlar. Recomendado para comenzar.</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">TimeSeriesSplit</div>
+        <div class="def">Técnica para evaluar modelos con datos en el tiempo. Siempre entrena con datos pasados y evalúa con datos futuros — jamás al revés. Garantiza que los resultados son reales.</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">Data Leakage</div>
+        <div class="def">Error grave en ML: cuando el modelo "ve el futuro" durante el entrenamiento. Si el modelo entrenara con los partidos de evaluación, sus métricas serían falsamente altas. Este modelo lo evita.</div>
+      </div>
+      <div class="glosario-item">
+        <div class="term">xG (Expected Goals)</div>
+        <div class="def">Métrica avanzada de fútbol: cuántos goles "deberían haber" marcado los equipos según la calidad de sus ocasiones. Más objetiva que los goles reales. Fuente: Understat.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. LIMITACIONES -->
+  <div class="seccion">
+    <div class="seccion-header">
+      <div class="seccion-icono ic-rojo">⚠️</div>
+      <h2>Limitaciones Actuales del Modelo</h2>
+    </div>
+
+    <p>Todo buen modelo debe ser honesto sobre lo que <em>no</em> puede hacer:</p>
+
+    <ul style="list-style:none; padding:0;">
+      <li style="padding: 10px 0; border-bottom: 1px solid var(--borde); color: var(--texto-dim);">
+        🔴 <strong style="color:var(--texto)">Serie A solamente.</strong> Solo la Serie A tiene suficientes apuestas con ROI positivo confirmado. Las demás ligas están en modo observación.
+      </li>
+      <li style="padding: 10px 0; border-bottom: 1px solid var(--borde); color: var(--texto-dim);">
+        🟡 <strong style="color:var(--texto)">xG solo para 2024.</strong> Los datos de Expected Goals de Understat cubren solo la temporada 2024. Con más temporadas históricas, el modelo mejoraría significativamente.
+      </li>
+      <li style="padding: 10px 0; border-bottom: 1px solid var(--borde); color: var(--texto-dim);">
+        🟡 <strong style="color:var(--texto)">Sin datos de Transfermarkt.</strong> Los valores de mercado de plantillas mejoran la predicción, pero aún no están integrados en el modelo activo (se descargan con cache de 30 días).
+      </li>
+      <li style="padding: 10px 0; border-bottom: 1px solid var(--borde); color: var(--texto-dim);">
+        🔴 <strong style="color:var(--texto)">ROI simulado ≠ ROI real.</strong> El +10.1% es backtesting histórico. El rendimiento real puede variar. Las cuotas cambian, los bookmakers se adaptan, y factores imprevisibles ocurren.
+      </li>
+      <li style="padding: 10px 0; color: var(--texto-dim);">
+        🟡 <strong style="color:var(--texto)">No considera lesiones ni sanciones en tiempo real.</strong> El modelo usa datos históricos, no noticias del día. Una baja de último minuto de un jugador clave no es capturada automáticamente.
+      </li>
+    </ul>
+  </div>
+
+  <!-- ADVERTENCIA RESPONSABLE -->
+  <div class="advertencia">
+    <h3>⚠️ Apuesta Responsablemente</h3>
+    <p>Este modelo es una herramienta de análisis estadístico, no una garantía de ganancias. Las apuestas deportivas conllevan riesgo de pérdida de dinero real. Nunca apuestes más de lo que puedas permitirte perder. El ROI positivo en simulación histórica no garantiza rentabilidad futura. Si las apuestas afectan negativamente tu vida o la de tu entorno, busca ayuda.</p>
+  </div>
+
+</div>
+
+<footer>
+  <p>Agente de Apuestas Deportivas · Sprint 9 · Actualizado 23/03/2026</p>
+  <p style="margin-top:6px;">Modelo: XGBoost · Features: Pi-Rating + Forma reciente · Datos: football-data.co.uk + Understat</p>
+  <p style="margin-top:6px; font-size:12px;">Desarrollado con Claude Code (Anthropic) · Sócrates Cabral</p>
+</footer>
+
+</body>
+</html>

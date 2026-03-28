@@ -824,3 +824,80 @@ Campos interactivos:
 - Cálculo en tiempo real: ganancia neta, retorno total, pérdida, monto Kelly
 - Semáforo value: verde >10%, amarillo 5-10%, rojo <5%
 Estética: fondo #0c1422, teal #14b8a6, borde #1e2d45
+
+---
+
+## Actualizaciones 2026-03-24
+
+### Azure AD Graph API — DESBLOQUEADO
+- AADSTS53003: RESUELTO — José Contreras aprobó Sites.ReadWrite.All bajo Microsoft Graph
+- Email via Graph API: Validado — correo llega a Outlook desde Egakat
+- SharePoint escritura: Validado — test completo 19/19 lectura + 5/5 escritura OK
+- DOC_LIBRARY confirmado: "Documentos" (no "Documentos compartidos")
+- Migración completa: M1/M3/M6/M7/M8 → Graph API directo (no más OneDrive sync para SP)
+- run_todos.py v1.8: JSON a logs/ (no OneDrive) → PA flow ya no dispara → 1 solo correo
+
+### Sprints 11-14 COMPLETOS (2026-03-24)
+- Sprint 11: multi_llm_analyst.py — Claude Haiku + Gemini 2.5 Flash + GPT-4o-mini en paralelo
+  Consenso: 3/3=100%, 2/3=75%, neutral=50%, rechazar=omitir
+  GOOGLE_API_KEY activo | OPENAI_API_KEY activo
+- Sprint 12: run_aprendizaje.py — análisis histórico por liga/bucket
+- Sprint 13: dashboard_apuestas.py — Streamlit puerto 8504
+- Sprint 14: ligas_activas.json — fuente de verdad para ligas ML activas
+
+### Sprint 15 — Pendiente
+Playwright Betano. Prerequisito: ROI positivo sostenido + TDC configurada en Betano.
+
+### Task Scheduler Agente Apuestas
+- "Agente Apuestas - Analisis Diario" → run_agent.py — 09:00 diario
+- "Agente Apuestas - Backtesting Nocturno" → backtesting\run_backtesting.py — 23:00 diario | WakeToRun: True
+
+### Sprint 16 — Champions League COMPLETADO (2026-03-25)
+- ucl_descargador.py: 674 partidos UCL (2022-24) vía api-sports (football-data.co.uk no tiene UCL)
+- Plan free api-sports: solo temporadas 2022-2024 disponibles
+- descargador_historico.py: carga ucl_consolidado.csv y anexa al histórico (con es_vuelta=0 para ligas domésticas)
+- feature_builder.py: +2 features: liga_ucl (bool), es_vuelta (bool)
+- run_entrenamiento.py: PASO 1b UCL antes del consolidado
+- Resultado entrenamiento: CV=0.4901 | Test=0.5244 | Serie A ROI=+12% activa
+- UCL: 0 apuestas con umbral 0.70 — no activar aún (pocas temporadas, qualifying diluye señal)
+- Pi-Rating UCL necesita más historia. Revisar en 6 meses con temporada 2025-26.
+
+### Roadmap Sprints 17-18
+- Sprint 17: NBA — BallDontLie API (BALLDONTLIE_KEY en .env), 3 modelos winner/total/over
+- Sprint 18: Tenis ATP/WTA — Jeff Sackmann GitHub, ELO por superficie, 3 modelos hard/clay/grass
+
+---
+
+## PROYECTO 5 — CleanAvi (cleanavi/)
+Última actualización: 2026-03-28
+
+App Streamlit de limpieza de archivos del sistema. Construida y funcionando.
+- **Script:** `cleanavi/app.py`
+- **Puerto:** por definir (no conflicta con 8502/8503/8504)
+- **Funcionalidad:** detecta archivos temporales (extensiones .tmp/.log/.bak/etc.), carpetas caché (__pycache__/.cache/etc.), archivos antiguos +180 días. Mueve a papelera con `send2trash`.
+- **Estado:** ✅ Construido y funcionando. Pendiente prueba completa.
+
+---
+
+## ACTUALIZACIONES 2026-03-28
+
+### Claude Code
+- Versión actual: **2.1.86**
+- **Computer Use (mouse/ventanas):** NO disponible en Claude Code CLI. Es feature de la API de Anthropic (beta). Se accede llamando la API directamente con modelo claude-opus-4-6 o sonnet. No integrado en la CLI aún.
+
+### Qwen Omni (asistente_omni.py + qwen_omni.py)
+- **Modelo:** QwenOmni vía **DashScope API** (nube Alibaba) — `DASHSCOPE_API_KEY` en .env
+- **URL:** `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
+- **Espacio disco local:** CERO — no hay modelo descargado. Solo `respuesta_omni.wav` (audio última respuesta)
+- Los scripts usan OpenAI SDK compatible con DashScope — 100% cloud
+
+### NPS Survey 418429 — Tokens pendientes
+- Script busca: `NPS_Encuesta/tokens_nps.csv`
+- Para obtenerlos: LimeSurvey Admin → Encuesta 418429 → Participantes → Administrar participantes → Exportar → Exportar participantes → guardar como `tokens_nps.csv`
+- Tarea programada `NPS Egakat - Primera descarga` → 28/03/2026 10:00 (¡HOY!)
+
+### Power BI NPS
+- ✅ Conectado al nuevo Excel `OneDrive\Reportes NPS\NPS_PBI_datos.xlsx` (antes Google Sheets)
+
+### finanzas_personales Sprint 4
+- ⏸ Postergado indefinidamente (BCI/ITAÚ scrapers, CMF PDF parser)

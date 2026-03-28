@@ -40,6 +40,9 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 import pandas as pd
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+from azure_graph import get_token, get_drive_id, subir_archivo_sp
 
 sys.stdout.reconfigure(encoding="utf-8")
 load_dotenv()
@@ -260,7 +263,9 @@ def descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta):
 
     # Combinar chunks y eliminar duplicados exactos (filas 100% iguales)
     # Nota: chunks no se solapan en fechas → duplicados solo si WMS repite datos
-    df_total   = pd.concat(dataframes, ignore_index=True)
+    # Excluir chunks vacíos antes del concat (fix FutureWarning pandas — all-NA columns)
+    dataframes_ok = [df for df in dataframes if len(df) > 0]
+    df_total   = pd.concat(dataframes_ok if dataframes_ok else dataframes, ignore_index=True)
     filas_raw  = len(df_total)
     df_total   = df_total.drop_duplicates()
     duplicados = filas_raw - len(df_total)
@@ -298,6 +303,15 @@ def run():
     meses_arg = args.mes or [None]
     periodos  = [calcular_periodo(m) for m in meses_arg]
 
+    # Graph API init (una sola vez para todos los clientes)
+    _sp_token, _sp_drive_id = None, None
+    try:
+        _sp_token    = get_token()
+        _sp_drive_id = get_drive_id(_sp_token)
+        log("Graph API: Token + Drive ID OK")
+    except Exception as e:
+        log(f"[WARN] Graph API init falló — sin subida SP directa: {e}")
+
     log(f"Modulo 7 — Pedidos Preparados | {len(periodos)} periodo(s) | {len(CLIENTES)} clientes")
     for fd, fh, ano, mes in periodos:
         log(f"  Periodo: {fd.strftime('%d/%m/%Y')} a {fh.strftime('%d/%m/%Y')}  ->  {ano}/{mes}")
@@ -325,8 +339,8 @@ def run():
                 archivo_hoy = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
 
                 if empresa_wms == "DERCO":
-                    # DERCO escribe archivo parcial aunque falle → usar marcador .ok_YYYYMMDD
-                    marker_ok = archivo_hoy + f".ok_{hoy_str}"
+                    # DERCO escribe archivo parcial aunque falle → marcador en logs/ (no OneDrive)
+                    marker_ok = str(Path(__file__).parent.parent / "logs" / f"derco_preparacion_{hoy_str}.ok")
                     if os.path.exists(marker_ok):
                         log(f"  >> [SKIP] DERCO completado hoy (marcador OK)")
                         resultados.append((empresa_wms, mes_carpeta, True))
@@ -334,6 +348,14 @@ def run():
                     ok = descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta)
                     if ok:
                         open(marker_ok, "w").close()
+                        if _sp_token:
+                            try:
+                                ok_sp = subir_archivo_sp(_sp_token, _sp_drive_id,
+                                    f"Clientes EK/{carpeta_cliente}/Preparación/{ano_str}/{mes_carpeta}",
+                                    Path(archivo_hoy))
+                                log(f"  -> [SP] {'OK' if ok_sp else 'WARN'} SharePoint Preparacion DERCO")
+                            except Exception as e_sp:
+                                log(f"  -> [WARN SP] {e_sp}")
                 else:
                     # Clientes normales: solo escriben archivo en éxito → mtime es suficiente
                     if os.path.exists(archivo_hoy):
@@ -343,6 +365,14 @@ def run():
                             resultados.append((empresa_wms, mes_carpeta, True))
                             continue
                     ok = descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta)
+                    if ok and _sp_token:
+                        try:
+                            ok_sp = subir_archivo_sp(_sp_token, _sp_drive_id,
+                                f"Clientes EK/{carpeta_cliente}/Preparación/{ano_str}/{mes_carpeta}",
+                                Path(archivo_hoy))
+                            log(f"  -> [SP] {'OK' if ok_sp else 'WARN'} SharePoint Preparacion {empresa_wms}")
+                        except Exception as e_sp:
+                            log(f"  -> [WARN SP] {e_sp}")
 
                 resultados.append((empresa_wms, mes_carpeta, ok))
 

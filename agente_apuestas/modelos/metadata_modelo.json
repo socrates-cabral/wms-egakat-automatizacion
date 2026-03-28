@@ -1,0 +1,12 @@
+{
+  "fecha": "2026-03-25 00:04:37.220083",
+  "accuracy_test": 0.5244,
+  "modelo_activo": true,
+  "ligas_activas": [
+    "Serie A"
+  ],
+  "ligas_suspendidas": [],
+  "umbral_prod": 0.7,
+  "value_min_prod": 0.1,
+  "roi_flat_mejor": 8.99
+}
