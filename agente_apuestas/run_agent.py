@@ -106,6 +106,15 @@ AUTO_REGISTRAR_BETS   = True  # registrar automáticamente en backtesting
 ESTRATEGIA_BACKTESTING = "flat"  # "flat" | "kelly"
 MIN_SCORE_AUTO_BET    = 65    # confianza mínima para auto-registrar en backtesting
 
+# Stop reasons tipados — patrón spec/01 query loop
+# Permite al orquestador (Task Scheduler / logs) distinguir por qué terminó el agente
+STOP_END_TURN      = "end_turn"       # completó normalmente sin recomendaciones
+STOP_MAX_TURNS     = "max_turns"      # procesó MAX_FIXTURES partidos
+STOP_QUOTA         = "quota_exhausted"  # cuota API insuficiente
+STOP_RISK_BLOCKED  = "risk_blocked"   # límites de riesgo activos
+STOP_NO_FIXTURES   = "no_fixtures"    # sin partidos hoy
+STOP_ERROR         = "error"          # excepción no manejada
+
 # Orden de prioridad de ligas (las primeras se procesan primero)
 LIGAS_PRIORIDAD = [
     "Champions League",
@@ -735,7 +744,8 @@ def main():
         if disponibles < 20:
             log.error(f"[FALLO] Cuota insuficiente ({disponibles} restantes). "
                       f"Se necesitan al menos 20. Abortando.")
-            return
+            log.info(f"[STOP] stop_reason={STOP_QUOTA}")
+            return STOP_QUOTA
     except Exception as e:
         log.warning(f"[AVISO] No se pudo verificar cuota: {e}. Continuando...")
 
@@ -757,7 +767,8 @@ def main():
         # Generar reporte con estado de bloqueo visible
         ruta = generar_reporte_html([], fecha_hoy, riesgo=riesgo)
         log.info(f"Reporte de bloqueo generado: {ruta}")
-        return
+        log.info(f"[STOP] stop_reason={STOP_RISK_BLOCKED} | motivo={riesgo['motivo']}")
+        return STOP_RISK_BLOCKED
 
     # 3. Obtener partidos del día
     log.info("")
@@ -789,7 +800,8 @@ def main():
         # Generar reporte vacío igual (para que el bat no falle)
         ruta = generar_reporte_html([], fecha_hoy)
         log.info(f"Reporte vacío generado: {ruta}")
-        return
+        log.info(f"[STOP] stop_reason={STOP_NO_FIXTURES}")
+        return STOP_NO_FIXTURES
 
     # 3b. Predictor ML (Sprint 10) — Serie A en paralelo al sistema de reglas
     # Solo se ejecuta para Serie A (liga_id=135) si el modelo está disponible.
@@ -890,8 +902,11 @@ def main():
         log.info("── Paso 6: notificaciones y registro ───────────────────────")
         _notificar_y_registrar(partidos_analizados, riesgo)
 
+    stop_reason = STOP_MAX_TURNS if len(partidos_analizados) >= MAX_FIXTURES else STOP_END_TURN
     log.info("")
     log.info(f"── AGENTE COMPLETO — Log: {log_path} ───────────────────────")
+    log.info(f"[STOP] stop_reason={stop_reason} | partidos={len(partidos_analizados)}/{MAX_FIXTURES}")
+    return stop_reason
 
 
 if __name__ == "__main__":
