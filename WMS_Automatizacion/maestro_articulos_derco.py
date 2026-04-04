@@ -343,10 +343,15 @@ def descargar_maestro(page, context):
     """Selecciona DERCO, busca y descarga el maestro de materiales."""
 
     archivos_existentes = list(DESTINO.glob("*.xlsx"))
-    if archivos_existentes:
-        archivo_mas_reciente = max(archivos_existentes, key=os.path.getmtime)
-        log(f"  [SKIP] Ya existe archivo en destino: {archivo_mas_reciente.name}")
-        return archivo_mas_reciente
+    hoy = datetime.now().date()
+    archivo_hoy = next(
+        (p for p in archivos_existentes
+         if datetime.fromtimestamp(p.stat().st_mtime).date() == hoy),
+        None
+    )
+    if archivo_hoy:
+        log(f"  [SKIP] Ya existe archivo de hoy en destino: {archivo_hoy.name}")
+        return archivo_hoy
 
     log("  → Seleccionando empresa DERCO...")
     try:

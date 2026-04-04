@@ -12,6 +12,7 @@ if sys.stdout:
     sys.stdout.reconfigure(encoding="utf-8")
 
 import os
+import time
 import requests
 from pathlib import Path
 from dotenv import load_dotenv
@@ -30,8 +31,17 @@ DOC_LIBRARY  = "Documentos"
 
 # ─── AUTH ─────────────────────────────────────────────────────────────────────
 
+_token_cache: dict = {"token": None, "expires_at": 0.0}
+_TOKEN_REFRESH_BUFFER = 5 * 60  # refrescar 5 min antes de expirar (patrón spec/09 Bridge)
+
 def get_token(scope: str = "https://graph.microsoft.com/.default") -> str:
-    """Obtiene access token via OAuth2 client_credentials."""
+    """Obtiene access token via OAuth2 client_credentials.
+    Cache en memoria: reutiliza el token mientras queden >5 min de vida.
+    Evita llamadas redundantes y detecta expiración antes de que falle mid-run."""
+    now = time.time()
+    if _token_cache["token"] and (_token_cache["expires_at"] - now) > _TOKEN_REFRESH_BUFFER:
+        return _token_cache["token"]
+
     url  = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
     resp = requests.post(url, data={
         "grant_type":    "client_credentials",
@@ -40,7 +50,10 @@ def get_token(scope: str = "https://graph.microsoft.com/.default") -> str:
         "scope":         scope,
     }, timeout=30)
     resp.raise_for_status()
-    return resp.json()["access_token"]
+    data = resp.json()
+    _token_cache["token"]      = data["access_token"]
+    _token_cache["expires_at"] = now + data.get("expires_in", 3600)
+    return _token_cache["token"]
 
 
 def _gh(token: str) -> dict:
