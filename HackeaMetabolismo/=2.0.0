@@ -1,0 +1,138 @@
+  error: subprocess-exited-with-error
+  
+  Building wheel for pyiceberg (pyproject.toml) did not run successfully.
+  exit code: 1
+  
+  [123 lines of output]
+  running bdist_wheel
+  running build
+  running build_py
+  creating build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\conversions.py -> build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\exceptions.py -> build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\manifest.py -> build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\partitioning.py -> build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\schema.py -> build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\serializers.py -> build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\transforms.py -> build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\typedef.py -> build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\types.py -> build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg
+  creating build\lib.win-amd64-cpython-314\pyiceberg\avro
+  copying .\pyiceberg\avro\decoder.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro
+  copying .\pyiceberg\avro\encoder.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro
+  copying .\pyiceberg\avro\file.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro
+  copying .\pyiceberg\avro\reader.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro
+  copying .\pyiceberg\avro\resolver.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro
+  copying .\pyiceberg\avro\writer.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro
+  copying .\pyiceberg\avro\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro
+  creating build\lib.win-amd64-cpython-314\pyiceberg\catalog
+  copying .\pyiceberg\catalog\bigquery_metastore.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog
+  copying .\pyiceberg\catalog\dynamodb.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog
+  copying .\pyiceberg\catalog\glue.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog
+  copying .\pyiceberg\catalog\hive.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog
+  copying .\pyiceberg\catalog\memory.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog
+  copying .\pyiceberg\catalog\noop.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog
+  copying .\pyiceberg\catalog\sql.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog
+  copying .\pyiceberg\catalog\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog
+  creating build\lib.win-amd64-cpython-314\pyiceberg\cli
+  copying .\pyiceberg\cli\console.py -> build\lib.win-amd64-cpython-314\pyiceberg\cli
+  copying .\pyiceberg\cli\output.py -> build\lib.win-amd64-cpython-314\pyiceberg\cli
+  copying .\pyiceberg\cli\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg\cli
+  creating build\lib.win-amd64-cpython-314\pyiceberg\expressions
+  copying .\pyiceberg\expressions\literals.py -> build\lib.win-amd64-cpython-314\pyiceberg\expressions
+  copying .\pyiceberg\expressions\parser.py -> build\lib.win-amd64-cpython-314\pyiceberg\expressions
+  copying .\pyiceberg\expressions\visitors.py -> build\lib.win-amd64-cpython-314\pyiceberg\expressions
+  copying .\pyiceberg\expressions\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg\expressions
+  creating build\lib.win-amd64-cpython-314\pyiceberg\io
+  copying .\pyiceberg\io\fsspec.py -> build\lib.win-amd64-cpython-314\pyiceberg\io
+  copying .\pyiceberg\io\pyarrow.py -> build\lib.win-amd64-cpython-314\pyiceberg\io
+  copying .\pyiceberg\io\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg\io
+  creating build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\delete_file_index.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\inspect.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\locations.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\maintenance.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\metadata.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\name_mapping.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\puffin.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\refs.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\snapshots.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\sorting.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\statistics.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\upsert_util.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  copying .\pyiceberg\table\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg\table
+  creating build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\bin_packing.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\concurrent.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\config.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\datetime.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\decimal.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\deprecated.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\lazydict.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\parsing.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\properties.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\schema_conversion.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\singleton.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\truncate.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  copying .\pyiceberg\utils\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg\utils
+  creating build\lib.win-amd64-cpython-314\pyiceberg\avro\codecs
+  copying .\pyiceberg\avro\codecs\bzip2.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro\codecs
+  copying .\pyiceberg\avro\codecs\codec.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro\codecs
+  copying .\pyiceberg\avro\codecs\deflate.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro\codecs
+  copying .\pyiceberg\avro\codecs\snappy_codec.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro\codecs
+  copying .\pyiceberg\avro\codecs\zstandard_codec.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro\codecs
+  copying .\pyiceberg\avro\codecs\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg\avro\codecs
+  creating build\lib.win-amd64-cpython-314\pyiceberg\catalog\rest
+  copying .\pyiceberg\catalog\rest\auth.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog\rest
+  copying .\pyiceberg\catalog\rest\response.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog\rest
+  copying .\pyiceberg\catalog\rest\scan_planning.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog\rest
+  copying .\pyiceberg\catalog\rest\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg\catalog\rest
+  creating build\lib.win-amd64-cpython-314\pyiceberg\table\update
+  copying .\pyiceberg\table\update\schema.py -> build\lib.win-amd64-cpython-314\pyiceberg\table\update
+  copying .\pyiceberg\table\update\snapshot.py -> build\lib.win-amd64-cpython-314\pyiceberg\table\update
+  copying .\pyiceberg\table\update\sorting.py -> build\lib.win-amd64-cpython-314\pyiceberg\table\update
+  copying .\pyiceberg\table\update\spec.py -> build\lib.win-amd64-cpython-314\pyiceberg\table\update
+  copying .\pyiceberg\table\update\statistics.py -> build\lib.win-amd64-cpython-314\pyiceberg\table\update
+  copying .\pyiceberg\table\update\validate.py -> build\lib.win-amd64-cpython-314\pyiceberg\table\update
+  copying .\pyiceberg\table\update\__init__.py -> build\lib.win-amd64-cpython-314\pyiceberg\table\update
+  creating build\lib.win-amd64-cpython-314\fb303
+  copying vendor\fb303\constants.py -> build\lib.win-amd64-cpython-314\fb303
+  copying vendor\fb303\FacebookService.py -> build\lib.win-amd64-cpython-314\fb303
+  copying vendor\fb303\ttypes.py -> build\lib.win-amd64-cpython-314\fb303
+  copying vendor\fb303\__init__.py -> build\lib.win-amd64-cpython-314\fb303
+  creating build\lib.win-amd64-cpython-314\hive_metastore
+  copying vendor\hive_metastore\constants.py -> build\lib.win-amd64-cpython-314\hive_metastore
+  copying vendor\hive_metastore\ThriftHiveMetastore.py -> build\lib.win-amd64-cpython-314\hive_metastore
+  copying vendor\hive_metastore\ttypes.py -> build\lib.win-amd64-cpython-314\hive_metastore
+  copying vendor\hive_metastore\__init__.py -> build\lib.win-amd64-cpython-314\hive_metastore
+  running egg_info
+  writing pyiceberg.egg-info\PKG-INFO
+  writing dependency_links to pyiceberg.egg-info\dependency_links.txt
+  writing entry points to pyiceberg.egg-info\entry_points.txt
+  writing requirements to pyiceberg.egg-info\requires.txt
+  writing top-level names to pyiceberg.egg-info\top_level.txt
+  reading manifest file 'pyiceberg.egg-info\SOURCES.txt'
+  reading manifest template 'MANIFEST.in'
+  warning: no previously-included files matching '*\__pycache__\*' found anywhere in distribution
+  no previously-included directories found matching '.venv'
+  no previously-included directories found matching 'build'
+  no previously-included directories found matching 'dist'
+  no previously-included directories found matching '.pytest_cache'
+  adding license file 'LICENSE'
+  adding license file 'NOTICE'
+  writing manifest file 'pyiceberg.egg-info\SOURCES.txt'
+  copying .\pyiceberg\py.typed -> build\lib.win-amd64-cpython-314\pyiceberg
+  copying .\pyiceberg\avro\decoder_fast.pyi -> build\lib.win-amd64-cpython-314\pyiceberg\avro
+  running build_ext
+  building 'pyiceberg.avro.decoder_fast' extension
+  error: Microsoft Visual C++ 14.0 or greater is required. Get it with "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/
+  [end of output]
+  
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+  ERROR: Failed building wheel for pyiceberg
+error: failed-wheel-build-for-install
+
+Failed to build installable wheels for some pyproject.toml based projects
+
+pyiceberg

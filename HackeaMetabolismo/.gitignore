@@ -1,0 +1,8 @@
+.env
+.streamlit/secrets.toml
+data/hackea_metabolismo.db
+logs/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store

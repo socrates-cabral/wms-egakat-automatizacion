@@ -1,0 +1,26 @@
+# Hackea tu Metabolismo con IA — requirements
+# py -m pip install -r requirements.txt
+
+# Core
+pandas>=2.0.0
+numpy>=1.24.0
+python-dotenv>=1.0.0
+
+# Dashboard
+streamlit>=1.28.0
+plotly>=5.15.0
+
+# IA / API
+anthropic>=0.25.0
+openai>=1.0.0
+google-generativeai>=0.3.0
+requests>=2.31.0
+
+# DB
+sqlalchemy>=2.0.0
+supabase>=2.0.0
+httpx[http2]
+
+# Reportes / utils
+Pillow>=10.0.0
+python-dateutil>=2.8.0
