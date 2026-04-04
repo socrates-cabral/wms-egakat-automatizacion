@@ -15,18 +15,20 @@ load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env")
 
 # --- Defaults ---
 DEFAULTS = {
-    "sueldo_liquido": 1_722_668,
-    "anticipo": 380_000,
-    "amipass": 58_000,
-    "arriendo_cobrado": 0,
-    "ingreso_variable": int(os.getenv("INGRESO_VARIABLE", 0)),
-    "bono_mensual":     int(os.getenv("BONO_MENSUAL", 0)),
-    "otros_ingresos":   int(os.getenv("OTROS_INGRESOS", 0)),
+    "sueldo_liquido":    int(os.getenv("SUELDO_LIQUIDO",    1_722_668)),
+    "anticipo":          int(os.getenv("ANTICIPO",          380_000)),
+    "amipass":           int(os.getenv("AMIPASS",           58_000)),
+    "arriendo_cobrado":  int(os.getenv("ARRIENDO_COBRADO",  0)),
+    "ingreso_variable":  int(os.getenv("INGRESO_VARIABLE",  0)),
+    "bono_mensual":      int(os.getenv("BONO_MENSUAL",      0)),
+    "otros_ingresos":    int(os.getenv("OTROS_INGRESOS",    0)),
     "total_ingresos": 2_160_668,
-    "afp_saldo": 8_774_527,
-    "afp_aporte_mensual": 224_155,
-    "isapre_mensual": 241_967,
-    "dividendo_mensual": 595_821,
+    "afp_saldo":         int(os.getenv("AFP_SALDO",         8_774_527)),
+    "afp_aporte_mensual":int(os.getenv("AFP_APORTE_MENSUAL",224_155)),
+    "afc_saldo":         int(os.getenv("AFC_SALDO",         0)),
+    "afc_aporte_mensual":int(os.getenv("AFC_APORTE_MENSUAL",0)),
+    "isapre_mensual":    int(os.getenv("ISAPRE_MENSUAL",    241_967)),
+    "dividendo_mensual": int(os.getenv("DIVIDENDO_MENSUAL", 595_821)),
     "hipoteca_saldo": 0,
     "precio_usdt_clp": 960,
     "patrimonio_cc":           int(os.getenv("PATRIMONIO_CC", 0)),
@@ -68,13 +70,14 @@ def set_cfg(key: str, val):
 
 
 def calc_total_ingresos() -> float:
-    """Calcula total ingresos con los valores actuales de configuración."""
+    """Calcula total ingresos con todos los valores actuales de configuración."""
     return (
         get_cfg("sueldo_liquido")
-        - get_cfg("anticipo")  # anticipo ya fue adelantado
-        + get_cfg("anticipo")
         + get_cfg("amipass")
         + get_cfg("arriendo_cobrado")
+        + get_cfg("ingreso_variable")
+        + get_cfg("bono_mensual")
+        + get_cfg("otros_ingresos")
     )
 
 

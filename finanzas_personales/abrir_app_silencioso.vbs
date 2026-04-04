@@ -4,7 +4,7 @@
 
 Dim WshShell, oExec, puerto, url, ya_corriendo
 
-puerto = 8503
+puerto = 8501
 url    = "http://localhost:" & puerto
 Set WshShell = CreateObject("WScript.Shell")
 
@@ -20,6 +20,9 @@ If ya_corriendo Then
     ' Solo abrir navegador
     WshShell.Run url, 1, False
 Else
+    ' Cambiar al directorio correcto antes de lanzar
+    WshShell.CurrentDirectory = "C:\ClaudeWork"
+
     ' Lanzar Streamlit completamente oculto (windowStyle=0)
     Dim cmd
     cmd = "py -m streamlit run " & _

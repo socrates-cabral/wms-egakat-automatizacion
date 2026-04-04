@@ -45,6 +45,7 @@ from charts import (
     fmt_clp,
     COLOR_MAP,
     badge_grupo,
+    _LAYOUT_BASE,
 )
 from config_manager import init_config, get_cfg, set_cfg
 from market_data import obtener_indicadores_cached, render_widget_indicadores, precio_usdt_estimado
@@ -435,7 +436,8 @@ with st.sidebar:
     if st.button("🔄 Recargar Excel", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
-    st.caption("v1.0 | Puerto 8503")
+    _puerto = st.get_option("server.port") or 8501
+    st.caption(f"v1.0 | Puerto {_puerto}")
 
 
 # ── Carga de datos (cacheada) ─────────────────────────────────────────────────
@@ -470,8 +472,9 @@ if error_carga:
 meses_con_datos = sorted(df_tx["mes"].unique().tolist()) if not df_tx.empty else []
 mes_actual = meses_con_datos[-1] if meses_con_datos else 1
 
-# Ingresos desde config
-ingresos_config = get_cfg("total_ingresos")
+# Ingresos desde config — calc_total_ingresos() incluye sueldo + amipass + arriendo_cobrado + variables
+from config_manager import calc_total_ingresos as _calc_ingresos
+ingresos_config = _calc_ingresos()
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PÁGINA: DASHBOARD
@@ -491,9 +494,10 @@ if pagina == "📊 Dashboard":
     # Calcular métricas del mes más reciente
     resumen = calc_resumen_mes(df_tx, mes_actual)
     gastos_mes = resumen["total"]
-    # Si hay ingresos en Excel, usarlos; si no, usar config Ajustes
+    # Ingresos: siempre usar total configurado (suma todas las fuentes: sueldo + amipass + arriendo + variables)
+    # ingresos_excel es solo el sueldo registrado en Excel — subestima el total real
     ingresos_excel = resumen.get("ingresos", 0.0)
-    ingresos_mes = ingresos_excel if ingresos_excel > 0 else ingresos_config
+    ingresos_mes = ingresos_config  # Usar total configurado siempre
     ahorro_info = calc_tasa_ahorro(ingresos_mes, gastos_mes)
 
     # Mes anterior (para delta)
@@ -504,7 +508,8 @@ if pagina == "📊 Dashboard":
 
     # Patrimonio neto básico (desde config)
     afp_saldo = get_cfg("afp_saldo")
-    activos_base = {"AFP ProVida": afp_saldo}
+    afc_saldo_dash = get_cfg("afc_saldo")
+    activos_base = {"AFP ProVida": afp_saldo, "AFC Cesantía": afc_saldo_dash}
     hipoteca_dash = get_cfg("hipoteca_saldo") or 0
     pasivos_base = {"Hipoteca": hipoteca_dash}
     patr = calc_patrimonio_neto(activos_base, pasivos_base)
@@ -512,11 +517,14 @@ if pagina == "📊 Dashboard":
     # ── KPI Cards ────────────────────────────────────────────────────────────
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        fuente_ing = "Excel" if ingresos_excel > 0 else "Config"
+        n_fuentes = sum(1 for v in [
+            get_cfg("sueldo_liquido"), get_cfg("amipass"), get_cfg("arriendo_cobrado"),
+            get_cfg("ingreso_variable"), get_cfg("bono_mensual"), get_cfg("otros_ingresos")
+        ] if v > 0)
         st.metric(
             label=f"💵 Ingresos {NOMBRES_MESES.get(mes_actual, '')}",
             value=fmt_clp(ingresos_mes),
-            delta=f"Fuente: {fuente_ing}",
+            delta=f"{n_fuentes} fuentes configuradas",
             delta_color="off",
         )
     with col2:
@@ -546,7 +554,7 @@ if pagina == "📊 Dashboard":
         st.metric(
             label="💎 Patrimonio Neto",
             value=fmt_clp(patr["neto"]),
-            delta=f"AFP: {fmt_clp(afp_saldo)}",
+            delta=f"AFP+AFC: {fmt_clp(afp_saldo + afc_saldo_dash)}",
         )
 
     st.markdown("---")
@@ -682,6 +690,7 @@ if pagina == "📊 Dashboard":
             if st.button("🔄 Nuevo análisis", key="btn_ai_dash"):
                 limpiar_cache_ai()
         with col_ai:
+            _gc_dash = cargar_gastos_compartidos(excel_path) if excel_path else None
             analisis = render_insight_con_spinner(
                 "Resumen inteligente del mes",
                 analizar_resumen_mes,
@@ -690,12 +699,125 @@ if pagina == "📊 Dashboard":
                 saldos_mes.get(mes_actual, {}).get("saldo_inicial", 0),
                 saldos_mes.get(mes_actual, {}).get("saldo_actual", 0),
                 por_grupo, ahorro_info["tasa"], indicadores,
+                get_cfg("arriendo_cobrado"), get_cfg("dividendo_mensual"), _gc_dash,
                 cache_key=f"dash_{mes_actual}",
             )
             if analisis:
                 render_insight_card("🤖 Análisis AI — Resumen del Mes", analisis)
     else:
         st.caption("🤖 Análisis AI disponible cuando se configure ANTHROPIC_API_KEY con créditos.")
+
+    # ── Monitor Dividendo UF ──────────────────────────────────────────────────
+    st.markdown("---")
+    with st.expander("🏠 Monitor Dividendo UF — Costo Neto Vivienda mes a mes", expanded=False):
+        _arr_cob = get_cfg("arriendo_cobrado")
+        # Extraer dividendo hipotecario por mes desde transacciones
+        _hist_div = []
+        if not df_tx.empty:
+            _div_tx = df_tx[df_tx["concepto"].str.contains("Dividendo", case=False, na=False) |
+                            df_tx["grupo"].str.contains("Hogar|Viviend", case=False, na=False)]
+            _div_tx = _div_tx[_div_tx["concepto"].str.contains("Dividendo", case=False, na=False)]
+            for _m in sorted(df_tx["mes"].unique()):
+                _div_m = _div_tx[_div_tx["mes"] == _m]["importe"].sum()
+                if _div_m > 0:
+                    _uf_m = indicadores.get("uf", 0) if _m == mes_actual else 0
+                    _hist_div.append({
+                        "mes": _m,
+                        "mes_nombre": NOMBRES_MESES.get(_m, str(_m)),
+                        "dividendo": _div_m,
+                        "neto": _div_m - _arr_cob,
+                        "uf": _uf_m,
+                    })
+
+        if _hist_div:
+            import plotly.graph_objects as _go
+            _meses_lbl = [h["mes_nombre"] for h in _hist_div]
+            _divs      = [h["dividendo"] for h in _hist_div]
+            _netos     = [h["neto"] for h in _hist_div]
+            _arrs      = [_arr_cob] * len(_hist_div)
+
+            _fig_div = _go.Figure()
+            _fig_div.add_trace(_go.Scatter(x=_meses_lbl, y=_divs,  name="Dividendo bruto",  mode="lines+markers", line=dict(color="#f59e0b", width=2)))
+            _fig_div.add_trace(_go.Scatter(x=_meses_lbl, y=_arrs,  name="Arriendo cobrado", mode="lines",         line=dict(color="#10b981", width=2, dash="dash")))
+            _fig_div.add_trace(_go.Scatter(x=_meses_lbl, y=_netos, name="Costo neto",        mode="lines+markers", line=dict(color="#6366f1", width=3), fill="tozeroy", fillcolor="rgba(99,102,241,0.1)"))
+            _fig_div.update_layout(
+                template="plotly_dark", height=320,
+                title="Dividendo hipotecario vs Arriendo cobrado → Costo Neto",
+                yaxis_tickprefix="$", yaxis_tickformat=",.0f",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                margin=dict(l=0, r=0, t=50, b=0),
+            )
+            st.plotly_chart(_fig_div, use_container_width=True)
+
+            # Tabla mes a mes con variaciones — estilo dark premium
+            import pandas as _pd_div
+
+            def _var_html(val_str: str) -> str:
+                """Colorea variaciones: rojo si sube (gasto aumenta), verde si baja."""
+                if val_str == "—":
+                    return '<span style="color:#4a6278">—</span>'
+                try:
+                    v = float(val_str.replace("%","").replace("+",""))
+                    color = "#f87171" if v > 0 else "#34d399" if v < 0 else "#94a3b8"
+                    return f'<span style="color:{color};font-weight:600">{val_str}</span>'
+                except Exception:
+                    return val_str
+
+            _rows_html = ""
+            for i, h in enumerate(_hist_div):
+                _prev = _hist_div[i-1] if i > 0 else None
+                _var_div_str  = f"{(h['dividendo'] - _prev['dividendo']) / _prev['dividendo'] * 100:+.2f}%" if _prev and _prev['dividendo'] else "—"
+                _var_neto_str = f"{(h['neto'] - _prev['neto']) / abs(_prev['neto']) * 100:+.2f}%" if _prev and _prev['neto'] else "—"
+                _is_last = i == len(_hist_div) - 1
+                _row_style = "background:rgba(20,184,166,0.07)" if _is_last else ""
+                _rows_html += f"""<tr style="{_row_style}">
+                    <td style="font-weight:{'600' if _is_last else '400'};color:{'#e2e8f0' if _is_last else '#94a3b8'}">{h["mes_nombre"]}</td>
+                    <td style="text-align:right;color:#f59e0b">{fmt_clp(h["dividendo"])}</td>
+                    <td style="text-align:right;color:#10b981">{fmt_clp(_arr_cob)}</td>
+                    <td style="text-align:right;color:#6366f1;font-weight:600">{fmt_clp(h["neto"])}</td>
+                    <td style="text-align:right">{_var_html(_var_div_str)}</td>
+                    <td style="text-align:right">{_var_html(_var_neto_str)}</td>
+                </tr>"""
+
+            st.markdown(f"""
+<div style="border-radius:8px;border:1px solid #1e2d45;overflow:hidden">
+<table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+<thead>
+<tr style="background:#111d2e;border-bottom:2px solid #14b8a6">
+  <th style="text-align:left;padding:10px 12px;color:#94a3b8;font-weight:600;letter-spacing:0.04em">MES</th>
+  <th style="text-align:right;padding:10px 12px;color:#f59e0b;font-weight:600">DIVIDENDO</th>
+  <th style="text-align:right;padding:10px 12px;color:#10b981;font-weight:600">ARRIENDO COBRADO</th>
+  <th style="text-align:right;padding:10px 12px;color:#6366f1;font-weight:600">COSTO NETO</th>
+  <th style="text-align:right;padding:10px 12px;color:#94a3b8;font-weight:600">VAR. DIVIDENDO</th>
+  <th style="text-align:right;padding:10px 12px;color:#94a3b8;font-weight:600">VAR. COSTO NETO</th>
+</tr>
+</thead>
+<tbody style="font-size:0.875rem">
+{_rows_html}
+</tbody>
+</table>
+</div>
+""", unsafe_allow_html=True)
+
+            # Análisis AI
+            if agente_disponible() or os.getenv("OPENAI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+                from ai_insights import analizar_dividendo_historico
+                _col_ai2, _col_btn2 = st.columns([5, 1])
+                with _col_btn2:
+                    if st.button("🔄", key="btn_div_ai", help="Nuevo análisis"):
+                        for _k in list(st.session_state.keys()):
+                            if "ai_cache_div" in _k:
+                                del st.session_state[_k]
+                with _col_ai2:
+                    _analisis_div = render_insight_con_spinner(
+                        "Dividendo UF", analizar_dividendo_historico,
+                        _hist_div, _arr_cob,
+                        cache_key="div_historico",
+                    )
+                    if _analisis_div:
+                        render_insight_card("🤖 Análisis AI — Evolución Dividendo UF", _analisis_div)
+        else:
+            st.info("Sin transacciones de 'Dividendo Hipotecario' en el Excel aún.")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1070,6 +1192,7 @@ elif pagina == "💎 Patrimonio Neto":
     ca          = st.sidebar.number_input("Cuenta Ahorro (CLP)",          value=get_cfg("patrimonio_ca"),            step=100_000,   format="%d")
     dpto505_val = st.sidebar.number_input("Dpto 505 Los Claros (valor mercado)", value=get_cfg("patrimonio_dpto505"), step=1_000_000, format="%d")
     afp_val     = get_cfg("afp_saldo")
+    afc_val     = get_cfg("afc_saldo")
     # USDT manual solo si Kraken no conecta
     usdt_qty = get_cfg("patrimonio_usdt")  # fallback siempre definido
     if _crypto_fuente == "manual":
@@ -1079,6 +1202,7 @@ elif pagina == "💎 Patrimonio Neto":
     else:
         st.sidebar.caption(f"₿ Crypto: {fmt_clp(int(_crypto_clp_total))} (Kraken Live)")
     otros_activos = st.sidebar.number_input("Otros activos (CLP)",         value=get_cfg("patrimonio_otros_activos"),step=100_000,   format="%d")
+    st.sidebar.caption(f"🏛️ AFP ProVida: {fmt_clp(afp_val)} | 🔒 AFC: {fmt_clp(afc_val)}")
 
     st.sidebar.markdown("### Pasivos")
     hipoteca_saldo = st.sidebar.number_input("Hipoteca (CLP)",        value=int(_auto_hipoteca or get_cfg("hipoteca_saldo") or 0), step=1_000_000, format="%d",
@@ -1123,6 +1247,7 @@ elif pagina == "💎 Patrimonio Neto":
             dpto505=dpto505_val, afp=int(afp_val), otros_activos=otros_activos,
             hipoteca=hipoteca_saldo, tarjetas=tarjetas, consumo=consumo,
             linea_credito=linea_credito, otros_pasivos=otros_pasivos,
+            afc=int(afc_val),
         )
         st.sidebar.success("✅ Activos guardados y snapshot del mes registrada.")
 
@@ -1133,6 +1258,7 @@ elif pagina == "💎 Patrimonio Neto":
         f"Crypto ({_crypto_fuente})": int(_crypto_clp_total),
         "Dpto 505 Los Claros":  dpto505_val,
         "AFP ProVida":          afp_val,
+        "AFC Cesantía":         afc_val,
         "Otros activos":        otros_activos,
     }
     pasivos = {
@@ -1811,6 +1937,45 @@ elif pagina == "🏛️ AFP y Previsión":
     _bi_table(df_afps, right_cols=["Comisión (%)"])
     st.caption("Fuente: Superintendencia de Pensiones Chile. ProVida = 1.45% (una de las más altas). Considera Modelo (0.58%) o Uno (0.49%).")
 
+    # ── Seguro de Cesantía AFC ────────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("🔒 Seguro de Cesantía — AFC Chile")
+
+    saldo_afc  = get_cfg("afc_saldo")
+    aporte_afc = get_cfg("afc_aporte_mensual")
+
+    col_a1, col_a2, col_a3, col_a4 = st.columns(4)
+    with col_a1:
+        st.metric("💼 Saldo Cuenta Individual", fmt_clp(saldo_afc))
+    with col_a2:
+        st.metric("📆 Cotización Mensual", fmt_clp(aporte_afc),
+                  help="Aprox. 2.2% sueldo bruto: 1.6% empleador + 0.6% trabajador")
+    with col_a3:
+        meses_afc = int(saldo_afc / get_cfg("dividendo_mensual")) if get_cfg("dividendo_mensual") else 0
+        st.metric("📅 Meses cubiertos (div.)", f"{meses_afc}m",
+                  help="Cuántos meses de dividendo cubre el saldo AFC")
+    with col_a4:
+        total_prev = saldo_afc + get_cfg("afp_saldo")
+        st.metric("🏛️ Total Previsional", fmt_clp(total_prev),
+                  help="AFP ProVida + AFC Cesantía")
+
+    st.info(
+        "ℹ️ **Cuenta Individual por Cesantía** — acumulada durante la vida laboral. "
+        "En caso de desempleo voluntario o involuntario puedes girar según tabla de beneficios AFC. "
+        "El **Fondo Solidario** es adicional y se financia con cotizaciones del empleador. "
+        "Los valores se actualizan en **Ajustes** cuando recibes el estado anual AFC."
+    )
+
+    # Proyección simple AFC
+    with st.expander("📈 Proyección AFC (cotizaciones futuras)"):
+        anos_afc = st.slider("Años proyección AFC", 5, 30, 10, key="afc_proy")
+        saldo_afc_proy = [saldo_afc]
+        for _ in range(anos_afc * 12):
+            saldo_afc_proy.append(saldo_afc_proy[-1] * (1 + 0.04/12) + aporte_afc)
+        saldo_afc_final = saldo_afc_proy[-1]
+        st.metric(f"Saldo estimado en {anos_afc} años (rentab. 4% anual)", fmt_clp(int(saldo_afc_final)))
+        st.caption("Proyección referencial con rentabilidad histórica AFC ~4% anual. Los fondos AFP y AFC son complementarios — la pensión proviene solo de AFP.")
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PÁGINA: LIQUIDACIONES
@@ -2123,7 +2288,7 @@ elif pagina == "⚙️ Ajustes":
     st.metric("Total ingresos calculado", fmt_clp(total_calc))
 
     st.markdown("---")
-    st.subheader("🏛️ Datos AFP y Previsión")
+    st.subheader("🏛️ Datos AFP, AFC y Previsión")
     col3, col4 = st.columns(2)
     with col3:
         nuevo_afp_saldo = st.number_input(
@@ -2135,6 +2300,18 @@ elif pagina == "⚙️ Ajustes":
             "Aporte mensual AFP neto (CLP)",
             value=get_cfg("afp_aporte_mensual"),
             step=5_000, format="%d"
+        )
+        nuevo_afc_saldo = st.number_input(
+            "Saldo AFC Cesantía (CLP)",
+            value=get_cfg("afc_saldo"),
+            step=100_000, format="%d",
+            help="Actualizar cuando llegue el estado anual AFC (documento PDF protegido)"
+        )
+        nuevo_afc_aporte = st.number_input(
+            "Cotización mensual AFC (CLP)",
+            value=get_cfg("afc_aporte_mensual"),
+            step=1_000, format="%d",
+            help="Aprox. 2.2% del sueldo bruto. Ver estado anual AFC."
         )
     with col4:
         nuevo_isapre = st.number_input(
@@ -2198,6 +2375,8 @@ elif pagina == "⚙️ Ajustes":
         set_cfg("total_ingresos", total_calc)
         set_cfg("afp_saldo", nuevo_afp_saldo)
         set_cfg("afp_aporte_mensual", nuevo_aporte_afp)
+        set_cfg("afc_saldo", nuevo_afc_saldo)
+        set_cfg("afc_aporte_mensual", nuevo_afc_aporte)
         set_cfg("isapre_mensual", nuevo_isapre)
         set_cfg("dividendo_mensual", nuevo_dividendo)
         set_cfg("precio_usdt_clp", nuevo_usdt)
@@ -2206,11 +2385,21 @@ elif pagina == "⚙️ Ajustes":
         _env_path = Path(__file__).parent.parent.parent / ".env"
         _lineas = _env_path.read_text(encoding="utf-8").splitlines()
         _env_map = {
-            "EXCEL_FP_PATH":     nueva_ruta,
-            "LIQUIDACIONES_PATH":nueva_ruta_liq,
-            "INGRESO_VARIABLE":  str(nuevo_ingreso_variable),
-            "BONO_MENSUAL":      str(nuevo_bono),
-            "OTROS_INGRESOS":    str(nuevo_otros_ingresos),
+            "EXCEL_FP_PATH":       nueva_ruta,
+            "LIQUIDACIONES_PATH":  nueva_ruta_liq,
+            "SUELDO_LIQUIDO":      str(nuevo_sueldo),
+            "ANTICIPO":            str(nuevo_anticipo),
+            "AMIPASS":             str(nuevo_amipass),
+            "ARRIENDO_COBRADO":    str(nuevo_arriendo),
+            "INGRESO_VARIABLE":    str(nuevo_ingreso_variable),
+            "BONO_MENSUAL":        str(nuevo_bono),
+            "OTROS_INGRESOS":      str(nuevo_otros_ingresos),
+            "AFP_SALDO":           str(nuevo_afp_saldo),
+            "AFP_APORTE_MENSUAL":  str(nuevo_aporte_afp),
+            "AFC_SALDO":           str(nuevo_afc_saldo),
+            "AFC_APORTE_MENSUAL":  str(nuevo_afc_aporte),
+            "ISAPRE_MENSUAL":      str(nuevo_isapre),
+            "DIVIDENDO_MENSUAL":   str(nuevo_dividendo),
         }
         _nuevas = []
         _escritas = set()
@@ -2462,7 +2651,7 @@ elif pagina == "⚙️ Ajustes":
         st.markdown("""
         **Finanzas Personales v1.0**
         - Python + Streamlit + Plotly
-        - Puerto: 8503
+        - Puerto: """ + str(st.get_option("server.port") or 8501) + """
         - Datos: Excel local (.xlsm)
         """)
     with col_v2:

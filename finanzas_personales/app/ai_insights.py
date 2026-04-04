@@ -18,9 +18,23 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import streamlit as st
 from dotenv import load_dotenv
+
+# ── SDKs opcionales ───────────────────────────────────────────────────────────
+try:
+    from openai import OpenAI as _OpenAI
+    _HAS_OPENAI = True
+except ImportError:
+    _HAS_OPENAI = False
+
+try:
+    from google import genai as _genai
+    _HAS_GEMINI = True
+except ImportError:
+    _HAS_GEMINI = False
 
 load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env")
 
@@ -78,6 +92,68 @@ def _pct(n: float, total: float) -> str:
     return f"{n / total * 100:.1f}%"
 
 
+def _contexto_vivienda(arriendo_cobrado: float, dividendo_mensual: float, gastos_compartidos: dict | None) -> str:
+    """
+    Genera el bloque de contexto de vivienda para inyectar en los prompts.
+    Explica al modelo que el gasto bruto de Hogar/Vivienda está parcialmente financiado
+    por el arriendo cobrado, y que el costo neto real es solo el diferencial.
+    """
+    if not arriendo_cobrado and not dividendo_mensual and not gastos_compartidos:
+        return ""
+
+    lineas = [
+        "",
+        "⚠️ INSTRUCCIÓN CRÍTICA — VIVIENDA (aplicar antes de analizar este caso):",
+        "El grupo 'Hogar y Vivienda' en los gastos contiene montos BRUTOS que están",
+        "parcialmente recuperados como ingresos. NO evalúes vivienda como gasto neto total.",
+        "La situación real es la siguiente:",
+    ]
+
+    # Gastos compartidos: el usuario reporta el total pero recupera la mitad como ingreso
+    if gastos_compartidos and gastos_compartidos.get("items"):
+        gc_bruto = gastos_compartidos.get("total", sum(
+            i.get("total", 0) for i in gastos_compartidos["items"]
+        ))
+        gc_neto = gastos_compartidos.get("por_persona", gc_bruto / 2)
+        lineas += [
+            "",
+            "  VIVIENDA ACTUAL (donde vive):",
+            f"  • Gastos compartidos BRUTOS reportados en Excel: {_fmt(gc_bruto)}",
+            f"    (arriendo + servicios — comparte con otra persona)",
+        ]
+        for item in gastos_compartidos["items"]:
+            lineas.append(f"      - {item.get('concepto','?')}: total {_fmt(item.get('total',0))} → su parte {_fmt(item.get('por_persona', item.get('total',0)/2))}")
+        lineas += [
+            f"  • La otra mitad ({_fmt(gc_bruto - gc_neto)}) la RECUPERA como ingreso (ya incluida en ingresos).",
+            f"  • COSTO NETO donde vive: {_fmt(gc_neto)}",
+        ]
+
+    # Dividendo vs arriendo cobrado del dpto propio
+    if dividendo_mensual > 0 and arriendo_cobrado > 0:
+        costo_neto_dpto = dividendo_mensual - arriendo_cobrado
+        lineas += [
+            "",
+            "  DEPARTAMENTO PROPIO (inversión inmobiliaria):",
+            f"  • Dividendo hipotecario (aparece en gastos): {_fmt(dividendo_mensual)}",
+            f"  • Arriendo que cobra de su inquilino (en ingresos): {_fmt(arriendo_cobrado)}",
+            f"  • COSTO NETO del dpto propio: {_fmt(costo_neto_dpto)} (solo el diferencial)",
+        ]
+
+    # Costo total real
+    if gastos_compartidos and dividendo_mensual > 0 and arriendo_cobrado > 0:
+        gc_neto = gastos_compartidos.get("por_persona", 0)
+        costo_total_real = gc_neto + (dividendo_mensual - arriendo_cobrado)
+        lineas += [
+            "",
+            f"  → COSTO TOTAL REAL DE VIVIENDA: {_fmt(costo_total_real)}",
+            f"     (su parte gastos compartidos + diferencial dividendo)",
+            f"  → Al analizar el % de vivienda, usa {_fmt(costo_total_real)}, NO el bruto reportado.",
+        ]
+
+    lineas.append("")
+    return "\n".join(lineas) + "\n"
+
+
 def _claude_personal(prompt_usuario: str, nivel: str = "senior") -> str:
     """Llama al agente con el system prompt de finanzas personales."""
     if not _agente_disponible:
@@ -95,6 +171,125 @@ def _claude_personal(prompt_usuario: str, nivel: str = "senior") -> str:
         return f"_Error al consultar el agente: {e}_"
 
 
+def _openai_personal(prompt_usuario: str) -> str | None:
+    """Llama a GPT-4o-mini con el system prompt de finanzas personales. Retorna texto o None."""
+    if not _HAS_OPENAI:
+        return None
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    try:
+        client = _OpenAI(api_key=api_key)
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            max_tokens=600,
+            messages=[
+                {"role": "system", "content": _SYSTEM_PERSONAL + _CONTEXTO_CHILE},
+                {"role": "user",   "content": prompt_usuario},
+            ]
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"[ai_insights] OpenAI error: {e}", file=sys.stderr)
+        return None
+
+
+def _gemini_personal(prompt_usuario: str) -> str | None:
+    """Llama a Gemini 2.5 Flash con el system prompt de finanzas personales. Retorna texto o None."""
+    if not _HAS_GEMINI:
+        return None
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return None
+    try:
+        client = _genai.Client(api_key=api_key)
+        resp = client.models.generate_content(
+            model="models/gemini-2.5-flash",
+            contents=_SYSTEM_PERSONAL + _CONTEXTO_CHILE + "\n\n" + prompt_usuario,
+        )
+        return resp.text.strip()
+    except Exception as e:
+        print(f"[ai_insights] Gemini error: {e}", file=sys.stderr)
+        return None
+
+
+def _analizar_tres_modelos(prompt_usuario: str) -> str:
+    """
+    Llama a Claude, OpenAI y Gemini en paralelo con el mismo prompt.
+    Si hay 2+ respuestas, Claude sintetiza una conclusión única consolidada.
+    Si solo hay una respuesta disponible, la retorna directamente.
+    """
+    _INVALIDOS = ("_agente no disponible", "⚠️", "_error al consultar", "_sin respuesta")
+
+    def _valida(texto: str | None) -> bool:
+        if not texto:
+            return False
+        t = texto.strip().lower()
+        return not any(t.startswith(m.lower()) for m in _INVALIDOS) and "no disponible" not in t
+
+    resultados: dict[str, str] = {}
+
+    def _run_claude():
+        return "claude", _claude_personal(prompt_usuario)
+
+    def _run_openai():
+        r = _openai_personal(prompt_usuario)
+        return "openai", r
+
+    def _run_gemini():
+        r = _gemini_personal(prompt_usuario)
+        return "gemini", r
+
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        for fut in as_completed([ex.submit(_run_claude), ex.submit(_run_openai), ex.submit(_run_gemini)]):
+            modelo, texto = fut.result()
+            if texto:
+                resultados[modelo] = texto
+
+    claude_r = resultados.get("claude", "")
+    openai_r = resultados.get("openai", "")
+    gemini_r = resultados.get("gemini", "")
+
+    modelos_ok = [m for m, t in resultados.items() if _valida(t)]
+    if len(modelos_ok) <= 1:
+        # Solo un modelo disponible — retornar directamente sin síntesis
+        return next((t for t in [claude_r, openai_r, gemini_r] if _valida(t)),
+                    claude_r or openai_r or gemini_r or "_Sin respuesta disponible_")
+
+    # Construir síntesis solo con modelos que dieron respuesta válida
+    bloques = []
+    if _valida(claude_r):
+        bloques.append(f"ANÁLISIS CLAUDE:\n{claude_r}")
+    if _valida(openai_r):
+        bloques.append(f"ANÁLISIS GPT-4o-mini:\n{openai_r}")
+    if _valida(gemini_r):
+        bloques.append(f"ANÁLISIS GEMINI:\n{gemini_r}")
+
+    synthesis_prompt = f"""Eres un árbitro financiero. Tienes {len(bloques)} análisis independientes del mismo caso:
+
+{chr(10).join(bloques)}
+
+Genera UNA SOLA conclusión consolidada de alto valor:
+
+**Consenso:** qué puntos coinciden los modelos (lo más importante y accionable)
+**Perspectivas complementarias:** qué aportó algún modelo que los otros no mencionaron (solo si agrega valor real)
+**Recomendaciones finales:** 3 acciones concretas y priorizadas
+
+Máximo 350 palabras. Directo, sin repetir obviedades. Español."""
+
+    # Síntesis con fallback: Claude → OpenAI → Gemini
+    sintesis = _claude_personal(synthesis_prompt)
+    if sintesis and not sintesis.startswith("_") and "no disponible" not in sintesis.lower():
+        return sintesis
+    sintesis_oa = _openai_personal(synthesis_prompt)
+    if sintesis_oa:
+        return sintesis_oa
+    sintesis_gm = _gemini_personal(synthesis_prompt)
+    if sintesis_gm:
+        return sintesis_gm
+    return claude_r or openai_r or gemini_r
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  ANÁLISIS POR MÓDULO
 # ══════════════════════════════════════════════════════════════════════════════
@@ -108,6 +303,9 @@ def analizar_resumen_mes(
     por_grupo: dict,
     tasa_ahorro: float,
     indicadores: dict | None = None,
+    arriendo_cobrado: float = 0,
+    dividendo_mensual: float = 0,
+    gastos_compartidos: dict | None = None,
 ) -> str:
     """
     Análisis ejecutivo del mes: qué pasó, cómo comparar, qué hacer.
@@ -118,6 +316,8 @@ def analizar_resumen_mes(
 
     uf = indicadores.get("uf", 39841) if indicadores else 39841
     dolar = indicadores.get("dolar", 913) if indicadores else 913
+
+    ctx_vivienda = _contexto_vivienda(arriendo_cobrado, dividendo_mensual, gastos_compartidos)
 
     prompt = f"""
 Analiza el resumen financiero de {mes_nombre}:
@@ -130,14 +330,14 @@ VARIACIÓN SALDO: {_fmt(saldo_actual - saldo_inicial)} ({'+' if saldo_actual >= 
 TASA DE AHORRO: {tasa_ahorro:.1f}%
 TOP GASTOS: {top_str}
 UF del mes: {uf} | USD/CLP: {dolar}
-
+{ctx_vivienda}
 Entrega:
 1) Diagnóstico del mes en 2 frases (positivo o preocupante, con datos concretos)
 2) El gasto más relevante y si está dentro de parámetros sanos
 3) 2 acciones concretas para mejorar o mantener el resultado
 Máximo 200 palabras.
 """
-    return _claude_personal(prompt)
+    return _analizar_tres_modelos(prompt)
 
 
 def analizar_historial_ingresos(liquidaciones: list) -> str:
@@ -182,7 +382,7 @@ Entrega:
 4) 2 recomendaciones específicas (ej: cambio AFP, negociación sueldo, optimización tributaria)
 Máximo 280 palabras.
 """
-    return _claude_personal(prompt)
+    return _analizar_tres_modelos(prompt)
 
 
 def analizar_presupuesto_vs_real(
@@ -191,6 +391,9 @@ def analizar_presupuesto_vs_real(
     por_tipo: dict,
     por_grupo: dict,
     regla_5030_20: dict,
+    arriendo_cobrado: float = 0,
+    dividendo_mensual: float = 0,
+    gastos_compartidos: dict | None = None,
 ) -> str:
     """
     Análisis FP&A personal: varianza por categoría, adherencia a regla 50/30/20.
@@ -205,6 +408,8 @@ def analizar_presupuesto_vs_real(
     top_grupos = sorted(por_grupo.items(), key=lambda x: x[1], reverse=True)[:6]
     grupos_str = "\n".join(f"  {g}: {_fmt(v)} ({_pct(v, ingresos)} ingresos)" for g, v in top_grupos)
 
+    ctx_vivienda = _contexto_vivienda(arriendo_cobrado, dividendo_mensual, gastos_compartidos)
+
     prompt = f"""
 Análisis FP&A personal — {mes_nombre}:
 
@@ -217,14 +422,14 @@ REGLA 50/30/20:
 
 TOP GASTOS POR GRUPO:
 {grupos_str}
-
+{ctx_vivienda}
 Entrega:
 1) ¿Está la distribución dentro de parámetros sanos? Identifica la desviación más importante.
 2) El grupo de gasto más preocupante y por qué.
 3) Oportunidades concretas de optimización sin afectar calidad de vida.
 Máximo 220 palabras.
 """
-    return _claude_personal(prompt)
+    return _analizar_tres_modelos(prompt)
 
 
 def analizar_patrimonio(
@@ -270,7 +475,7 @@ Entrega:
 4) Próximo hito de construcción patrimonial recomendado
 Máximo 280 palabras.
 """
-    return _claude_personal(prompt)
+    return _analizar_tres_modelos(prompt)
 
 
 def analizar_afp(
@@ -312,7 +517,52 @@ Entrega:
 3) 2 estrategias para acelerar el crecimiento previsional (APV, cambio de fondo, etc.)
 Máximo 250 palabras.
 """
-    return _claude_personal(prompt)
+    return _analizar_tres_modelos(prompt)
+
+
+def analizar_dividendo_historico(historico: list, arriendo_cobrado: float) -> str:
+    """
+    Analiza la evolución mensual del dividendo hipotecario vs arriendo cobrado (UF).
+    historico: lista de dicts {mes_nombre, dividendo, neto, uf}
+    """
+    if not historico:
+        return "_Sin historial de dividendo disponible._"
+
+    lineas = ["Mes | Dividendo | Arriendo Cobrado | Costo Neto | Var Dividendo | Var Neto"]
+    prev_div = None
+    prev_neto = None
+    for h in historico:
+        div = h["dividendo"]
+        neto = h["neto"]
+        var_div = f"{(div - prev_div) / prev_div * 100:+.2f}%" if prev_div else "—"
+        var_neto = f"{(neto - prev_neto) / prev_neto * 100:+.2f}%" if prev_neto else "—"
+        lineas.append(
+            f"{h['mes_nombre']} | {_fmt(div)} | {_fmt(arriendo_cobrado)} | {_fmt(neto)} | {var_div} | {var_neto}"
+        )
+        prev_div = div
+        prev_neto = neto
+
+    ultimo = historico[-1]
+    primero = historico[0]
+    variacion_total = (ultimo["dividendo"] - primero["dividendo"]) / primero["dividendo"] * 100 if primero["dividendo"] else 0
+
+    prompt = f"""
+Analiza la evolución mensual del costo neto de vivienda (dividendo UF - arriendo cobrado):
+
+{chr(10).join(lineas)}
+
+ARRIENDO COBRADO DE INQUILINO: {_fmt(arriendo_cobrado)} (fijo mensual)
+VARIACIÓN TOTAL DEL DIVIDENDO ({primero['mes_nombre']} → {ultimo['mes_nombre']}): {variacion_total:+.2f}%
+UF referencia último mes: {ultimo.get('uf', 'N/D')}
+
+Entrega:
+1) Tendencia del dividendo: ¿está subiendo por UF? ¿a qué ritmo mensual y anualizado?
+2) Impacto en el costo neto real: variación en CLP y % respecto al mes anterior
+3) Proyección: si la UF sigue su tendencia, ¿cuánto podría ser el dividendo en 6 y 12 meses?
+4) ¿El arriendo cobrado ({_fmt(arriendo_cobrado)} fijo) está cubriendo bien el diferencial o la brecha se amplía?
+Máximo 250 palabras.
+"""
+    return _analizar_tres_modelos(prompt)
 
 
 def consulta_libre(pregunta: str, contexto_usuario: dict | None = None) -> str:
@@ -365,18 +615,27 @@ def render_insight_con_spinner(titulo: str, funcion, *args, cache_key: str = "",
     """
     Llama a una función de análisis AI con spinner de carga.
     Cachea el resultado en session_state para no re-llamar la API.
+    Retorna "" si la respuesta es inválida (error de API, sin créditos, etc.)
 
     Uso:
         resultado = render_insight_con_spinner(
             "Análisis del mes", analizar_resumen_mes, mes, ingresos, ...
         )
     """
+    _INVALIDOS = ("_agente no disponible", "⚠️", "_error al consultar", "_sin respuesta")
+
+    def _es_valido(texto: str | None) -> bool:
+        if not texto:
+            return False
+        t = texto.strip().lower()
+        return not any(t.startswith(m.lower()) for m in _INVALIDOS) and "no disponible" not in t
+
     clave = f"ai_cache_{cache_key}" if cache_key else f"ai_cache_{titulo}_{id(funcion)}"
 
     if clave not in st.session_state:
         with st.spinner(f"🤖 Generando análisis: {titulo}..."):
             resultado = funcion(*args, **kwargs)
-            st.session_state[clave] = resultado
+            st.session_state[clave] = resultado if _es_valido(resultado) else ""
 
     return st.session_state.get(clave, "")
 

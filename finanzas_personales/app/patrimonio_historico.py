@@ -36,13 +36,14 @@ def guardar_snapshot(
     dpto505: int, afp: int, otros_activos: int,
     hipoteca: int, tarjetas: int, consumo: int,
     linea_credito: int, otros_pasivos: int,
+    afc: int = 0,
 ):
     """Guarda o actualiza la snapshot del mes actual."""
     hist = _cargar()
     mes_actual = datetime.now().strftime("%Y-%m")
     fecha_hoy  = datetime.now().strftime("%Y-%m-%d")
 
-    total_activos  = cc + ca + crypto_clp + dpto505 + afp + otros_activos
+    total_activos  = cc + ca + crypto_clp + dpto505 + afp + afc + otros_activos
     total_pasivos  = hipoteca + tarjetas + consumo + linea_credito + otros_pasivos
     patrimonio_neto = total_activos - total_pasivos
 
@@ -54,6 +55,7 @@ def guardar_snapshot(
         "crypto_clp":     crypto_clp,
         "dpto505":        dpto505,
         "afp":            afp,
+        "afc":            afc,
         "otros_activos":  otros_activos,
         "hipoteca":       hipoteca,
         "tarjetas":       tarjetas,
