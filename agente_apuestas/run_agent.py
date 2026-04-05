@@ -75,6 +75,14 @@ from referee_collector    import get_referee_stats
 from weather_collector    import get_weather
 from tavily_enricher      import enriquecer_stats as tavily_enriquecer, DISPONIBLE as TAVILY_DISPONIBLE
 
+# ── Football-Data.org H2H (Sprint 19) ────────────────────────────────────────
+FDATA_DISPONIBLE = False
+try:
+    from footballdataorg_h2h import enriquecer_con_h2h as fdata_enriquecer, DISPONIBLE as _fdata_disp
+    FDATA_DISPONIBLE = _fdata_disp
+except ImportError:
+    pass
+
 # ── Predictor ML (Sprint 10) ──────────────────────────────────────────────────
 ML_DISPONIBLE = False
 try:
@@ -102,6 +110,11 @@ if TAVILY_DISPONIBLE:
     log.info("[OK] Tavily enricher cargado — datos web como fallback para H2H/forma/lesiones")
 else:
     log.info("[INFO] Tavily no disponible — usando solo api-sports")
+
+if FDATA_DISPONIBLE:
+    log.info("[OK] Football-Data.org H2H cargado — H2H preciso para 6 ligas top")
+else:
+    log.info("[INFO] FOOTBALL_DATA_KEY no configurada — sin H2H de football-data.org")
 
 # ── Paths adicionales ─────────────────────────────────────────────────────────
 HISTORICO_PATH    = BASE_DIR / "backtesting" / "historico_apuestas.json"
@@ -422,7 +435,17 @@ def analizar_partido(partido: dict) -> dict | None:
 
     # ── Capa 4 dummy para no-fútbol (ya asignados arriba) ─────────────────
 
-    # Enriquecer con Tavily si datos insuficientes (H2H vacío, forma con "?")
+    # ── Enriquecer H2H con football-data.org (Sprint 19) — mayor precisión ──
+    # Prioridad: api-sports > football_data_org > tavily_web
+    if FDATA_DISPONIBLE:
+        try:
+            fecha_partido = partido.get("fixture", {}).get("date", "")[:10] or None
+            liga_nombre   = partido.get("league", {}).get("name", "")
+            stats = fdata_enriquecer(home, away, stats, liga_nombre, fecha_partido)
+        except Exception as e:
+            log.warning(f"  [AVISO] footballdataorg_h2h: {e}")
+
+    # Enriquecer con Tavily si datos aún insuficientes (H2H vacío, forma con "?")
     if TAVILY_DISPONIBLE:
         try:
             stats = tavily_enriquecer(home, away, stats)
