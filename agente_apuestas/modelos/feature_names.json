@@ -21,19 +21,5 @@
   "ratio_valor",
   "log_ratio_valor",
   "diff_valor_mill",
-  "_liga_id",
-  "xg_anotados_5_home",
-  "xg_recibidos_5_home",
-  "xg_diferencial_5_home",
-  "xg_temporada_home",
-  "xg_temporada_a_home",
-  "xg_overperformance_home",
-  "xg_consistencia_home",
-  "xg_anotados_5_away",
-  "xg_recibidos_5_away",
-  "xg_diferencial_5_away",
-  "xg_temporada_away",
-  "xg_temporada_a_away",
-  "xg_overperformance_away",
-  "xg_consistencia_away"
+  "_liga_id"
 ]

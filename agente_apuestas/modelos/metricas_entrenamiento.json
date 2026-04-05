@@ -1,52 +1,52 @@
 {
-  "fecha_entrenamiento": "2026-03-24 23:57:57.915489",
+  "fecha_entrenamiento": "2026-04-04 21:30:29.428327",
   "n_partidos_train": 7703,
   "n_partidos_test": 1926,
-  "n_features": 37,
-  "cv_accuracy_mean": 0.4901,
-  "cv_accuracy_std": 0.0127,
-  "cv_log_loss_mean": 1.0632,
-  "test_accuracy": 0.5244,
-  "test_log_loss": 0.9946,
+  "n_features": 23,
+  "cv_accuracy_mean": 0.4764,
+  "cv_accuracy_std": 0.0092,
+  "cv_log_loss_mean": 1.0566,
+  "test_accuracy": 0.514,
+  "test_log_loss": 1.0081,
   "leakage_ok": true,
   "folds": [
     {
       "fold": 1,
-      "accuracy": 0.4660950896336711,
-      "log_loss": 1.1638414312049419,
+      "accuracy": 0.4699922057677319,
+      "log_loss": 1.0583468419262583,
       "n_val": 1283
     },
     {
       "fold": 2,
-      "accuracy": 0.4886983632112237,
-      "log_loss": 1.0513483863952053,
+      "accuracy": 0.48636009353078724,
+      "log_loss": 1.0447789612628469,
       "n_val": 1283
     },
     {
       "fold": 3,
-      "accuracy": 0.49649259547934527,
-      "log_loss": 1.0429680336171936,
+      "accuracy": 0.46453624318004677,
+      "log_loss": 1.076510756897641,
       "n_val": 1283
     },
     {
       "fold": 4,
-      "accuracy": 0.5019485580670304,
-      "log_loss": 1.030887716771629,
+      "accuracy": 0.48791893998441155,
+      "log_loss": 1.0478469398440713,
       "n_val": 1283
     },
     {
       "fold": 5,
-      "accuracy": 0.49727201870615745,
-      "log_loss": 1.0270775901983984,
+      "accuracy": 0.4731098986749805,
+      "log_loss": 1.0553241981558055,
       "n_val": 1283
     }
   ],
   "top_features": {
-    "pi_exp_away": 0.09875266253948212,
-    "pi_exp_home": 0.05840884521603584,
-    "pi_diff": 0.050362396985292435,
-    "xg_temporada_home": 0.041316524147987366,
-    "xg_temporada_away": 0.038719430565834045
+    "pi_exp_away": 0.10265543311834335,
+    "pi_exp_home": 0.07072780281305313,
+    "pi_diff": 0.056415457278490067,
+    "pi_diff_abs": 0.045761559158563614,
+    "pi_rating_away": 0.041513558477163315
   },
   "params_xgb": {
     "n_estimators": 300,
@@ -62,6 +62,6 @@
     "random_state": 42,
     "n_jobs": -1
   },
-  "accuracy_cv_media": 0.4901,
-  "log_loss_cv_media": 1.0632
+  "accuracy_cv_media": 0.4764,
+  "log_loss_cv_media": 1.0566
 }
