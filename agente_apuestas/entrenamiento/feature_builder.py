@@ -298,6 +298,28 @@ def build_features_partido(
         except Exception:
             pass  # Sportmonks xG opcional — no bloquea si falla
 
+    # ── FootyStats features: corners, posesión, shots, xG (Sprint 19) ────────
+    # Disponible: Premier League 2018/19 (gratis) + más ligas con créditos
+    try:
+        liga_nombre = row.get("liga_nombre") or row.get("league") or ""
+        if not liga_nombre:
+            # Inferir liga desde liga_id
+            liga_id = row.get("liga_id", 0)
+            _LIGA_ID_MAP = {39: "Premier League", 140: "La Liga", 135: "Serie A",
+                            78: "Bundesliga", 61: "Ligue 1", 2: "Champions League"}
+            liga_nombre = _LIGA_ID_MAP.get(int(liga_id) if liga_id else 0, "")
+
+        if liga_nombre:
+            from entrenamiento.footystats_features import get_footystats_features
+            fs = get_footystats_features(home, away, liga_nombre, fecha)
+            if fs.get("disponible"):
+                for lado, prefijo in [("home", "home"), ("away", "away")]:
+                    for k, v in fs.get(lado, {}).items():
+                        if v is not None:
+                            features[f"fs_{k}_{prefijo}"] = float(v)
+    except Exception:
+        pass  # FootyStats opcional — no bloquea si falla
+
     # ── Valor de mercado Transfermarkt ───────────────────────────────────────
     # valor_mercado es un dict pre-cargado en build_dataset() (una sola vez).
     # Si no viene pre-cargado, cae al fallback directo (más lento, con logs).
