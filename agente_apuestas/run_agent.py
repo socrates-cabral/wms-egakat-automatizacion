@@ -83,6 +83,22 @@ try:
 except ImportError:
     pass
 
+# ── NBA features (Sprint 19) — nba_api + balldontlie ─────────────────────────
+NBA_FEATURES_DISPONIBLE = False
+try:
+    from nba_features import enriquecer_stats_nba
+    NBA_FEATURES_DISPONIBLE = True
+except ImportError:
+    pass
+
+# ── MLB features (Sprint 19) — MLB-StatsAPI ───────────────────────────────────
+MLB_FEATURES_DISPONIBLE = False
+try:
+    from mlb_features import enriquecer_stats_mlb
+    MLB_FEATURES_DISPONIBLE = True
+except ImportError:
+    pass
+
 # ── Predictor ML (Sprint 10) ──────────────────────────────────────────────────
 ML_DISPONIBLE = False
 try:
@@ -115,6 +131,11 @@ if FDATA_DISPONIBLE:
     log.info("[OK] Football-Data.org H2H cargado — H2H preciso para 6 ligas top")
 else:
     log.info("[INFO] FOOTBALL_DATA_KEY no configurada — sin H2H de football-data.org")
+
+if NBA_FEATURES_DISPONIBLE:
+    log.info("[OK] NBA features cargado — back-to-back, eFG%, pace, forma (nba_api + balldontlie)")
+if MLB_FEATURES_DISPONIBLE:
+    log.info("[OK] MLB features cargado — ERA pitcher, forma, carreras (MLB-StatsAPI)")
 
 # ── Paths adicionales ─────────────────────────────────────────────────────────
 HISTORICO_PATH    = BASE_DIR / "backtesting" / "historico_apuestas.json"
@@ -444,6 +465,22 @@ def analizar_partido(partido: dict) -> dict | None:
             stats = fdata_enriquecer(home, away, stats, liga_nombre, fecha_partido)
         except Exception as e:
             log.warning(f"  [AVISO] footballdataorg_h2h: {e}")
+
+    # ── Enriquecer con features específicas por deporte (Sprint 19) ──────────
+    deporte_partido = partido.get("deporte", "futbol")
+    fecha_partido_str = partido.get("fixture", {}).get("date", "")[:10] or None
+
+    if NBA_FEATURES_DISPONIBLE and deporte_partido == "basketball":
+        try:
+            stats = enriquecer_stats_nba(home, away, stats)
+        except Exception as e:
+            log.warning(f"  [AVISO] nba_features: {e}")
+
+    if MLB_FEATURES_DISPONIBLE and deporte_partido == "baseball":
+        try:
+            stats = enriquecer_stats_mlb(home, away, stats, fecha_partido_str)
+        except Exception as e:
+            log.warning(f"  [AVISO] mlb_features: {e}")
 
     # Enriquecer con Tavily si datos aún insuficientes (H2H vacío, forma con "?")
     if TAVILY_DISPONIBLE:
