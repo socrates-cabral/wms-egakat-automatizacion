@@ -217,6 +217,23 @@ def verificar_pendientes(verbose: bool = True) -> dict:
 
     guardar_historico(apuestas)
 
+    # Sprint 18: actualizar CLV de las apuestas recién resueltas
+    try:
+        from backtesting.clv_tracker import actualizar_clv_pendientes
+        n_clv = actualizar_clv_pendientes()
+        if n_clv > 0:
+            print(f"[OK] CLV actualizado para {n_clv} apuesta(s)")
+    except ImportError:
+        try:
+            from clv_tracker import actualizar_clv_pendientes
+            n_clv = actualizar_clv_pendientes()
+            if n_clv > 0:
+                print(f"[OK] CLV actualizado para {n_clv} apuesta(s)")
+        except Exception as e:
+            print(f"[WARN] CLV update falló: {e}")
+    except Exception as e:
+        print(f"[WARN] CLV update falló: {e}")
+
     print()
     print(f"[OK] Sesión completada: "
           f"✅ {resumen['ganadas']} ganadas | "

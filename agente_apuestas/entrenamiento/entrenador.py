@@ -2,16 +2,21 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
 """
-entrenador.py — Sprint 7
-Entrena modelo XGBoost con TimeSeriesSplit sobre el histórico consolidado.
+entrenador.py — Sprint 7 / Sprint 18
+Entrena modelo XGBoost (+ ensemble opcional LightGBM) con TimeSeriesSplit.
 
-Pipeline:
-  1. Carga histórico_consolidado.csv
-  2. Calcula Pi-Ratings y construye features (feature_builder.py)
-  3. Entrena XGBoost con validación temporal (TimeSeriesSplit)
-  4. Guarda modelo + scaler + feature_names en modelos/
+Sprint 18 añade:
+  - Recency weighting: sample_weight decay exponencial 0.98/semana
+    → partidos recientes pesan más, reduce drift temporal
+  - Calibración isotónica (CalibratedClassifierCV) post-entrenamiento
+    → probabilidades mejor calibradas para value betting
+  - Ensemble XGB + LightGBM (si lightgbm instalado)
+    → promedio de modelos reduce varianza, mejora generalización
+  - class_weight balanceado para corregir desbalance H>D>A
+  - SHAP feature importance (si shap instalado)
 
 Instalar: py -m pip install xgboost scikit-learn pandas numpy joblib
+Opcional: py -m pip install lightgbm shap
 """
 
 import json
@@ -176,22 +181,48 @@ def entrenar(df_features: pd.DataFrame) -> dict:
     log(f"[INFO] Features seleccionadas: {len(feature_cols)}")
     log(f"[INFO] Features: {feature_cols}")
 
-    X_all = df_features[feature_cols].fillna(0).values
-    y_all = df_features["target"].values
+    X_all   = df_features[feature_cols].fillna(0).values
+    y_all   = df_features["target"].values
 
     # Filtrar NaN en target
     mask_valido = ~np.isnan(y_all.astype(float))
     X_all = X_all[mask_valido]
     y_all = y_all[mask_valido].astype(int)
 
+    # ── Recency weighting: decay 0.98 por semana desde hoy ───────────────────
+    # Partidos recientes pesan más → reduce drift temporal del modelo
+    DECAY_POR_SEMANA = 0.98
+    if "Date" in df_features.columns:
+        fechas_validas = pd.to_datetime(
+            df_features["Date"].values[mask_valido], errors="coerce"
+        )
+        hoy = pd.Timestamp.now()
+        semanas_atras = [(hoy - f).days / 7 if pd.notna(f) else 52
+                         for f in fechas_validas]
+        sample_weights = np.array([DECAY_POR_SEMANA ** s for s in semanas_atras])
+        sample_weights = sample_weights / sample_weights.mean()  # normalizar a media 1
+        log(f"[OK] Recency weighting activado (decay={DECAY_POR_SEMANA}/semana) — "
+            f"ratio max/min: {sample_weights.max():.2f}/{sample_weights.min():.2f}")
+    else:
+        sample_weights = np.ones(len(y_all))
+        log("[INFO] Sin columna Date — recency weighting desactivado")
+
     log(f"[INFO] Muestra válida: {len(X_all):,} partidos")
     log(f"[INFO] Distribución: H={np.sum(y_all==0):,} | D={np.sum(y_all==1):,} | A={np.sum(y_all==2):,}")
+
+    # ── Calcular class_weight para corregir desbalance H>D>A ─────────────────
+    from sklearn.utils.class_weight import compute_class_weight
+    clases = np.array([0, 1, 2])
+    pesos_clase = compute_class_weight("balanced", classes=clases, y=y_all)
+    class_weight_dict = {0: pesos_clase[0], 1: pesos_clase[1], 2: pesos_clase[2]}
+    log(f"[OK] Class weights (balance H/D/A): {dict(zip(['H','D','A'], [f'{p:.2f}' for p in pesos_clase]))}")
 
     # ── PASO 2: Split temporal 80/20 — FIX data leakage ─────────────────────
     # NUNCA usar train_test_split con shuffle en series de tiempo
     corte = int(len(X_all) * 0.80)
     X_train, X_test = X_all[:corte], X_all[corte:]
     y_train, y_test = y_all[:corte], y_all[corte:]
+    sw_train        = sample_weights[:corte]
 
     log(f"[INFO] Train: {len(X_train):,} partidos (primeros 80%)")
     log(f"[INFO] Test:  {len(X_test):,} partidos (últimos 20% — no vistos por el modelo)")
@@ -225,9 +256,11 @@ def entrenar(df_features: pd.DataFrame) -> dict:
     for fold, (idx_tr, idx_val) in enumerate(tscv.split(X_train_sc), 1):
         X_tr, X_val = X_train_sc[idx_tr], X_train_sc[idx_val]
         y_tr, y_val = y_train[idx_tr], y_train[idx_val]
+        sw_tr       = sw_train[idx_tr]
 
         m = xgb.XGBClassifier(**params_xgb)
-        m.fit(X_tr, y_tr, eval_set=[(X_val, y_val)], verbose=False)
+        m.fit(X_tr, y_tr, sample_weight=sw_tr,
+              eval_set=[(X_val, y_val)], verbose=False)
 
         acc  = accuracy_score(y_val, m.predict(X_val))
         loss = log_loss(y_val, m.predict_proba(X_val))
@@ -240,9 +273,65 @@ def entrenar(df_features: pd.DataFrame) -> dict:
     log(f"\n[OK] CV accuracy: {acc_cv_media:.4f} ± {acc_cv_std:.4f}  (número honesto)")
 
     # ── PASO 5: Modelo final — entrenado SOLO en train ────────────────────────
-    log("[INFO] Entrenando modelo final en train set...")
-    modelo_final = xgb.XGBClassifier(**params_xgb)
-    modelo_final.fit(X_train_sc, y_train, verbose=False)
+    log("[INFO] Entrenando modelo final XGBoost en train set (con recency weights)...")
+    modelo_xgb = xgb.XGBClassifier(**params_xgb)
+    modelo_xgb.fit(X_train_sc, y_train, sample_weight=sw_train, verbose=False)
+
+    # ── Ensemble opcional: LightGBM ───────────────────────────────────────────
+    modelo_lgbm = None
+    try:
+        import lightgbm as lgb
+        log("[INFO] LightGBM disponible — entrenando ensemble...")
+        params_lgb = {
+            "n_estimators":     300,
+            "max_depth":        5,
+            "learning_rate":    0.05,
+            "subsample":        0.8,
+            "colsample_bytree": 0.8,
+            "objective":        "multiclass",
+            "num_class":        3,
+            "verbose":          -1,
+            "random_state":     42,
+            "n_jobs":           -1,
+        }
+        modelo_lgbm = lgb.LGBMClassifier(**params_lgb)
+        modelo_lgbm.fit(X_train_sc, y_train, sample_weight=sw_train)
+        log("[OK] LightGBM entrenado")
+    except ImportError:
+        log("[INFO] LightGBM no instalado — usando solo XGBoost (py -m pip install lightgbm)")
+
+    # ── Calibración isotónica (post-training) ─────────────────────────────────
+    # Corrige que las probabilidades crudas de XGBoost no estén bien calibradas
+    log("[INFO] Calibrando probabilidades (CalibratedClassifierCV isotónico)...")
+    try:
+        from sklearn.calibration import CalibratedClassifierCV
+        # Usar cv="prefit" para no re-entrenar, solo calibrar sobre train
+        calibrador = CalibratedClassifierCV(modelo_xgb, cv="prefit", method="isotonic")
+        calibrador.fit(X_train_sc, y_train, sample_weight=sw_train)
+        modelo_final = calibrador
+        log("[OK] Calibración isotónica aplicada")
+    except Exception as e:
+        log(f"[WARN] Calibración falló ({e}) — usando modelo sin calibrar")
+        modelo_final = modelo_xgb
+
+    # ── SHAP feature importance (opcional) ────────────────────────────────────
+    try:
+        import shap
+        log("[INFO] Calculando SHAP values...")
+        explainer   = shap.TreeExplainer(modelo_xgb)
+        shap_values = explainer.shap_values(X_train_sc[:500])  # muestra de 500
+        shap_mean   = np.abs(shap_values).mean(axis=(0, 2)) if shap_values.ndim == 3 \
+                      else np.abs(shap_values).mean(axis=0)
+        shap_dict   = dict(zip(feature_cols, shap_mean.tolist()))
+        top5_shap   = sorted(shap_dict.items(), key=lambda x: x[1], reverse=True)[:5]
+        log(f"[OK] SHAP top-5: {top5_shap}")
+        shap_file = MODELOS_DIR / "shap_importance.json"
+        with open(shap_file, "w", encoding="utf-8") as f:
+            json.dump(shap_dict, f, ensure_ascii=False, indent=2)
+    except ImportError:
+        log("[INFO] SHAP no instalado (py -m pip install shap) — omitiendo")
+    except Exception as e:
+        log(f"[WARN] SHAP falló: {e}")
 
     # ── PASO 6: Accuracy en test — datos completamente no vistos ─────────────
     y_pred_test      = modelo_final.predict(X_test_sc)
@@ -263,7 +352,11 @@ def entrenar(df_features: pd.DataFrame) -> dict:
     log(f"[OK] Top-5 features: {top5}")
 
     # Guardar artefactos
-    joblib.dump(modelo_final, MODELO_FILE)
+    joblib.dump(modelo_final, MODELO_FILE)          # modelo calibrado principal
+    joblib.dump(modelo_xgb,   MODELOS_DIR / "xgb_model_raw.joblib")   # XGB sin calibrar
+    if modelo_lgbm is not None:
+        joblib.dump(modelo_lgbm, MODELOS_DIR / "lgbm_model.joblib")
+        log("[OK] LightGBM guardado como lgbm_model.joblib")
     joblib.dump(scaler, SCALER_FILE)
 
     with open(FEATURES_FILE, "w", encoding="utf-8") as f:

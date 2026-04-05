@@ -2,20 +2,33 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
 """
-xg_collector.py — Sprint 7 / Fix Sprint 8
-Descarga xG (expected goals) desde Understat.
-FBref fue comentado (bloqueaba con HTTP 403).
+xg_collector.py — Sprint 7 / Fix Sprint 8 / Sprint 18
+Descarga xG (expected goals) desde Understat (5 ligas top) y
+Sportmonks (5 ligas + UCL — xGOT, npxG, set play, corners).
 
-Instalar: py -m pip install understatapi
-Ligas disponibles Understat: EPL, La_liga, Bundesliga, Serie_A, Ligue_1
-Champions League no disponible — omitida.
+Fuentes:
+  1. Understat (gratuito)  — EPL, La Liga, Bundesliga, Serie A, Ligue 1
+  2. Sportmonks (de pago, $15/mes) — mismas ligas + UCL + xG avanzado
+
+Sprint 18 añade:
+  - descargar_xg_sportmonks_liga() — xG por fixture via Sportmonks
+  - descargar_xg_sportmonks_temporada() — descarga completa de temporada
+  - Nuevas columnas: xgot_home, xgot_away, npxg_home, npxg_away,
+                     xg_sp_home, xg_sp_away  (set play)
+
+Instalar: py -m pip install understatapi requests
 """
 
+import os
 import time
+import requests
 import pandas as pd
 import numpy as np
 from pathlib import Path
 from datetime import datetime, date
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env")
 
 # ── Rutas ─────────────────────────────────────────────────────────────────────
 BASE_DIR  = Path(__file__).parent.parent          # agente_apuestas\
@@ -37,6 +50,25 @@ UNDERSTAT_LIGAS = {
 }
 
 SLEEP_UNDERSTAT = 3   # segundos entre llamadas (rate limiting Understat)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Sprint 18: Sportmonks xG avanzado
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Mapeo liga_id (api-sports) → season_id Sportmonks
+# IDs de temporada 2024/25: verificar en https://docs.sportmonks.com/football/seasons
+SPORTMONKS_SEASONS = {
+    39:  23776,   # Premier League 2024/25
+    140: 23480,   # La Liga 2024/25
+    135: 23686,   # Serie A 2024/25
+    78:  23538,   # Bundesliga 2024/25
+    61:  23527,   # Ligue 1 2024/25
+    2:   23723,   # Champions League 2024/25 ← NO disponible en Understat
+}
+
+SPORTMONKS_BASE   = "https://api.sportmonks.com/v3/football"
+SPORTMONKS_KEY    = os.getenv("SPORTMONKS_KEY", "")
+SLEEP_SPORTMONKS  = 1   # segundos entre llamadas
 
 # ── Config FBref comentada (Sprint 7 — bloqueada HTTP 403) ────────────────────
 # FBREF_LIGAS = {
@@ -361,6 +393,219 @@ def get_xg_actual(liga_id: int, equipo: str, temporada_actual=2024) -> dict | No
     if df_xg is None:
         return None
     return calcular_xg_rolling(df_xg, equipo, str(date.today()))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SPRINT 18: Sportmonks xG avanzado
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _sportmonks_get(endpoint: str, params: dict = None) -> dict | None:
+    """Llamada GET a Sportmonks v3. Retorna JSON o None si falla."""
+    if not SPORTMONKS_KEY:
+        return None
+    url = f"{SPORTMONKS_BASE}/{endpoint}"
+    p   = {"api_token": SPORTMONKS_KEY, **(params or {})}
+    try:
+        r = requests.get(url, params=p, timeout=20)
+        if r.status_code == 200:
+            return r.json()
+        log(f"[FALLO] Sportmonks {endpoint} HTTP {r.status_code}: {r.text[:200]}")
+        return None
+    except Exception as e:
+        log(f"[FALLO] Sportmonks {endpoint}: {e}")
+        return None
+
+
+def descargar_xg_sportmonks_liga(liga_id: int, season_id: int) -> pd.DataFrame | None:
+    """
+    Descarga xG avanzado de Sportmonks para una liga/temporada.
+
+    Campos disponibles (incluye): xGOT, npxG, xG set play, xG open play.
+    UCL (liga 2) sí disponible — ventaja frente a Understat.
+
+    Args:
+        liga_id:   ID de liga (api-sports) — ej: 2 para UCL
+        season_id: Season ID de Sportmonks (ver SPORTMONKS_SEASONS)
+
+    Returns:
+        DataFrame con columnas extendidas o None si no disponible.
+    """
+    if liga_id not in SPORTMONKS_SEASONS:
+        log(f"[INFO] Liga {liga_id} sin mapeo Sportmonks — omitiendo")
+        return None
+    if not SPORTMONKS_KEY:
+        log("[INFO] SPORTMONKS_KEY no configurada — omitiendo xG avanzado")
+        return None
+
+    cache_path = RAW_DIR / f"sportmonks_xg_{liga_id}_{season_id}.csv"
+    if cache_path.exists():
+        log(f"[OK] Cache Sportmonks: {cache_path.name}")
+        return pd.read_csv(cache_path)
+
+    log(f"[INFO] Sportmonks xG liga {liga_id} season {season_id}...")
+
+    # Obtener fixtures de la temporada
+    pagina   = 1
+    fixtures = []
+    while True:
+        data = _sportmonks_get(
+            f"fixtures/season/{season_id}",
+            {"include": "scores;statistics", "per_page": 50, "page": pagina}
+        )
+        if not data or "data" not in data:
+            break
+        batch = data["data"]
+        if not batch:
+            break
+        fixtures.extend(batch)
+        meta = data.get("pagination", {})
+        if pagina >= meta.get("last_page", 1):
+            break
+        pagina += 1
+        time.sleep(SLEEP_SPORTMONKS)
+
+    if not fixtures:
+        log(f"[FALLO] Sportmonks: sin fixtures para liga {liga_id} season {season_id}")
+        return None
+
+    registros = []
+    for f in fixtures:
+        try:
+            scores = {s.get("type_id"): s for s in (f.get("scores") or [])}
+            stats  = f.get("statistics") or []
+
+            # Goles finales (type_id 1501 = full-time)
+            ft = scores.get(1501, {})
+            if not ft:
+                continue
+            score = ft.get("score", {}) or {}
+            gh = score.get("home")
+            ga = score.get("away")
+            if gh is None or ga is None:
+                continue
+
+            # xG desde statistics (participant_id side: 1=home, 2=away)
+            xg_h = xg_a = xgot_h = xgot_a = npxg_h = npxg_a = None
+            for s in stats:
+                tipo  = s.get("type_id")
+                side  = s.get("location")  # "home" o "away"
+                valor = s.get("value", {})
+                v     = float(valor.get("total", 0) or 0) if isinstance(valor, dict) else float(valor or 0)
+                if tipo == 42:   # xG total
+                    if side == "home": xg_h = v
+                    else: xg_a = v
+                elif tipo == 114: # xGOT (on target)
+                    if side == "home": xgot_h = v
+                    else: xgot_a = v
+                elif tipo == 115: # npxG (non-penalty)
+                    if side == "home": npxg_h = v
+                    else: npxg_a = v
+
+            fecha_str = (f.get("starting_at") or "")[:10]
+            if not fecha_str:
+                continue
+
+            registros.append({
+                "fecha":    fecha_str,
+                "home":     f.get("name", "").split(" vs ")[0].strip(),
+                "away":     f.get("name", "").split(" vs ")[-1].strip() if " vs " in f.get("name", "") else "",
+                "xg_home":  xg_h,
+                "xg_away":  xg_a,
+                "xgot_home": xgot_h,
+                "xgot_away": xgot_a,
+                "npxg_home": npxg_h,
+                "npxg_away": npxg_a,
+                "home_goals": int(gh),
+                "away_goals": int(ga),
+            })
+        except Exception:
+            continue
+
+    if not registros:
+        log(f"[FALLO] Sportmonks: sin registros procesados liga {liga_id}")
+        return None
+
+    df = pd.DataFrame(registros).sort_values("fecha").reset_index(drop=True)
+    # Filtrar filas con home/away vacíos
+    df = df[df["home"].str.len() > 2].reset_index(drop=True)
+    df.to_csv(cache_path, index=False)
+    log(f"[OK] Sportmonks xG {liga_id}: {len(df)} partidos → {cache_path.name}")
+    return df
+
+
+def descargar_xg_sportmonks_temporada(ligas: list = None) -> dict:
+    """
+    Descarga xG Sportmonks para todas las ligas configuradas.
+
+    Args:
+        ligas: lista de liga_ids (default: todas en SPORTMONKS_SEASONS)
+
+    Returns:
+        Dict {liga_id: DataFrame o None}
+    """
+    if not SPORTMONKS_KEY:
+        log("[INFO] SPORTMONKS_KEY no configurada — omitiendo descarga Sportmonks")
+        return {}
+
+    ligas = ligas or list(SPORTMONKS_SEASONS.keys())
+    resultados = {}
+    log(f"[INFO] Sportmonks xG: {len(ligas)} ligas (incluye UCL)")
+
+    for liga_id in ligas:
+        season_id = SPORTMONKS_SEASONS.get(liga_id)
+        if not season_id:
+            continue
+        df = descargar_xg_sportmonks_liga(liga_id, season_id)
+        resultados[liga_id] = df
+        time.sleep(SLEEP_SPORTMONKS)
+
+    n_ok = sum(1 for v in resultados.values() if v is not None)
+    log(f"[OK] Sportmonks xG descargado: {n_ok}/{len(ligas)} ligas")
+    return resultados
+
+
+def get_xg_sportmonks_actual(liga_id: int, equipo: str) -> dict | None:
+    """
+    Obtiene features xG Sportmonks en tiempo real para un equipo.
+    Incluye xGOT y npxG si están disponibles.
+
+    Returns:
+        Dict extendido o None.
+    """
+    season_id = SPORTMONKS_SEASONS.get(liga_id)
+    if not season_id:
+        return None
+    df = descargar_xg_sportmonks_liga(liga_id, season_id)
+    if df is None:
+        return None
+
+    # Reutilizar calcular_xg_rolling con el DataFrame extendido
+    resultado = calcular_xg_rolling(df, equipo, str(date.today()))
+    if resultado is None:
+        return None
+
+    # Enriquecer con xGOT si disponible
+    if "xgot_home" in df.columns:
+        df_eq = df[(df["home"] == equipo) | (df["away"] == equipo)].copy()
+        df_eq["xgot_eq"] = df_eq.apply(
+            lambda r: r["xgot_home"] if r["home"] == equipo else r["xgot_away"], axis=1
+        )
+        xgot_vals = df_eq["xgot_eq"].dropna()
+        if len(xgot_vals) >= 3:
+            resultado["xgot_5"]     = round(float(xgot_vals.tail(5).mean()), 3)
+            resultado["xgot_temp"]  = round(float(xgot_vals.mean()), 3)
+
+    if "npxg_home" in df.columns:
+        df_eq = df[(df["home"] == equipo) | (df["away"] == equipo)].copy()
+        df_eq["npxg_eq"] = df_eq.apply(
+            lambda r: r["npxg_home"] if r["home"] == equipo else r["npxg_away"], axis=1
+        )
+        npxg_vals = df_eq["npxg_eq"].dropna()
+        if len(npxg_vals) >= 3:
+            resultado["npxg_5"]    = round(float(npxg_vals.tail(5).mean()), 3)
+            resultado["npxg_temp"] = round(float(npxg_vals.mean()), 3)
+
+    return resultado
 
 
 # ══════════════════════════════════════════════════════════════════════════════

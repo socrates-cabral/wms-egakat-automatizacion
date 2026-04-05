@@ -257,6 +257,47 @@ def build_features_partido(
         except Exception:
             pass  # xG opcional — no bloquea si falla
 
+    # ── Sportmonks xGOT / npxG features (Sprint 18) ──────────────────────────
+    if xg_data is not None:
+        try:
+            if isinstance(xg_data, dict):
+                df_xg = xg_data.get("_df")
+            else:
+                df_xg = xg_data
+
+            if df_xg is not None and not df_xg.empty:
+                from entrenamiento.nombre_normalizer import normalizar_nombre
+                import pandas as _pd
+                import numpy as _np
+
+                home_norm = normalizar_nombre(home)
+                away_norm = normalizar_nombre(away)
+                fecha_dt  = _pd.to_datetime(fecha, errors="coerce")
+
+                for equipo, prefijo in [(home_norm, "home"), (away_norm, "away")]:
+                    mask = (
+                        ((df_xg["home"] == equipo) | (df_xg["away"] == equipo)) &
+                        (_pd.to_datetime(df_xg["fecha"], errors="coerce") < fecha_dt)
+                    )
+                    partidos_sm = df_xg[mask].sort_values("fecha")
+                    if len(partidos_sm) >= 3 and "xgot_home" in df_xg.columns:
+                        xgot_gen, npxg_gen = [], []
+                        for _, p in partidos_sm.iterrows():
+                            if p["home"] == equipo:
+                                xgot_gen.append(p.get("xgot_home", _np.nan))
+                                npxg_gen.append(p.get("npxg_home",  _np.nan))
+                            else:
+                                xgot_gen.append(p.get("xgot_away", _np.nan))
+                                npxg_gen.append(p.get("npxg_away",  _np.nan))
+                        xgot_gen  = [v for v in xgot_gen  if not _np.isnan(v)]
+                        npxg_gen  = [v for v in npxg_gen  if not _np.isnan(v)]
+                        if xgot_gen:
+                            features[f"xgot_5_{prefijo}"]  = float(_np.mean(xgot_gen[-5:]))
+                        if npxg_gen:
+                            features[f"npxg_5_{prefijo}"]  = float(_np.mean(npxg_gen[-5:]))
+        except Exception:
+            pass  # Sportmonks xG opcional — no bloquea si falla
+
     # ── Valor de mercado Transfermarkt ───────────────────────────────────────
     # valor_mercado es un dict pre-cargado en build_dataset() (una sola vez).
     # Si no viene pre-cargado, cae al fallback directo (más lento, con logs).

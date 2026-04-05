@@ -143,6 +143,7 @@ def registrar_apuesta(recomendacion: dict, estrategia: str = "flat") -> dict | N
         "tipo_apuesta":      recomendacion["tipo_apuesta"],
         "seleccion":         recomendacion["seleccion"],
         "cuota":             cuota,
+        "cuota_apertura":    cuota,   # Sprint 18: guardamos cuota al momento de registro para CLV
         "prob_modelo":       prob,
         "prob_implicita":    prob_i,
         "value":             value,
@@ -154,6 +155,9 @@ def registrar_apuesta(recomendacion: dict, estrategia: str = "flat") -> dict | N
         "score_final":       None,
         "ganado":            None,
         "retorno":           None,
+        # Campos CLV — completados por clv_tracker.py (Sprint 18)
+        "cuota_cierre":      None,
+        "clv":               None,
     }
 
     apuestas.append(apuesta)

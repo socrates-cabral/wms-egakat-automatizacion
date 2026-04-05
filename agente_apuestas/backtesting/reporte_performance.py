@@ -149,6 +149,21 @@ def calcular_metricas(apuestas: list[dict]) -> dict:
     vb_ganadas = [a for a in value_bets if a["ganado"]]
     vb_hit_rate = len(vb_ganadas) / len(value_bets) * 100 if value_bets else 0
 
+    # ── CLV (Closing Line Value) — Sprint 18 ─────────────────────────────────
+    clv_data = {"n_con_clv": 0, "n_total": len(apuestas), "clv_promedio": 0,
+                "edge_estimado": "Sin datos", "clv_positivos_pct": 0}
+    try:
+        from backtesting.clv_tracker import resumen_clv
+        clv_data = resumen_clv()
+    except ImportError:
+        try:
+            from clv_tracker import resumen_clv
+            clv_data = resumen_clv()
+        except Exception:
+            pass
+    except Exception:
+        pass
+
     return {
         "sin_datos":       False,
         "total":           total,
@@ -169,6 +184,11 @@ def calcular_metricas(apuestas: list[dict]) -> dict:
         "calibracion":     calibracion_lista,
         "value_bets_total": len(value_bets),
         "value_bets_hit":   round(vb_hit_rate, 1),
+        # CLV metrics
+        "clv_promedio":       clv_data.get("clv_promedio", 0),
+        "clv_positivos_pct":  clv_data.get("clv_positivos_pct", 0),
+        "clv_n":              clv_data.get("n_con_clv", 0),
+        "edge_estimado":      clv_data.get("edge_estimado", "Sin datos"),
     }
 
 
@@ -233,6 +253,13 @@ Registra apuestas con simulador.py y verifica resultados con resultado_checker.p
     cal_x        = [c["predicho"] for c in metricas["calibracion"]]
     cal_real     = [c["real"]     for c in metricas["calibracion"]]
     cal_n        = [c["n"]        for c in metricas["calibracion"]]
+
+    # CLV display
+    clv_prom      = metricas.get("clv_promedio", 0)
+    clv_color     = COLOR_VERDE if clv_prom > 0.02 else (COLOR_AMARILLO if clv_prom >= 0 else COLOR_ROJO)
+    clv_pct_str   = f"{clv_prom:+.1%}" if metricas.get("clv_n", 0) > 0 else "—"
+    clv_pos_str   = f"{metricas.get('clv_positivos_pct', 0):.0%} beats closing" if metricas.get("clv_n", 0) > 0 else "Sin cuotas cierre"
+    edge_est      = metricas.get("edge_estimado", "Sin datos")
 
     racha_actual = metricas["racha_actual"]
     racha_texto  = (f"+{racha_actual} ganadas seguidas" if racha_actual > 0
@@ -329,7 +356,7 @@ Registra apuestas con simulador.py y verifica resultados con resultado_checker.p
   </div>
 </div>
 
-<!-- Value bets -->
+<!-- Value bets + CLV -->
 <div class="grid-4" style="margin-bottom:24px">
   <div class="card">
     <div class="card-label">Value bets (>5%)</div>
@@ -345,6 +372,12 @@ Registra apuestas con simulador.py y verifica resultados con resultado_checker.p
     <div class="card-label">Retorno neto</div>
     <div class="card-value" style="color:{b_color}">${metricas['total_retorno']:+,.0f}</div>
     <div class="card-sub">CLP</div>
+  </div>
+  <div class="card" title="Closing Line Value: si es positivo, tomas mejores precios que el mercado al cierre — señal de edge real">
+    <div class="card-label">CLV promedio ℹ️</div>
+    <div class="card-value" style="color:{clv_color}">{clv_pct_str}</div>
+    <div class="card-sub">{clv_pos_str}</div>
+    <div class="card-sub" style="margin-top:4px;font-size:0.7rem">{edge_est} · n={metricas.get('clv_n',0)}</div>
   </div>
 </div>
 
