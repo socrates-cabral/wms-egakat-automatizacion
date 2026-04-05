@@ -448,8 +448,11 @@ def build_dataset(df_historico: pd.DataFrame, xg_data: pd.DataFrame = None, valo
             except Exception:
                 continue
 
-        # Agregar metadata para análisis por liga (no se usa como feature)
+        # Agregar metadata para análisis por liga y recency weighting (no son features)
         feats["_liga_id"] = row.get("liga_id", None)
+        # Propagar fecha para recency weighting en entrenador.py (Sprint 18)
+        col_fecha = col_map.get("date", None)
+        feats["Date"] = row[col_fecha] if col_fecha and col_fecha in row.index else None
 
         rows_features.append(feats)
         targets.append(target)

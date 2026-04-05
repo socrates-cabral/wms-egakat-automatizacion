@@ -301,13 +301,35 @@ def entrenar(df_features: pd.DataFrame) -> dict:
         log("[INFO] LightGBM no instalado — usando solo XGBoost (py -m pip install lightgbm)")
 
     # ── Calibración isotónica (post-training) ─────────────────────────────────
-    # Corrige que las probabilidades crudas de XGBoost no estén bien calibradas
-    log("[INFO] Calibrando probabilidades (CalibratedClassifierCV isotónico)...")
+    # Corrige que las probabilidades crudas de XGBoost no estén bien calibradas.
+    # sklearn 1.8+ eliminó cv="prefit" → usamos holdout de calibración manual.
+    log("[INFO] Calibrando probabilidades (holdout isotónico)...")
     try:
         from sklearn.calibration import CalibratedClassifierCV
-        # Usar cv="prefit" para no re-entrenar, solo calibrar sobre train
-        calibrador = CalibratedClassifierCV(modelo_xgb, cv="prefit", method="isotonic")
-        calibrador.fit(X_train_sc, y_train, sample_weight=sw_train)
+        from sklearn.base import clone
+
+        # Reservamos el 20% final del train para calibración (orden cronológico)
+        cal_size    = max(200, int(len(X_train_sc) * 0.20))
+        X_fit_sc    = X_train_sc[:-cal_size]
+        X_cal_sc    = X_train_sc[-cal_size:]
+        y_fit_c     = y_train[:-cal_size]
+        y_cal_c     = y_train[-cal_size:]
+        sw_fit_c    = sw_train[:-cal_size]
+
+        # Re-entrenar XGBoost en el split más pequeño (solo para calibración)
+        modelo_para_cal = clone(modelo_xgb)
+        modelo_para_cal.fit(X_fit_sc, y_fit_c, sample_weight=sw_fit_c)
+
+        # Intentar cv="prefit" (sklearn < 1.8) o fallback manual (sklearn >= 1.8)
+        try:
+            calibrador = CalibratedClassifierCV(modelo_para_cal, cv="prefit", method="isotonic")
+            calibrador.fit(X_cal_sc, y_cal_c)
+        except (ValueError, TypeError):
+            # sklearn 1.8+: cv="prefit" removido — calibrar con cv=3 sobre holdout
+            log("[INFO] sklearn >= 1.8 detectado — usando cv=3 para calibración")
+            calibrador = CalibratedClassifierCV(clone(modelo_xgb), cv=3, method="isotonic")
+            calibrador.fit(X_train_sc, y_train)
+
         modelo_final = calibrador
         log("[OK] Calibración isotónica aplicada")
     except Exception as e:
@@ -346,8 +368,9 @@ def entrenar(df_features: pd.DataFrame) -> dict:
     else:
         log(f"[OK] Test ≈ CV — sin leakage detectado ✓")
 
-    # Importancia de features
-    importancias = dict(zip(feature_cols, modelo_final.feature_importances_.tolist()))
+    # Importancia de features (usar XGBoost raw, CalibratedClassifierCV no expone feature_importances_)
+    modelo_para_imp = modelo_xgb  # siempre disponible
+    importancias = dict(zip(feature_cols, modelo_para_imp.feature_importances_.tolist()))
     top5 = sorted(importancias.items(), key=lambda x: x[1], reverse=True)[:5]
     log(f"[OK] Top-5 features: {top5}")
 
