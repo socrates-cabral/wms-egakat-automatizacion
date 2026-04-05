@@ -113,7 +113,10 @@ def _get_game_log_nba(team_id: int, n_games: int = 15) -> list[dict]:
 
 def _calcular_stats_basicas(games: list[dict], team_name: str) -> dict:
     """
-    Calcula back-to-back, rest_days, win_pct_l10, racha desde game logs de nba_api.
+    Calcula back-to-back, rest_days, win_pct_l10, racha, eFG%, TS% desde game logs de nba_api.
+
+    eFG% = (FGM + 0.5 * FG3M) / FGA          — eficiencia de tiro ajustada por triples
+    TS%  = PTS / (2 * (FGA + 0.44 * FTA))     — true shooting (incluye libres)
     """
     if not games:
         return {}
@@ -134,16 +137,11 @@ def _calcular_stats_basicas(games: list[dict], team_name: str) -> dict:
                     except Exception:
                         pass
 
-        if len(fechas) >= 2:
+        if fechas:
             hoy = date.today()
             ultimo_partido = fechas[0]
-            penultimo_partido = fechas[1] if len(fechas) > 1 else None
-
-            # Rest days desde último partido
             rest_days = (hoy - ultimo_partido).days
-            resultado["rest_days"] = max(0, rest_days)
-
-            # Back-to-back: si el último partido fue ayer
+            resultado["rest_days"]    = max(0, rest_days)
             resultado["back_to_back"] = (rest_days == 1)
 
     except Exception:
@@ -159,7 +157,7 @@ def _calcular_stats_basicas(games: list[dict], team_name: str) -> dict:
 
     # ── Racha actual ──────────────────────────────────────────────────────────
     try:
-        racha = 0
+        racha    = 0
         ultimo_wl = games[0].get("WL", "") if games else ""
         for g in games:
             if g.get("WL", "") == ultimo_wl:
@@ -170,83 +168,46 @@ def _calcular_stats_basicas(games: list[dict], team_name: str) -> dict:
     except Exception:
         pass
 
-    # ── Puntos promedio ───────────────────────────────────────────────────────
+    # ── Puntos, eFG%, TS% — calculados desde nba_api (sin balldontlie) ────────
     try:
-        pts_lista = [g.get("PTS", 0) for g in games[:10] if g.get("PTS")]
-        if pts_lista:
-            resultado["pts_pg"] = round(sum(pts_lista) / len(pts_lista), 1)
+        ultimos = games[:10]
+        pts_l, fgm_l, fga_l, fg3m_l, ftm_l, fta_l = [], [], [], [], [], []
+
+        for g in ultimos:
+            for campo, lista in [("PTS", pts_l), ("FGM", fgm_l), ("FGA", fga_l),
+                                  ("FG3M", fg3m_l), ("FTM", ftm_l), ("FTA", fta_l)]:
+                v = g.get(campo)
+                if v is not None:
+                    try:
+                        lista.append(float(v))
+                    except (ValueError, TypeError):
+                        pass
+
+        if pts_l:
+            resultado["pts_pg"] = round(sum(pts_l) / len(pts_l), 1)
+
+        # eFG% = (FGM + 0.5*FG3M) / FGA
+        if fgm_l and fga_l and fg3m_l and len(fgm_l) == len(fga_l) == len(fg3m_l):
+            efg_lista = [(fgm_l[i] + 0.5 * fg3m_l[i]) / fga_l[i]
+                         for i in range(len(fga_l)) if fga_l[i] > 0]
+            if efg_lista:
+                resultado["efg_pct"] = round(sum(efg_lista) / len(efg_lista), 3)
+
+        # TS% = PTS / (2 * (FGA + 0.44*FTA))
+        if pts_l and fga_l and fta_l and len(pts_l) == len(fga_l) == len(fta_l):
+            ts_lista = [pts_l[i] / (2 * (fga_l[i] + 0.44 * fta_l[i]))
+                        for i in range(len(pts_l)) if (fga_l[i] + 0.44 * fta_l[i]) > 0]
+            if ts_lista:
+                resultado["ts_pct"] = round(sum(ts_lista) / len(ts_lista), 3)
+
     except Exception:
         pass
 
     return resultado
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# BALLDONTLIE — pace, eFG%, TS%, advanced stats
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _get_advanced_stats_balldontlie(team_name: str) -> dict:
-    """
-    Obtiene pace, eFG%, TS% de balldontlie v2.
-    Requiere BBALL_KEY en .env.
-    """
-    if not BBALL_KEY:
-        return {}
-
-    try:
-        headers = {"Authorization": BBALL_KEY}
-
-        # Buscar team_id en balldontlie
-        r = requests.get(f"{BBALL_BASE}/nba/v2/teams",
-                         headers=headers, timeout=15)
-        if r.status_code != 200:
-            _log(f"balldontlie teams HTTP {r.status_code}")
-            return {}
-
-        nombre_l = team_name.lower()
-        team_id  = None
-        for t in r.json().get("data", []):
-            if (nombre_l in t.get("full_name", "").lower() or
-                    nombre_l in t.get("name", "").lower() or
-                    nombre_l in t.get("abbreviation", "").lower()):
-                team_id = t["id"]
-                break
-
-        if not team_id:
-            return {}
-
-        # Obtener stats avanzadas (box scores recientes)
-        r2 = requests.get(f"{BBALL_BASE}/nba/v2/stats",
-                          headers=headers,
-                          params={
-                              "team_ids[]": team_id,
-                              "per_page":   10,   # últimos 10 partidos
-                          }, timeout=15)
-        if r2.status_code != 200:
-            return {}
-
-        stats_list = r2.json().get("data", [])
-        if not stats_list:
-            return {}
-
-        # Calcular promedios
-        pace_list  = [s.get("pace", None) for s in stats_list if s.get("pace")]
-        efg_list   = [s.get("efg_pct", None) for s in stats_list if s.get("efg_pct")]
-        ts_list    = [s.get("ts_pct", None) for s in stats_list if s.get("ts_pct")]
-
-        resultado = {}
-        if pace_list:
-            resultado["pace"] = round(sum(pace_list) / len(pace_list), 1)
-        if efg_list:
-            resultado["efg_pct"] = round(sum(efg_list) / len(efg_list), 3)
-        if ts_list:
-            resultado["ts_pct"] = round(sum(ts_list) / len(ts_list), 3)
-
-        return resultado
-
-    except Exception as e:
-        _log(f"balldontlie error: {e}")
-        return {}
+# balldontlie.io migró a v2 de pago en 2024 — eFG%/TS% ahora se calculan
+# directamente desde los game logs de nba_api (FGM, FGA, FG3M, FTM, FTA).
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -289,13 +250,6 @@ def get_nba_features(home: str, away: str, fecha: str = None) -> dict:
             resultado[lado].update(stats_basicas)
         else:
             _log(f"No se encontró team_id NBA para: {equipo}")
-
-        # ── balldontlie: pace, eFG%, TS% ──────────────────────────────────────
-        if BBALL_KEY:
-            adv_stats = _get_advanced_stats_balldontlie(equipo)
-            if adv_stats:
-                resultado[lado].update(adv_stats)
-                resultado["fuente"] = "nba_api+balldontlie"
 
         _log(f"  {equipo}: {resultado[lado]}")
 
