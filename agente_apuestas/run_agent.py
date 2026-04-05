@@ -145,7 +145,8 @@ ESTADO_RIESGO_PATH = BASE_DIR / "backtesting" / "estado_riesgo.json"
 MAX_FIXTURES          = 6     # máx partidos a analizar (v2.0 stats ~11 req/partido)
 AUTO_REGISTRAR_BETS   = True  # registrar automáticamente en backtesting
 ESTRATEGIA_BACKTESTING = "flat"  # "flat" | "kelly"
-MIN_SCORE_AUTO_BET    = 55    # confianza mínima para auto-registrar en backtesting (bajado de 65 para generar historial)
+MIN_SCORE_AUTO_BET    = 55    # confianza mínima para fútbol (bajado de 65)
+MIN_SCORE_AUTO_BET_NO_FOOTBALL = 42   # umbral reducido para MLB/NBA/NFL (menos señales disponibles)
 
 # Stop reasons tipados — patrón spec/01 query loop
 # Permite al orquestador (Task Scheduler / logs) distinguir por qué terminó el agente
@@ -565,8 +566,11 @@ def _auto_registrar(partidos_analizados: list[dict], riesgo: dict) -> int:
         fixture = pd["fixture"]
         liga    = fixture.get("liga_nombre", "Desconocida")
 
+        deporte_fix = fixture.get("deporte", "futbol")
+        umbral_auto = MIN_SCORE_AUTO_BET if deporte_fix == "futbol" else MIN_SCORE_AUTO_BET_NO_FOOTBALL
+
         for rec in pd.get("recomendaciones", []):
-            if rec.get("confianza", 0) < MIN_SCORE_AUTO_BET:
+            if rec.get("confianza", 0) < umbral_auto:
                 continue
 
             # Límite diario
@@ -659,8 +663,11 @@ def _notificar_y_registrar(partidos_analizados: list[dict], riesgo: dict) -> int
         fixture = pd["fixture"]
         liga    = fixture.get("liga_nombre", "Desconocida")
 
+        deporte_notif = fixture.get("deporte", "futbol")
+        umbral_notif  = MIN_SCORE_AUTO_BET if deporte_notif == "futbol" else MIN_SCORE_AUTO_BET_NO_FOOTBALL
+
         for rec in pd.get("recomendaciones", []):
-            if rec.get("confianza", 0) < MIN_SCORE_AUTO_BET:
+            if rec.get("confianza", 0) < umbral_notif:
                 continue
             if apuestas_hoy >= 5:
                 log.info("[RIESGO] Límite 5 apuestas/día — fin de notificaciones.")
