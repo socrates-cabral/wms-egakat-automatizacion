@@ -57,9 +57,10 @@ def _color(score: int) -> str:
 def _score_h2h_muestra(stats: dict) -> int:
     """0-15: más datos H2H = más confianza."""
     total = stats.get("resumen_h2h", {}).get("total", 0)
-    if total >= 5: return 15
-    if total >= 3: return 10
-    if total >= 1: return 5
+    fuente_web = stats.get("_h2h_fuente") == "tavily_web"
+    if total >= 5: return 12 if fuente_web else 15
+    if total >= 3: return 8 if fuente_web else 10
+    if total >= 1: return 4 if fuente_web else 5
     return 0
 
 
@@ -221,6 +222,10 @@ def calcular_confianza(
     value     = value_bet.get("value")
     prob_m    = value_bet.get("prob_modelo", 0.5)
 
+    # Detectar si es deporte sin api-sports (NBA/MLB/NFL/tenis via Odds API)
+    deporte = fixture.get("deporte", stats.get("deporte", "futbol"))
+    sin_apisports = deporte not in ("futbol",)
+
     desglose = {
         "h2h_muestra":       _score_h2h_muestra(stats),
         "h2h_consistencia":  _score_h2h_consistencia(stats, tipo, seleccion),
@@ -232,6 +237,17 @@ def calcular_confianza(
     }
 
     score_base = min(sum(desglose.values()), 100)
+
+    # ── Ajuste para deportes sin api-sports ──────────────────────────────────
+    # NBA/MLB/NFL/tenis solo tienen cuotas → escalar score proporcionalmente
+    # ya que muchas señales (predicciones, lineup, H2H api) no están disponibles
+    if sin_apisports:
+        # Calcular qué % del score máximo teórico obtuvieron las señales disponibles
+        # y escalar al rango completo 0-100 para que sea comparable
+        max_teorico_sin_api = 15 + 20 + 15 + 5 + 15 + 3 + 3   # 76 (sin prediction/lineup completo)
+        factor_escala = 100 / max_teorico_sin_api if max_teorico_sin_api > 0 else 1.0
+        score_base = min(int(score_base * factor_escala), 100)
+        desglose["ajuste_no_apisports"] = f"x{factor_escala:.2f}"
 
     # ── Penalizaciones basketball ──────────────────────────────────────────────
     # Determinar equipo relevante para la apuesta
@@ -275,12 +291,16 @@ def calcular_confianza(
 
     score = max(0, min(score_base + pen_basketball + pen_capa4, 100))
 
+    # Umbral adaptativo: deportes sin api-sports tienen menos señales disponibles
+    # → usar umbral proporcionalmente más bajo para no bloquear todas las apuestas
+    umbral_efectivo = 40 if sin_apisports else MIN_CONFIDENCE
+
     return {
         "score":    score,
         "nivel":    _nivel(score),
         "color":    _color(score),
         "desglose": desglose,
-        "apto":     score >= MIN_CONFIDENCE,
+        "apto":     score >= umbral_efectivo,
     }
 
 

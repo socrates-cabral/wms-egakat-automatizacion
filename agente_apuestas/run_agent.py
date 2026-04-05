@@ -73,6 +73,7 @@ from claude_agent         import generar_reporte_html
 from backtesting.simulador import registrar_apuesta
 from referee_collector    import get_referee_stats
 from weather_collector    import get_weather
+from tavily_enricher      import enriquecer_stats as tavily_enriquecer, DISPONIBLE as TAVILY_DISPONIBLE
 
 # ── Predictor ML (Sprint 10) ──────────────────────────────────────────────────
 ML_DISPONIBLE = False
@@ -96,6 +97,12 @@ except ImportError:
     TELEGRAM_DISPONIBLE = False
     log = logging.getLogger(__name__)   # puede no estar definido aún, se redefine abajo
 
+# ── Tavily enrichment ─────────────────────────────────────────────────────────
+if TAVILY_DISPONIBLE:
+    log.info("[OK] Tavily enricher cargado — datos web como fallback para H2H/forma/lesiones")
+else:
+    log.info("[INFO] Tavily no disponible — usando solo api-sports")
+
 # ── Paths adicionales ─────────────────────────────────────────────────────────
 HISTORICO_PATH    = BASE_DIR / "backtesting" / "historico_apuestas.json"
 ESTADO_RIESGO_PATH = BASE_DIR / "backtesting" / "estado_riesgo.json"
@@ -104,7 +111,7 @@ ESTADO_RIESGO_PATH = BASE_DIR / "backtesting" / "estado_riesgo.json"
 MAX_FIXTURES          = 6     # máx partidos a analizar (v2.0 stats ~11 req/partido)
 AUTO_REGISTRAR_BETS   = True  # registrar automáticamente en backtesting
 ESTRATEGIA_BACKTESTING = "flat"  # "flat" | "kelly"
-MIN_SCORE_AUTO_BET    = 65    # confianza mínima para auto-registrar en backtesting
+MIN_SCORE_AUTO_BET    = 55    # confianza mínima para auto-registrar en backtesting (bajado de 65 para generar historial)
 
 # Stop reasons tipados — patrón spec/01 query loop
 # Permite al orquestador (Task Scheduler / logs) distinguir por qué terminó el agente
@@ -414,6 +421,13 @@ def analizar_partido(partido: dict) -> dict | None:
         cuotas = {}
 
     # ── Capa 4 dummy para no-fútbol (ya asignados arriba) ─────────────────
+
+    # Enriquecer con Tavily si datos insuficientes (H2H vacío, forma con "?")
+    if TAVILY_DISPONIBLE:
+        try:
+            stats = tavily_enriquecer(home, away, stats)
+        except Exception as e:
+            log.warning(f"  [AVISO] tavily_enricher: {e}")
 
     # e. Detectar value bets
     value_bets = detectar_value_bets(partido, stats, prediccion, cuotas, lineup)

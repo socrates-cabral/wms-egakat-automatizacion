@@ -422,6 +422,9 @@ def detectar_value_bets(
     home = fixture.get("home_nombre", "")
     away = fixture.get("away_nombre", "")
     fid  = fixture.get("fixture_id")
+    # Para deportes sin api-sports (NBA/MLB/NFL) relajamos el requisito de consenso
+    deporte = fixture.get("deporte", "futbol")
+    _requiere_consenso = deporte == "futbol"
 
     # ── Ensemble de probabilidades ────────────────────────────────────────────
     h2h_apertura = (cuotas or {}).get("h2h_apertura")   # dict {home, draw, away} si disponible
@@ -458,7 +461,7 @@ def detectar_value_bets(
             "prob_implicita":     round(prob_implicita, 4),
             "value":              round(value, 4),
             "cuota":              cuota,
-            "tiene_value":        value >= VALUE_THRESHOLD and consenso_modelos >= 2,
+            "tiene_value":        value >= VALUE_THRESHOLD and (consenso_modelos >= 2 or not _requiere_consenso),
             "fuente_cuota":       "the-odds-api",
             "steam_move":         steam["steam_move"],
             "steam_direccion":    steam["direccion"],
