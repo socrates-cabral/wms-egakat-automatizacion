@@ -160,6 +160,7 @@ def login(page):
 def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo):
     """
     Descarga un Excel para empresa/fechas dadas y lo guarda en ruta_archivo.
+    Si no hay registros, crea un archivo vacío (solo headers).
     Retorna True si OK, False si falla.
     El handler de dialog ya fue registrado en login() — no se registra aquí.
     """
@@ -188,6 +189,24 @@ def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo):
     page.wait_for_timeout(500)
     page.select_option("select[name='vCOMBOEXCEL']", label="Excel General")
     page.wait_for_timeout(500)
+
+    # Verificar si hay resultados antes de esperar descarga (evita timeout cuando sin registros)
+    # Esperar brevemente a que cargue la tabla, luego verificar si hay filas
+    try:
+        page.wait_for_selector("table", timeout=3000)
+        filas = page.query_selector_all("table tbody tr")
+        if not filas:
+            # Tabla existe pero vacía → sin registros en el período
+            df_vacio = pd.DataFrame()
+            df_vacio.to_excel(ruta_archivo, index=False, engine="openpyxl")
+            log(f"     [ADVERTENCIA] Sin registros — archivo vacío creado")
+            return True
+    except:
+        # Sin tabla → sin registros
+        df_vacio = pd.DataFrame()
+        df_vacio.to_excel(ruta_archivo, index=False, engine="openpyxl")
+        log(f"     [ADVERTENCIA] Sin registros — archivo vacío creado")
+        return True
 
     with page.expect_download(timeout=TIMEOUT_DESCARGA) as dl_info:
         page.click("input[name='BUTTON7']")
