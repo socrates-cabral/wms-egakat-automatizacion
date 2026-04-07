@@ -225,7 +225,8 @@ def verificar_limites_riesgo() -> dict:
     bankroll_ref = max(bankroll, BANKROLL_INICIAL)   # nunca dividir por 0
 
     # ── Verificar bloqueo semanal activo ──────────────────────────────────────
-    if ESTADO_RIESGO_PATH.exists():
+    # En paper trading: ignorar bloqueos persistidos — solo aplican en dinero real
+    if ESTADO_RIESGO_PATH.exists() and not MODO_PAPER_TRADING:
         try:
             with open(ESTADO_RIESGO_PATH, encoding="utf-8") as f:
                 estado = json.load(f)
@@ -248,13 +249,16 @@ def verificar_limites_riesgo() -> dict:
     pct_perdida_hoy = abs(perdida_hoy) / bankroll_ref
 
     if pct_perdida_hoy >= 0.15:
-        resultado["bloqueado"] = True
-        resultado["motivo"] = (
-            f"Stop-loss diario activado: -{pct_perdida_hoy:.1%} del bankroll hoy"
-        )
+        motivo_dia = f"Stop-loss diario activado: -{pct_perdida_hoy:.1%} del bankroll hoy"
         resultado["estado_color"] = "rojo"
-        log.warning(f"[RIESGO] {resultado['motivo']}")
-        return resultado
+        log.warning(f"[RIESGO] {motivo_dia}")
+        if not MODO_PAPER_TRADING:
+            resultado["bloqueado"] = True
+            resultado["motivo"] = motivo_dia
+            return resultado
+        else:
+            log.warning("[RIESGO] PAPER TRADING — stop-loss diario en alerta pero sin bloqueo")
+            resultado["alertas"].append(f"⚠️ {motivo_dia} (paper trading — sin bloqueo)")
 
     # ── Stop-loss semanal (>25% bankroll perdido esta semana) ─────────────────
     semana_resueltas = [a for a in resueltas
@@ -265,23 +269,30 @@ def verificar_limites_riesgo() -> dict:
 
     if pct_perdida_semana >= 0.25:
         bloqueo_hasta = (date.today() + timedelta(days=3)).isoformat()
-        try:
-            ESTADO_RIESGO_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with open(ESTADO_RIESGO_PATH, "w", encoding="utf-8") as f:
-                json.dump({"bloqueado_hasta": bloqueo_hasta,
-                           "motivo": "stop_loss_semanal",
-                           "fecha_registro": hoy}, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            log.warning(f"[RIESGO] No se pudo guardar estado_riesgo: {e}")
-
-        resultado["bloqueado"] = True
-        resultado["motivo"] = (
+        motivo_sl = (
             f"Stop-loss semanal activado: -{pct_perdida_semana:.1%} esta semana. "
             f"Bloqueado 3 días (hasta {bloqueo_hasta})"
         )
         resultado["estado_color"] = "rojo"
-        log.warning(f"[RIESGO] {resultado['motivo']}")
-        return resultado
+        log.warning(f"[RIESGO] {motivo_sl}")
+
+        # En paper trading: advertir pero NO bloquear — el objetivo es probar el modelo
+        # En dinero real: bloquear y guardar estado
+        if not MODO_PAPER_TRADING:
+            try:
+                ESTADO_RIESGO_PATH.parent.mkdir(parents=True, exist_ok=True)
+                with open(ESTADO_RIESGO_PATH, "w", encoding="utf-8") as f:
+                    json.dump({"bloqueado_hasta": bloqueo_hasta,
+                               "motivo": "stop_loss_semanal",
+                               "fecha_registro": hoy}, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                log.warning(f"[RIESGO] No se pudo guardar estado_riesgo: {e}")
+            resultado["bloqueado"] = True
+            resultado["motivo"] = motivo_sl
+            return resultado
+        else:
+            log.warning("[RIESGO] PAPER TRADING — stop-loss semanal en alerta pero sin bloqueo (modo prueba)")
+            resultado["alertas"].append(f"⚠️ {motivo_sl} (paper trading — sin bloqueo)")
 
     # ── Racha negativa ────────────────────────────────────────────────────────
     # Últimas apuestas con resultado conocido (ordenadas cronológicamente desc)
