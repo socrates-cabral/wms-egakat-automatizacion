@@ -347,10 +347,18 @@ def _prob_1x2(stats: dict, prediccion: dict) -> dict:
 # LAMBDA ESPERADO (goles totales)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _lambda_esperado(prediccion: dict, stats: dict) -> float:
+_MLB_LAMBDA_DEFAULT  = 8.5   # carreras totales promedio MLB
+_NBA_LAMBDA_DEFAULT  = 220.0 # puntos totales promedio NBA (Poisson no aplica — _p_over retorna 0.5)
+_NFL_LAMBDA_DEFAULT  = 47.0  # puntos totales promedio NFL (ídem)
+
+def _lambda_esperado(prediccion: dict, stats: dict, deporte: str = "futbol") -> float:
     """
-    Estima los goles totales esperados del partido (lambda para Poisson).
+    Estima los goles/carreras/puntos totales esperados del partido (lambda para Poisson).
     Blend de 3 fuentes: api-sports, H2H, promedios temporada.
+
+    Para deportes que no son fútbol y donde las fuentes devuelven datos de fútbol
+    (lambda < 5), se aplica un default realista por deporte para evitar probabilidades
+    absurdas (ej: P(Under 7.5 carreras MLB) ≈ 100% con lambda=2.5 de fútbol).
     """
     fuentes = []
 
@@ -385,11 +393,35 @@ def _lambda_esperado(prediccion: dict, stats: dict) -> float:
         lam_season = sh["promedio_gf"] + sa["promedio_gf"]
         fuentes.append((lam_season, 0.20))
 
+    # Lambda mínimos realistas por deporte — evita prob Under ≈ 100% por datos vacíos de API
+    LAMBDA_MINIMO = {
+        "futbol":           1.0,   # La Liga/PL raramente < 1 gol esperado total
+        "mlb":              6.0,   # béisbol: mínimo conservador
+        "nba":              180.0, # basketball: mínimo realista
+        "nfl":              35.0,  # americano: mínimo realista
+        "americanfootball": 35.0,
+    }
+    # Lambda defaults cuando no hay datos en absoluto
+    LAMBDA_DEFAULT = {
+        "mlb":              _MLB_LAMBDA_DEFAULT,
+        "nba":              _NBA_LAMBDA_DEFAULT,
+        "nfl":              _NFL_LAMBDA_DEFAULT,
+        "americanfootball": _NFL_LAMBDA_DEFAULT,
+    }
+
     if not fuentes:
-        return 2.5   # neutral
+        return LAMBDA_DEFAULT.get(deporte, 2.5)
 
     peso_total = sum(f[1] for f in fuentes)
-    return sum(f[0] * f[1] / peso_total for f in fuentes)
+    lam_calculado = sum(f[0] * f[1] / peso_total for f in fuentes)
+
+    # Aplicar mínimo por deporte — si el calculado es irreal (datos vacíos/cero de API),
+    # usar el mínimo para ese deporte en vez de dar probabilidades absurdas
+    lam_min = LAMBDA_MINIMO.get(deporte, 0.0)
+    if lam_calculado < lam_min:
+        return LAMBDA_DEFAULT.get(deporte, lam_min)
+
+    return lam_calculado
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -471,7 +503,7 @@ def detectar_value_bets(
         })
 
     # ── OVER / UNDER (Poisson) ────────────────────────────────────────────────
-    lam = _lambda_esperado(prediccion, stats)
+    lam = _lambda_esperado(prediccion, stats, deporte=deporte)
     totals = (cuotas or {}).get("totals", [])
     totals_apertura = (cuotas or {}).get("totals_apertura", [])
 

@@ -77,7 +77,17 @@ def recomendar_apuestas(
 
     recomendaciones.sort(key=lambda r: r["score_final"], reverse=True)
 
-    return recomendaciones[:max_recomendaciones]
+    # Deduplicar: una sola apuesta por (fixture_id, tipo_apuesta)
+    # Si hay Under 7.5, Under 8.0, Under 9.5 del mismo partido → solo la mejor
+    vistos = set()
+    deduplicadas = []
+    for r in recomendaciones:
+        clave = (r.get("fixture_id"), r["tipo_apuesta"])
+        if clave not in vistos:
+            vistos.add(clave)
+            deduplicadas.append(r)
+
+    return deduplicadas[:max_recomendaciones]
 
 
 def formatear_recomendaciones_texto(recomendaciones: list[dict]) -> str:

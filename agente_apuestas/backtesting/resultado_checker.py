@@ -160,6 +160,18 @@ def verificar_pendientes(verbose: bool = True) -> dict:
 
     for apuesta in pendientes:
         fixture_id = apuesta["fixture_id"]
+
+        # Detectar fixture_ids de The Odds API (hashes string como "48b9e30cc5595d9696cc12db0aef6114")
+        # Estos no son consultables via api-sports — requieren verificación manual o API distinta
+        es_hash_externo = isinstance(fixture_id, str) and not fixture_id.isdigit()
+        if es_hash_externo:
+            liga = apuesta.get("liga", "")
+            resumen["pendientes"] += 1
+            if verbose:
+                print(f"  🔎 [{apuesta['id'][:8]}] {apuesta['home']} vs {apuesta['away']} "
+                      f"({liga}) → ID externo (The Odds API) — verificar resultado manualmente")
+            continue
+
         resultado  = get_resultado_fixture(fixture_id)
 
         if resultado is None:

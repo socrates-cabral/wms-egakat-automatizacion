@@ -190,23 +190,19 @@ def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo):
     page.select_option("select[name='vCOMBOEXCEL']", label="Excel General")
     page.wait_for_timeout(500)
 
-    # Verificar si hay resultados antes de esperar descarga (evita timeout cuando sin registros)
-    # Esperar brevemente a que cargue la tabla, luego verificar si hay filas
+    # Detectar mensaje WMS "sin resultados" — aparece cuando el cliente no tiene pedidos
+    # preparados en el período (condición normal, no un error del sistema)
     try:
-        page.wait_for_selector("table", timeout=3000)
-        filas = page.query_selector_all("table tbody tr")
-        if not filas:
-            # Tabla existe pero vacía → sin registros en el período
-            df_vacio = pd.DataFrame()
-            df_vacio.to_excel(ruta_archivo, index=False, engine="openpyxl")
-            log(f"     [ADVERTENCIA] Sin registros — archivo vacío creado")
-            return True
-    except:
-        # Sin tabla → sin registros
+        page.wait_for_selector(
+            "text=No existen OPs que coincidan con los filtros de la pantalla.",
+            timeout=4000
+        )
         df_vacio = pd.DataFrame()
         df_vacio.to_excel(ruta_archivo, index=False, engine="openpyxl")
-        log(f"     [ADVERTENCIA] Sin registros — archivo vacío creado")
+        log(f"     [ADVERTENCIA] Sin pedidos preparados en el periodo — archivo vacío creado")
         return True
+    except Exception:
+        pass  # Mensaje no presente → hay registros, continuar con descarga
 
     with page.expect_download(timeout=TIMEOUT_DESCARGA) as dl_info:
         page.click("input[name='BUTTON7']")

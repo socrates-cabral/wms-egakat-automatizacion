@@ -292,8 +292,9 @@ def calcular_confianza(
     score = max(0, min(score_base + pen_basketball + pen_capa4, 100))
 
     # Umbral adaptativo: deportes sin api-sports tienen menos señales disponibles
-    # → usar umbral proporcionalmente más bajo para no bloquear todas las apuestas
-    umbral_efectivo = 40 if sin_apisports else MIN_CONFIDENCE
+    # → usar umbral ligeramente más bajo pero no tan permisivo como para dejar pasar
+    #   señales basura (el 40 anterior era demasiado bajo — pasaban bets con lambda roto)
+    umbral_efectivo = 50 if sin_apisports else MIN_CONFIDENCE
 
     return {
         "score":    score,
