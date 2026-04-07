@@ -55,15 +55,31 @@ def _poisson_pmf(k: int, lam: float) -> float:
 
 
 def _p_over(lam: float, linea: float) -> float:
-    """P(total_goles > linea) con distribución Poisson(lam).
-    Retorna 0.5 (neutral) si la línea es >30 — basketball/NFL donde Poisson no aplica
-    y donde k_max grande causaría OverflowError en math.factorial().
+    """P(total > linea) con distribución Poisson(lam).
+    Para líneas enteras (2.0, 3.0) Over N = P(X >= N+1) — push excluido.
+    Para líneas fraccionarias (2.5): Over 2.5 = P(X >= 3) — sin push posible.
+    Retorna 0.5 (neutral) si la línea es >30 — basketball/NFL donde Poisson no aplica.
     """
-    k_max = int(linea)   # si linea=2.5 → P(X >= 3)
-    if k_max > 30:       # NBA ~224, NFL ~47 — Poisson no aplica para estos deportes
+    k_max = int(linea)   # int(2.5)=2 → P(X>=3); int(2.0)=2 → P(X>=3) también ✓
+    if k_max > 30:
         return 0.5
     p_under_o_igual = sum(_poisson_pmf(k, lam) for k in range(k_max + 1))
     return max(0.0, min(1.0, 1 - p_under_o_igual))
+
+
+def _p_under(lam: float, linea: float) -> float:
+    """P(total < linea) con distribución Poisson(lam).
+    Para líneas enteras (2.0): Under 2.0 = P(X <= 1), excluye el push en X=2.
+    Para líneas fraccionarias (2.5): Under 2.5 = P(X <= 2) — sin push posible.
+    Retorna 0.5 (neutral) si la línea es >30.
+    """
+    if linea == int(linea):   # línea entera: excluir el empate exacto (push)
+        k_max = int(linea) - 1
+    else:
+        k_max = int(linea)
+    if k_max > 30:
+        return 0.5
+    return max(0.0, min(1.0, sum(_poisson_pmf(k, lam) for k in range(k_max + 1))))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -394,19 +410,19 @@ def _lambda_esperado(prediccion: dict, stats: dict, deporte: str = "futbol") -> 
         fuentes.append((lam_season, 0.20))
 
     # Lambda mínimos realistas por deporte — evita prob Under ≈ 100% por datos vacíos de API
+    # IMPORTANTE: usar las claves exactas de fixtures_collector.py (deporte field)
+    #   "futbol", "baseball" (MLB), "basketball" (NBA), "nfl"
     LAMBDA_MINIMO = {
-        "futbol":           1.0,   # La Liga/PL raramente < 1 gol esperado total
-        "mlb":              6.0,   # béisbol: mínimo conservador
-        "nba":              180.0, # basketball: mínimo realista
-        "nfl":              35.0,  # americano: mínimo realista
-        "americanfootball": 35.0,
+        "futbol":     1.0,    # La Liga/PL raramente < 1 gol esperado total
+        "baseball":   6.0,    # MLB: mínimo conservador (~8.5 carreras promedio)
+        "basketball": 180.0,  # NBA: mínimo realista (~220 pts promedio)
+        "nfl":        35.0,   # NFL: mínimo realista (~47 pts promedio)
     }
     # Lambda defaults cuando no hay datos en absoluto
     LAMBDA_DEFAULT = {
-        "mlb":              _MLB_LAMBDA_DEFAULT,
-        "nba":              _NBA_LAMBDA_DEFAULT,
-        "nfl":              _NFL_LAMBDA_DEFAULT,
-        "americanfootball": _NFL_LAMBDA_DEFAULT,
+        "baseball":   _MLB_LAMBDA_DEFAULT,
+        "basketball": _NBA_LAMBDA_DEFAULT,
+        "nfl":        _NFL_LAMBDA_DEFAULT,
     }
 
     if not fuentes:
@@ -513,14 +529,14 @@ def detectar_value_bets(
         t_ap = totals_apertura[idx] if idx < len(totals_apertura) else {}
         for tipo, cuota_key, prob_fn in [
             ("Over",  "over",  lambda p=punto: _p_over(lam, p)),
-            ("Under", "under", lambda p=punto: 1 - _p_over(lam, p)),
+            ("Under", "under", lambda p=punto: _p_under(lam, p)),
         ]:
             cuota = t.get(cuota_key)
             if not cuota or cuota <= 1.01:
                 continue
             cuota_ap       = t_ap.get(cuota_key)
             steam          = detectar_steam_move(cuota_ap, cuota)
-            prob_modelo    = prob_fn()
+            prob_modelo    = min(0.95, prob_fn())   # cap: ningún modelo debería ser 100% seguro
             prob_implicita = 1 / cuota
             value = prob_modelo - prob_implicita
 
