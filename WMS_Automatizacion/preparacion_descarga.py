@@ -1,7 +1,7 @@
 """
 WMS EGAKAT — Módulo 7: Descarga de Pedidos Preparados
 Autor: Sócrates Cabral - Control de Gestión y Mejora Continua
-Versión: 1.4
+Versión: 1.5
 Flujo:
   1. Login → Depósito QUILICURA → Aceptar
   2. Navegar directamente a pedidospreparadoswp.aspx
@@ -9,6 +9,9 @@ Flujo:
      → Detalle de Picking (sin Aplicar) → Exportar Excel
   4. Guardar en OneDrive → {CLIENTE}/Preparación/{AÑO}/{MM Mes}/Pedidos Preparados.xlsx
   5. Al sobrescribir el archivo, Power BI siempre lee datos del mes acumulado
+Cambios v1.5:
+  - Retry automático en descargar_cliente: 2 intentos con 60s de pausa entre ellos
+  - Cubre timeouts por WMS lento (e.g. CERVECERIA ABI con volumen alto)
 Cambios v1.4:
   - DERCO descarga particionada en chunks de 5 dias (evita timeout por volumen)
   - Chunks combinados con pandas + drop_duplicates() por filas exactamente iguales
@@ -216,19 +219,24 @@ def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo):
 def descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta):
     fd_str = fd_dt.strftime("%d/%m/%Y")
     fh_str = fh_dt.strftime("%d/%m/%Y")
-    try:
-        archivo_final = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
-        log(f"  -> Fechas: {fd_str} a {fh_str}")
-        _bajar_excel(page, empresa_wms, fd_str, fh_str, archivo_final)
-        log(f"  -> [OK] Guardado: {archivo_final}")
-        return True
-    except Exception as e:
-        log(f"  -> [FALLO] {e}")
+    archivo_final = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
+    for intento in range(1, 3):  # 2 intentos
         try:
-            page.goto("about:blank", wait_until="load", timeout=15_000)
-        except Exception:
-            pass
-        return False
+            log(f"  -> Fechas: {fd_str} a {fh_str} (intento {intento}/2)")
+            _bajar_excel(page, empresa_wms, fd_str, fh_str, archivo_final)
+            log(f"  -> [OK] Guardado: {archivo_final}")
+            return True
+        except Exception as e:
+            log(f"  -> [FALLO intento {intento}] {e}")
+            try:
+                page.goto("about:blank", wait_until="load", timeout=15_000)
+            except Exception:
+                pass
+            if intento < 2:
+                log("  -> Esperando 60s antes de reintentar...")
+                page.wait_for_timeout(60_000)
+    log(f"  -> [FALLO] {empresa_wms} no descargó tras 2 intentos")
+    return False
 
 # ── DESCARGA DERCO PARTICIONADA (chunks de 5 días + merge) ────────────────────
 
