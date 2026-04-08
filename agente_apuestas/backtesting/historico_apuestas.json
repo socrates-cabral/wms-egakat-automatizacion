@@ -267,12 +267,12 @@
     "monto_apostado": 5000,
     "estrategia": "flat",
     "bankroll_antes": 59125.0,
-    "resultado_real": null,
-    "score_final": null,
-    "ganado": null,
-    "retorno": null,
-    "cuota_cierre": null,
-    "clv": null
+    "resultado_real": "Under 7.5",
+    "score_final": "4-3",
+    "ganado": true,
+    "retorno": 1715.0,
+    "cuota_cierre": 1.93,
+    "clv": -0.3041
   },
   {
     "id": "ccf32dbc1ea5",
@@ -292,11 +292,11 @@
     "monto_apostado": 5000,
     "estrategia": "flat",
     "bankroll_antes": 59125.0,
-    "resultado_real": null,
-    "score_final": null,
-    "ganado": null,
-    "retorno": null,
-    "cuota_cierre": null,
-    "clv": null
+    "resultado_real": "Under 8.5",
+    "score_final": "2-9",
+    "ganado": false,
+    "retorno": -5000,
+    "cuota_cierre": 1.97,
+    "clv": 0.0
   }
 ]
