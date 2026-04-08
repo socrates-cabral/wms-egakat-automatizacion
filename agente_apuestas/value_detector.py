@@ -367,29 +367,66 @@ _MLB_LAMBDA_DEFAULT  = 8.5   # carreras totales promedio MLB
 _NBA_LAMBDA_DEFAULT  = 220.0 # puntos totales promedio NBA (Poisson no aplica — _p_over retorna 0.5)
 _NFL_LAMBDA_DEFAULT  = 47.0  # puntos totales promedio NFL (ídem)
 
+def _pitcher_factor(era) -> float:
+    """Factor multiplicador de lambda según ERA del pitcher abridor MLB.
+    Era < 3.0 → ace dominante: reduce runs esperadas.
+    Era >= 5.0 → pitcher débil: aumenta runs esperadas.
+    """
+    if era is None:
+        return 1.0
+    try:
+        era = float(era)
+    except (TypeError, ValueError):
+        return 1.0
+    if era < 3.0:  return 0.75
+    if era < 4.0:  return 0.88
+    if era < 5.0:  return 1.00
+    return 1.15
+
+
 def _lambda_esperado(prediccion: dict, stats: dict, deporte: str = "futbol") -> float:
     """
     Estima los goles/carreras/puntos totales esperados del partido (lambda para Poisson).
-    Blend de 3 fuentes: api-sports, H2H, promedios temporada.
 
-    Para deportes que no son fútbol y donde las fuentes devuelven datos de fútbol
-    (lambda < 5), se aplica un default realista por deporte para evitar probabilidades
-    absurdas (ej: P(Under 7.5 carreras MLB) ≈ 100% con lambda=2.5 de fútbol).
+    Fuentes (en orden de prioridad para béisbol):
+      1. MLB StatsAPI features — runs/game + ERA pitcher abridor (peso 0.70 si disponible)
+      2. api-sports goles esperados (peso 0.50 en fútbol / respaldo en béisbol)
+      3. H2H promedio goles (peso 0.30)
+      4. Promedios de temporada (peso 0.20)
     """
     fuentes = []
 
-    # Fuente 1 — api-sports goles esperados (peso 0.50)
+    # ── Fuente MLB (solo béisbol) — runs/game reales + ajuste pitcher ERA ─────
+    if deporte == "baseball":
+        runs_h  = stats.get("_mlb_home_runs_pg")
+        runs_a  = stats.get("_mlb_away_runs_pg")
+        ra_h    = stats.get("_mlb_home_runs_against_pg")  # carreras permitidas home
+        ra_a    = stats.get("_mlb_away_runs_against_pg")  # carreras permitidas away
+        era_h   = stats.get("_mlb_home_era_sp")
+        era_a   = stats.get("_mlb_away_era_sp")
+
+        if runs_h and runs_a:
+            # Carreras esperadas home: ofensiva home vs defensa away
+            base_h = (float(runs_h) + float(ra_a)) / 2 if ra_a else float(runs_h)
+            # Carreras esperadas away: ofensiva away vs defensa home
+            base_a = (float(runs_a) + float(ra_h)) / 2 if ra_h else float(runs_a)
+
+            # Ajuste por ERA del pitcher abridor (~40% del resultado en MLB)
+            lam_mlb = base_h * _pitcher_factor(era_h) + base_a * _pitcher_factor(era_a)
+            fuentes.append((lam_mlb, 0.70))   # peso alto: datos reales del partido
+
+    # ── Fuente api-sports goles esperados (peso 0.50 en fútbol) ───────────────
     if prediccion:
         gh = prediccion.get("goles_esperados_home")
         ga = prediccion.get("goles_esperados_away")
         if gh is not None and ga is not None:
             try:
-                fuentes.append((float(gh) + float(ga), 0.50))
+                peso_api = 0.20 if deporte == "baseball" and fuentes else 0.50
+                fuentes.append((float(gh) + float(ga), peso_api))
             except (TypeError, ValueError):
                 pass
 
-    # Fuente 2 — H2H promedio goles (peso 0.30)
-    # Usar h2h_raw (lista de partidos) — stats["h2h"] es un dict completo en v2.0
+    # ── Fuente H2H promedio goles (peso 0.30) ─────────────────────────────────
     h2h_games = stats.get("h2h_raw") or stats.get("h2h", [])
     if isinstance(h2h_games, dict):
         h2h_games = h2h_games.get("partidos", [])
@@ -399,15 +436,16 @@ def _lambda_esperado(prediccion: dict, stats: dict, deporte: str = "futbol") -> 
                   and p.get("away_goles") is not None]
     if terminados:
         avg = sum(p["home_goles"] + p["away_goles"] for p in terminados) / len(terminados)
-        fuentes.append((avg, 0.30))
+        peso_h2h = 0.10 if deporte == "baseball" and fuentes else 0.30
+        fuentes.append((avg, peso_h2h))
 
-    # Fuente 3 — Promedios de temporada (peso 0.20)
+    # ── Fuente promedios de temporada (peso 0.20) ─────────────────────────────
     sh = stats.get("stats_home", {})
     sa = stats.get("stats_away", {})
     if sh.get("promedio_gf") and sa.get("promedio_gf"):
-        # xG simplificado: goles favor home + goles favor away
         lam_season = sh["promedio_gf"] + sa["promedio_gf"]
-        fuentes.append((lam_season, 0.20))
+        peso_season = 0.10 if deporte == "baseball" and fuentes else 0.20
+        fuentes.append((lam_season, peso_season))
 
     # Lambda mínimos realistas por deporte — evita prob Under ≈ 100% por datos vacíos de API
     # IMPORTANTE: usar las claves exactas de fixtures_collector.py (deporte field)

@@ -220,7 +220,20 @@ def verificar_limites_riesgo() -> dict:
 
     # ── Calcular bankroll actual ──────────────────────────────────────────────
     resueltas = [a for a in apuestas if a.get("retorno") is not None]
-    bankroll = BANKROLL_INICIAL + sum(a.get("retorno", 0) for a in resueltas)
+    bankroll_base = BANKROLL_INICIAL + sum(a.get("retorno", 0) for a in resueltas)
+
+    # Descontar apuestas pendientes (apostado pero sin resultado aún)
+    # Representan exposición real aunque no estén resueltas
+    pendientes_monto = sum(
+        a.get("monto_apostado", 0)
+        for a in apuestas
+        if a.get("retorno") is None and a.get("monto_apostado")
+    )
+    bankroll = bankroll_base - pendientes_monto
+    if pendientes_monto > 0:
+        log.info(f"  [RIESGO] Bankroll: ${bankroll_base:,.0f} base "
+                 f"- ${pendientes_monto:,.0f} pendientes = ${bankroll:,.0f} disponible")
+
     resultado["bankroll_actual"] = bankroll
     bankroll_ref = max(bankroll, BANKROLL_INICIAL)   # nunca dividir por 0
 
