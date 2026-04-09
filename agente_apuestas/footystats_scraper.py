@@ -2,50 +2,41 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
 """
-footystats_scraper.py  v1.1
-Descarga CSVs de partidos desde footystats.org usando Playwright.
+footystats_scraper.py  v2.0
+Descarga CSVs de FootyStats usando las cookies de tu Chrome real.
+NO usa Playwright — evita Cloudflare completamente.
 
-Requisitos en .env:
-    FOOTYSTATS_EMAIL=tu@email.com
-    FOOTYSTATS_PASSWORD=tu_password
+Requisitos:
+  - Estar logueado en footystats.org en tu Chrome normal (no necesita estar abierto)
+  - pip install browser-cookie3 requests beautifulsoup4
 
 Uso:
-    py agente_apuestas/footystats_scraper.py              # headless (puede fallar Cloudflare)
-    py agente_apuestas/footystats_scraper.py --headful    # abre ventana visible — recomendado
-    py agente_apuestas/footystats_scraper.py --headful --liga "Serie A"
-
-Modo headful:
-    - Abre Chromium visible para que puedas resolver captchas/Cloudflare manualmente
-    - Si hay Cloudflare: resuelve el challenge → el scraper continúa solo
-    - Si hay login: el scraper lo intenta automático; si falla, loguéate tú
-    - Pausa 10s antes del login para que veas la pantalla
+    py agente_apuestas/footystats_scraper.py              # descarga todo
+    py agente_apuestas/footystats_scraper.py --liga "Serie A"
+    py agente_apuestas/footystats_scraper.py --debug      # muestra links encontrados sin descargar
 
 Output:
-    datos_footystats/{slug}_{season}_matches.csv
-    datos_footystats/{slug}_{season}_teams.csv
+    agente_apuestas/datos_footystats/{slug}_{season}_{tipo}.csv
 
 Frecuencia recomendada: 1 vez por semana.
-Costo de requests: 0 (no consume api-sports).
 """
 
 import os
 import re
-import time
 import logging
 import argparse
 from datetime import datetime
 from pathlib import Path
+
+import json
+import requests
 from dotenv import load_dotenv
-from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 # ── Config ────────────────────────────────────────────────────────────────────
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
-FOOTYSTATS_EMAIL    = os.getenv("FOOTYSTATS_EMAIL", "")
-FOOTYSTATS_PASSWORD = os.getenv("FOOTYSTATS_PASSWORD", "")
-
-BASE_DIR      = Path(__file__).parent
-DATOS_DIR     = BASE_DIR / "datos_footystats"
+BASE_DIR  = Path(__file__).parent
+DATOS_DIR = BASE_DIR / "datos_footystats"
 DATOS_DIR.mkdir(exist_ok=True)
 
 LOG_DIR = BASE_DIR.parent / "logs"
@@ -64,290 +55,182 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-TIMEOUT = 30_000   # 30s para navegación
-TIMEOUT_DL = 60_000  # 60s para descargas
+URL_DOWNLOAD  = "https://footystats.org/download-stats-csv"
+COOKIES_FILE  = BASE_DIR / "footystats_cookies.json"   # exportado con Cookie-Editor
 
-# ── Ligas objetivo (nombres como aparecen en footystats.org) ──────────────────
-# El scraper busca estas cadenas en el texto de los links de descarga.
-# Ajustar si footystats usa nombres distintos.
-LIGAS_OBJETIVO = {
-    "Premier League":    "premier-league",
-    "Serie A":           "serie-a",
-    "La Liga":           "la-liga",
-    "Bundesliga":        "bundesliga",
-    "Ligue 1":           "ligue-1",
-    "Champions League":  "champions-league",
-    "Primera Division CL": "primera-division",   # Chile
+# comp IDs de FootyStats para cada liga objetivo
+# Verificados 2026-04-09 desde footystats.org/download-stats-csv
+LIGAS_COMP = {
+    "Premier League":      {"comp": "15050", "slug": "premier-league"},
+    "La Liga":             {"comp": "14956", "slug": "la-liga"},
+    "Serie A":             {"comp": "15068", "slug": "serie-a"},
+    "Bundesliga":          {"comp": "14968", "slug": "bundesliga"},
+    "Ligue 1":             {"comp": "2426",  "slug": "ligue-1"},
+    "Primera Division CL": {"comp": "16615", "slug": "primera-division-cl"},
+    # Gratis (sin Premium):
+    "EPL 2018-2019":       {"comp": "1625",  "slug": "epl-2018-2019"},
 }
-
-URL_LOGIN    = "https://footystats.org/login"
-URL_DOWNLOAD = "https://footystats.org/download-stats-csv"
-
-# Perfil de browser persistente — guarda cookies/sesión entre ejecuciones
-# Así no tienes que resolver Cloudflare cada vez
-PROFILE_DIR  = BASE_DIR / ".footystats_profile"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def slug_from_url(href: str) -> str:
-    """Extrae slug legible de la URL de descarga."""
-    parts = href.rstrip("/").split("/")
-    return parts[-1].replace(".csv", "").replace(".xlsx", "")
+def nombre_archivo(slug: str, tipo: str, comp_id: str) -> Path:
+    return DATOS_DIR / f"{slug}_{tipo}.csv"
 
 
-def nombre_archivo(liga_slug: str, tipo: str, season: str) -> Path:
-    """
-    Retorna Path destino para el CSV.
-    Ejemplo: datos_footystats/serie-a_2024_matches.csv
-    """
-    season_clean = season.replace("/", "-")
-    return DATOS_DIR / f"{liga_slug}_{season_clean}_{tipo}.csv"
-
-
-def ya_descargado(liga_slug: str, tipo: str, season: str) -> bool:
-    path = nombre_archivo(liga_slug, tipo, season)
+def ya_descargado(slug: str, tipo: str, comp_id: str) -> bool:
+    path = nombre_archivo(slug, tipo, comp_id)
     return path.exists() and path.stat().st_size > 1000
 
 
-# ── Login ─────────────────────────────────────────────────────────────────────
 
-def hacer_login(page, headful: bool = False) -> bool:
+# ── Sesión con cookies exportadas ────────────────────────────────────────────
+
+def obtener_sesion_chrome() -> requests.Session:
     """
-    Navega a login y autentica.
-    En modo headful: pausa para que el usuario resuelva Cloudflare/captcha si aparece.
-    Retorna True si logramos estar logueados.
+    Carga cookies desde footystats_cookies.json (exportado con Cookie-Editor en Chrome).
+    Para exportar:
+      1. Ve a footystats.org en Chrome (logueado)
+      2. Abre Cookie-Editor → Export → Export as JSON
+      3. Guarda como: agente_apuestas/footystats_cookies.json
     """
-    if not FOOTYSTATS_EMAIL or not FOOTYSTATS_PASSWORD:
-        log.error("[FALLO] FOOTYSTATS_EMAIL / FOOTYSTATS_PASSWORD no configurados en .env")
-        return False
+    if not COOKIES_FILE.exists():
+        log.error(f"[FALLO] No se encontró: {COOKIES_FILE}")
+        log.error("")
+        log.error("Para crear el archivo de cookies:")
+        log.error("  1. Instala la extensión 'Cookie-Editor' en Chrome")
+        log.error("  2. Ve a footystats.org (logueado)")
+        log.error("  3. Clic en Cookie-Editor → Export → Export as JSON")
+        log.error(f"  4. Guarda el archivo en: {COOKIES_FILE}")
+        raise FileNotFoundError(COOKIES_FILE)
 
-    log.info("Navegando a login FootyStats...")
-    page.goto(URL_LOGIN, timeout=TIMEOUT)
+    log.info(f"Cargando cookies desde {COOKIES_FILE.name}...")
+    with open(COOKIES_FILE, "r", encoding="utf-8") as f:
+        raw = json.load(f)
 
-    if headful:
-        log.info("Modo headful — esperando 8s para que cargue (resuelve Cloudflare si aparece)...")
-        time.sleep(8)
+    session = requests.Session()
 
-    page.wait_for_load_state("domcontentloaded", timeout=TIMEOUT)
+    # Cookie-Editor exporta lista de objetos con campos "name", "value", "domain", etc.
+    for c in raw:
+        name  = c.get("name") or c.get("key", "")
+        value = c.get("value", "")
+        if name and value:
+            session.cookies.set(name, value, domain=c.get("domain", ".footystats.org"))
 
-    # ── Detectar Cloudflare challenge ────────────────────────────────────────
-    if "cloudflare" in page.title().lower() or "attention required" in page.title().lower():
-        if headful:
-            log.warning("[Cloudflare] Challenge detectado — tienes 30s para resolverlo en la ventana...")
-            time.sleep(30)
-            page.wait_for_load_state("domcontentloaded", timeout=TIMEOUT)
-        else:
-            log.error("[FALLO] Cloudflare bloqueó el acceso. Usa --headful para resolver manualmente.")
-            return False
-
-    # ── Verificar si ya estamos logueados (sesión guardada en perfil) ────────
-    if "/login" not in page.url:
-        log.info(f"[OK] Sesión activa detectada — {page.url}")
-        return True
-
-    # ── Intentar login automático ─────────────────────────────────────────────
-    try:
-        # Esperar a que aparezca el formulario
-        page.wait_for_selector(
-            'input[type="email"], input[name="email"], input[name="username"], #email',
-            timeout=10_000
-        )
-        page.fill('input[type="email"], input[name="email"], input[name="username"], #email',
-                  FOOTYSTATS_EMAIL)
-        page.fill('input[type="password"], input[name="password"], #password',
-                  FOOTYSTATS_PASSWORD)
-
-        if headful:
-            log.info("Credenciales ingresadas — esperando 3s antes de submit...")
-            time.sleep(3)
-
-        page.click('button[type="submit"], input[type="submit"], .login-btn, button:has-text("Login")')
-        page.wait_for_load_state("domcontentloaded", timeout=TIMEOUT)
-
-        if headful:
-            time.sleep(3)
-
-    except PWTimeout:
-        if headful:
-            log.warning("[AVISO] No se encontró formulario automáticamente.")
-            log.warning("Tienes 30s para hacer login manualmente en la ventana...")
-            time.sleep(30)
-        else:
-            log.error("[FALLO] Timeout buscando formulario de login")
-            return False
-
-    # ── Verificar resultado ───────────────────────────────────────────────────
-    if "/login" in page.url:
-        if headful:
-            log.warning("Aún en /login — esperando 15s más (completa el login manualmente)...")
-            time.sleep(15)
-        if "/login" in page.url:
-            log.error("[FALLO] Login fallido — verificar credenciales en .env")
-            return False
-
-    log.info(f"[OK] Login exitoso — {page.url}")
-    return True
+    session.headers.update({
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "es-419,es;q=0.9,en;q=0.8",
+        "Referer": "https://footystats.org/",
+    })
+    log.info(f"[OK] {len(raw)} cookies cargadas")
+    return session
 
 
-# ── Descarga de CSVs ──────────────────────────────────────────────────────────
+# ── Scraping de links ─────────────────────────────────────────────────────────
 
-def obtener_links_descarga(page) -> list[dict]:
+def obtener_links(session: requests.Session, debug: bool = False) -> list[dict]:
     """
-    Navega a la página de descargas y extrae todos los links de CSV/Excel.
-    Retorna lista de dicts: {liga, slug, tipo, season, href}
+    Genera la lista de links de descarga directamente desde LIGAS_COMP (comp IDs conocidos).
+    No necesita parsear HTML — los IDs fueron verificados el 2026-04-09.
     """
-    log.info(f"Navegando a {URL_DOWNLOAD}...")
-    page.goto(URL_DOWNLOAD, timeout=TIMEOUT)
-    page.wait_for_load_state("networkidle", timeout=TIMEOUT)
-
     links = []
+    for liga, meta in LIGAS_COMP.items():
+        comp = meta["comp"]
+        slug = meta["slug"]
+        for tipo in ("matches", "league"):
+            href = f"https://footystats.org/c-dl.php?type={tipo}&comp={comp}"
+            links.append({
+                "liga":    liga,
+                "slug":    slug,
+                "tipo":    tipo,
+                "comp_id": comp,
+                "href":    href,
+            })
 
-    # Buscar todos los <a> que apunten a CSVs
-    anchors = page.query_selector_all("a[href*='.csv'], a[href*='download'], a[href*='csv']")
-
-    for a in anchors:
-        href = a.get_attribute("href") or ""
-        texto = (a.inner_text() or "").strip().lower()
-
-        if not href or not href.startswith("http"):
-            if href.startswith("/"):
-                href = "https://footystats.org" + href
-            else:
-                continue
-
-        # Detectar liga por slug en URL
-        liga_detectada = None
-        slug_detectado = None
-        for nombre_liga, slug in LIGAS_OBJETIVO.items():
-            if slug in href.lower() or slug in texto:
-                liga_detectada = nombre_liga
-                slug_detectado = slug
-                break
-
-        if not liga_detectada:
-            continue
-
-        # Detectar tipo (matches / teams / league)
-        tipo = "matches"
-        if "team" in href.lower() or "team" in texto:
-            tipo = "teams"
-        elif "league" in href.lower() or "standing" in texto:
-            tipo = "league"
-
-        # Detectar temporada desde la URL o texto
-        season_match = re.search(r"(20\d{2}[-/]20\d{2}|20\d{2})", href + texto)
-        season = season_match.group(1) if season_match else "2024"
-
-        links.append({
-            "liga":  liga_detectada,
-            "slug":  slug_detectado,
-            "tipo":  tipo,
-            "season": season,
-            "href":  href,
-        })
-
-    log.info(f"Links encontrados: {len(links)}")
+    log.info(f"Links a descargar: {len(links)} ({len(LIGAS_COMP)} ligas × 2 tipos)")
+    if debug:
+        for lnk in links:
+            skip = " [YA EXISTE]" if ya_descargado(lnk["slug"], lnk["tipo"], lnk["comp_id"]) else ""
+            log.info(f"  → {lnk['liga']:25} [{lnk['tipo']:7}] comp={lnk['comp_id']}{skip}")
     return links
 
 
-def descargar_csv(page, link: dict) -> bool:
-    """Descarga un CSV y lo guarda en datos_footystats/."""
-    destino = nombre_archivo(link["slug"], link["tipo"], link["season"])
+# ── Descarga ──────────────────────────────────────────────────────────────────
 
-    if ya_descargado(link["slug"], link["tipo"], link["season"]):
+def descargar_csv(session: requests.Session, link: dict) -> bool:
+    destino = nombre_archivo(link["slug"], link["tipo"], link["comp_id"])
+
+    if ya_descargado(link["slug"], link["tipo"], link["comp_id"]):
         log.info(f"[SKIP] Ya existe: {destino.name}")
         return True
 
-    log.info(f"Descargando {link['liga']} {link['season']} ({link['tipo']})...")
+    log.info(f"Descargando {link['liga']} ({link['tipo']})...")
 
     try:
-        with page.expect_download(timeout=TIMEOUT_DL) as dl_info:
-            page.goto(link["href"], timeout=TIMEOUT)
+        resp = session.get(link["href"], timeout=60, stream=True)
+        if resp.status_code != 200:
+            log.warning(f"[FALLO] HTTP {resp.status_code} — {link['liga']}")
+            return False
 
-        download = dl_info.value
-        download.save_as(str(destino))
-        log.info(f"[OK] Guardado: {destino.name} ({destino.stat().st_size:,} bytes)")
+        # FootyStats envía content-type: text/html incluso para CSVs — no confiar en él
+        # Detectar si es HTML real (página de error/upgrade) vs CSV
+        inicio = resp.text[:200].strip()
+        if inicio.startswith("<") or "<!DOCTYPE" in inicio.upper():
+            log.warning(f"[FALLO] Respuesta es HTML — requiere Premium o sesión expirada")
+            return False
+
+        with open(destino, "wb") as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        size = destino.stat().st_size
+        if size < 500:
+            destino.unlink()
+            log.warning(f"[FALLO] Archivo muy pequeño ({size} bytes) — probablemente Premium")
+            return False
+
+        log.info(f"[OK] {destino.name} ({size:,} bytes)")
         return True
 
-    except PWTimeout:
-        log.warning(f"[FALLO] Timeout descargando {link['liga']} {link['tipo']}")
-        return False
     except Exception as e:
-        log.warning(f"[FALLO] {link['liga']} {link['tipo']}: {e}")
+        log.warning(f"[FALLO] {link['liga']}: {e}")
         return False
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def run(solo_liga: str | None = None, headful: bool = False):
+def run(solo_liga: str | None = None, debug: bool = False):
     log.info("=" * 60)
-    log.info(f"FootyStats Scraper v1.1  [{'HEADFUL' if headful else 'headless'}]")
+    log.info(f"FootyStats Scraper v2.0  [cookies Chrome]")
     log.info("=" * 60)
+
+    session = obtener_sesion_chrome()
+
+    links = obtener_links(session, debug=debug)
+    if not links:
+        log.warning("No se encontraron links descargables.")
+        log.warning("  → Verifica que estés logueado en footystats.org en Chrome")
+        log.warning("  → Navega a footystats.org/download-stats-csv y recarga")
+        return
 
     if solo_liga:
-        log.info(f"Modo filtro: solo '{solo_liga}'")
+        links = [l for l in links if solo_liga.lower() in l["liga"].lower()]
+        log.info(f"Filtro '{solo_liga}': {len(links)} links")
 
-    if headful:
-        log.info(f"Perfil persistente: {PROFILE_DIR}")
-        log.info("La ventana del browser se abrirá — no la cierres.")
+    if debug:
+        log.info("[DEBUG] Modo debug — no se descargan archivos.")
+        return
 
-    ok = 0
-    fail = 0
-
-    with sync_playwright() as p:
-        if headful:
-            # Perfil persistente: guarda cookies/sesión entre ejecuciones
-            # → la segunda vez no necesita resolver Cloudflare ni hacer login
-            PROFILE_DIR.mkdir(exist_ok=True)
-            context = p.chromium.launch_persistent_context(
-                user_data_dir=str(PROFILE_DIR),
-                headless=False,
-                accept_downloads=True,
-                args=["--start-maximized"],
-                no_viewport=True,
-            )
-            page = context.new_page()
+    ok = fail = 0
+    for link in links:
+        if descargar_csv(session, link):
+            ok += 1
         else:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(accept_downloads=True)
-            page    = context.new_page()
-
-        # 1. Login
-        if not hacer_login(page, headful=headful):
-            context.close()
-            return
-
-        # 2. Obtener links
-        links = obtener_links_descarga(page)
-
-        if not links:
-            log.warning("No se encontraron links de descarga.")
-            log.warning("Posibles causas:")
-            log.warning("  - Cuenta sin Premium (solo EPL 2018 gratis)")
-            log.warning("  - FootyStats cambió el HTML de la página de descargas")
-            if headful:
-                log.info("La ventana sigue abierta — navega manualmente a la página de descargas")
-                log.info("y descarga los CSVs. Luego ponlos en: datos_footystats/")
-                time.sleep(20)
-            context.close()
-            return
-
-        # 3. Filtrar si se pidió una liga específica
-        if solo_liga:
-            links = [l for l in links if solo_liga.lower() in l["liga"].lower()]
-            log.info(f"Links tras filtro: {len(links)}")
-
-        # 4. Descargar
-        for link in links:
-            resultado = descargar_csv(page, link)
-            if resultado:
-                ok += 1
-            else:
-                fail += 1
-            time.sleep(2)
-
-        context.close()
+            fail += 1
 
     log.info("")
     log.info(f"Resumen: {ok} OK | {fail} fallidos")
@@ -355,10 +238,10 @@ def run(solo_liga: str | None = None, headful: bool = False):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="FootyStats CSV Scraper v1.1")
+    parser = argparse.ArgumentParser(description="FootyStats CSV Scraper v2.0")
     parser.add_argument("--liga", type=str, default=None,
                         help='Filtrar por liga. Ej: "Serie A"')
-    parser.add_argument("--headful", action="store_true",
-                        help="Abre browser visible — necesario si Cloudflare bloquea")
+    parser.add_argument("--debug", action="store_true",
+                        help="Muestra links encontrados sin descargar")
     args = parser.parse_args()
-    run(solo_liga=args.liga, headful=args.headful)
+    run(solo_liga=args.liga, debug=args.debug)
