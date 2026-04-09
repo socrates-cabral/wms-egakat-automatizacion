@@ -99,6 +99,13 @@ try:
 except ImportError:
     pass
 
+# ── FootyStats CSV features (xG, BTTS%, Over%) ───────────────────────────────
+FOOTYSTATS_DISPONIBLE = False
+try:
+    from footystats_loader import DISPONIBLE as FOOTYSTATS_DISPONIBLE
+except ImportError:
+    pass
+
 # ── Predictor ML (Sprint 10) ──────────────────────────────────────────────────
 ML_DISPONIBLE = False
 try:
@@ -136,6 +143,10 @@ if NBA_FEATURES_DISPONIBLE:
     log.info("[OK] NBA features cargado — back-to-back, eFG%, pace, forma (nba_api + balldontlie)")
 if MLB_FEATURES_DISPONIBLE:
     log.info("[OK] MLB features cargado — ERA pitcher, forma, carreras (MLB-StatsAPI)")
+if FOOTYSTATS_DISPONIBLE:
+    log.info("[OK] FootyStats CSV cargado — xG, BTTS%, Over% disponibles para fútbol")
+else:
+    log.info("[INFO] FootyStats sin CSVs — correr footystats_scraper.py para activar")
 
 # ── Paths adicionales ─────────────────────────────────────────────────────────
 HISTORICO_PATH    = BASE_DIR / "backtesting" / "historico_apuestas.json"
@@ -512,8 +523,23 @@ def analizar_partido(partido: dict) -> dict | None:
         except Exception as e:
             log.warning(f"  [AVISO] tavily_enricher: {e}")
 
+    # ── FootyStats features (xG, BTTS%, Over%) — si hay CSVs descargados ───────
+    footystats_features = {}
+    if FOOTYSTATS_DISPONIBLE and es_futbol:
+        try:
+            from footystats_loader import get_features_footystats
+            footystats_features = get_features_footystats(home, away, liga)
+            if footystats_features:
+                log.info(f"  [footystats] xG {footystats_features.get('xg_home','?')}/"
+                         f"{footystats_features.get('xg_away','?')} | "
+                         f"BTTS {footystats_features.get('btts_pct','?')}% | "
+                         f"Over2.5 {footystats_features.get('over25_pct','?')}%")
+        except Exception as e:
+            log.warning(f"  [AVISO] footystats_loader: {e}")
+
     # e. Detectar value bets
-    value_bets = detectar_value_bets(partido, stats, prediccion, cuotas, lineup)
+    value_bets = detectar_value_bets(partido, stats, prediccion, cuotas, lineup,
+                                     footystats_features=footystats_features)
     bets_con_value = [b for b in value_bets if b.get("tiene_value")]
 
     # f. Recomendaciones rankeadas

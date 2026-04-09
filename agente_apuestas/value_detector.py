@@ -34,6 +34,12 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 from config import VALUE_THRESHOLD
 
+# FootyStats features (xG, BTTS%, Over%) — disponible si hay CSVs descargados
+try:
+    from footystats_loader import DISPONIBLE as FOOTYSTATS_DISPONIBLE
+except ImportError:
+    FOOTYSTATS_DISPONIBLE = False
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
@@ -384,7 +390,8 @@ def _pitcher_factor(era) -> float:
     return 1.15
 
 
-def _lambda_esperado(prediccion: dict, stats: dict, deporte: str = "futbol") -> float:
+def _lambda_esperado(prediccion: dict, stats: dict, deporte: str = "futbol",
+                     footystats: dict = None) -> float:
     """
     Estima los goles/carreras/puntos totales esperados del partido (lambda para Poisson).
 
@@ -415,13 +422,33 @@ def _lambda_esperado(prediccion: dict, stats: dict, deporte: str = "futbol") -> 
             lam_mlb = base_h * _pitcher_factor(era_h) + base_a * _pitcher_factor(era_a)
             fuentes.append((lam_mlb, 0.70))   # peso alto: datos reales del partido
 
-    # ── Fuente api-sports goles esperados (peso 0.50 en fútbol) ───────────────
+    # ── Fuente FootyStats xG pre-partido (peso 0.45 en fútbol — más predictivo) ─
+    # xG es luck-adjusted: captura "debería haber marcado" vs goles reales.
+    # Solo aplica a fútbol; béisbol/basketball tienen sus propias fuentes.
+    if footystats and deporte == "futbol":
+        xg_h = footystats.get("xg_home")
+        xg_a = footystats.get("xg_away")
+        if xg_h and xg_a:
+            try:
+                fuentes.append((float(xg_h) + float(xg_a), 0.45))
+            except (TypeError, ValueError):
+                pass
+
+    # ── Fuente api-sports goles esperados (peso 0.50 en fútbol, 0.30 si FootyStats activo) ─
     if prediccion:
         gh = prediccion.get("goles_esperados_home")
         ga = prediccion.get("goles_esperados_away")
         if gh is not None and ga is not None:
             try:
-                peso_api = 0.20 if deporte == "baseball" and fuentes else 0.50
+                # Si FootyStats xG ya está → bajar peso api-sports (0.30 vs 0.50)
+                footystats_xg_activo = (footystats and footystats.get("xg_home")
+                                        and deporte == "futbol")
+                if deporte == "baseball" and fuentes:
+                    peso_api = 0.20
+                elif footystats_xg_activo:
+                    peso_api = 0.30
+                else:
+                    peso_api = 0.50
                 fuentes.append((float(gh) + float(ga), peso_api))
             except (TypeError, ValueError):
                 pass
@@ -488,6 +515,7 @@ def detectar_value_bets(
     prediccion: dict,
     cuotas: dict,
     lineup: dict = None,
+    footystats_features: dict = None,
 ) -> list[dict]:
     """
     Detecta value bets comparando probabilidades del modelo vs probabilidades
@@ -557,7 +585,8 @@ def detectar_value_bets(
         })
 
     # ── OVER / UNDER (Poisson) ────────────────────────────────────────────────
-    lam = _lambda_esperado(prediccion, stats, deporte=deporte)
+    fs = footystats_features or {}
+    lam = _lambda_esperado(prediccion, stats, deporte=deporte, footystats=fs)
     totals = (cuotas or {}).get("totals", [])
     totals_apertura = (cuotas or {}).get("totals_apertura", [])
 
@@ -597,6 +626,78 @@ def detectar_value_bets(
                 "confianza_extra":    confianza_extra,
                 "consensus_penalty":  consensus_penalty,
             })
+
+    # ── BTTS (FootyStats btts_pct) ────────────────────────────────────────────
+    # Solo cuando FootyStats tiene el % histórico calibrado para este cruce.
+    # prob_modelo = btts_pct / 100 (ya es una probabilidad histórica, no derivada).
+    btts_pct = fs.get("btts_pct")
+    btts_cuotas = (cuotas or {}).get("btts", {})
+    if btts_pct and deporte == "futbol":
+        prob_btts = min(0.95, float(btts_pct) / 100)
+        for seleccion, prob_modelo, cuota_key in [
+            ("Yes", prob_btts,       "yes"),
+            ("No",  1 - prob_btts,   "no"),
+        ]:
+            cuota = btts_cuotas.get(cuota_key)
+            if not cuota or cuota <= 1.01:
+                continue
+            prob_implicita = 1 / cuota
+            value = prob_modelo - prob_implicita
+            bets.append({
+                "fixture_id":        fid,
+                "home":              home,
+                "away":              away,
+                "tipo_apuesta":      "BTTS",
+                "seleccion":         f"BTTS {seleccion}",
+                "prob_modelo":       round(prob_modelo,    4),
+                "prob_implicita":    round(prob_implicita, 4),
+                "value":             round(value, 4),
+                "cuota":             cuota,
+                "tiene_value":       value >= VALUE_THRESHOLD,
+                "fuente_cuota":      "the-odds-api",
+                "fuente_prob":       "footystats_btts_pct",
+                "steam_move":        False,
+                "steam_direccion":   None,
+                "consenso_modelos":  consenso_modelos,
+                "confianza_extra":   confianza_extra,
+                "consensus_penalty": consensus_penalty,
+            })
+
+    # ── Over25 crosscheck FootyStats ─────────────────────────────────────────
+    # Si FootyStats tiene over25_pct Y el mercado tiene Over 2.5,
+    # añade un bet alternativo usando la probabilidad histórica directa.
+    # No reemplaza el Poisson — aparece como fuente adicional para comparar.
+    over25_pct = fs.get("over25_pct")
+    if over25_pct and deporte == "futbol":
+        prob_over25_fs = min(0.95, float(over25_pct) / 100)
+        # Buscar la línea 2.5 en totals
+        for t in totals:
+            if abs(t.get("punto", 0) - 2.5) < 0.01:
+                cuota_o25 = t.get("over")
+                if cuota_o25 and cuota_o25 > 1.01:
+                    prob_imp = 1 / cuota_o25
+                    value_fs = prob_over25_fs - prob_imp
+                    bets.append({
+                        "fixture_id":        fid,
+                        "home":              home,
+                        "away":              away,
+                        "tipo_apuesta":      "OVER_UNDER",
+                        "seleccion":         "Over 2.5 [FS]",
+                        "prob_modelo":       round(prob_over25_fs, 4),
+                        "prob_implicita":    round(prob_imp, 4),
+                        "value":             round(value_fs, 4),
+                        "cuota":             cuota_o25,
+                        "tiene_value":       value_fs >= VALUE_THRESHOLD,
+                        "lambda":            round(lam, 2),
+                        "fuente_cuota":      "the-odds-api",
+                        "fuente_prob":       "footystats_over25_pct",
+                        "steam_move":        False,
+                        "steam_direccion":   None,
+                        "consenso_modelos":  consenso_modelos,
+                        "confianza_extra":   confianza_extra + " [FS]",
+                        "consensus_penalty": consensus_penalty,
+                    })
+                break
 
     # ── DOUBLE CHANCE (derivado de 1X2) ───────────────────────────────────────
     # No tiene cuota directa en The Odds API — lo calculamos como referencia interna
