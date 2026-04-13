@@ -1,0 +1,5 @@
+playwright
+openpyxl
+python-dotenv
+msal
+requests

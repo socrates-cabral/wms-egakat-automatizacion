@@ -62,23 +62,35 @@ def _gh(token: str) -> dict:
 
 # ─── EMAIL ────────────────────────────────────────────────────────────────────
 
-def enviar_email(from_email: str, to_email: str, asunto: str, html_body: str) -> bool:
+def enviar_email(
+    from_email: str,
+    to_email: str,
+    asunto: str,
+    html_body: str,
+    cc_emails: list | None = None,
+    extra_to_emails: list | None = None,
+) -> bool:
     """
     Envía correo HTML via Graph API en nombre de from_email.
+    - to_email: destinatario principal (requerido para compatibilidad)
+    - extra_to_emails: destinatarios TO adicionales
+    - cc_emails: destinatarios en CC
     Requiere permiso Mail.Send (application) con admin consent.
     """
     try:
         token = get_token()
-        resp  = requests.post(
+        all_to = [to_email] + (extra_to_emails or [])
+        to_recipients = [{"emailAddress": {"address": e}} for e in all_to if e]
+        message: dict = {
+            "subject": asunto,
+            "body": {"contentType": "HTML", "content": html_body},
+            "toRecipients": to_recipients,
+        }
+        if cc_emails:
+            message["ccRecipients"] = [{"emailAddress": {"address": e}} for e in cc_emails if e]
+        resp = requests.post(
             f"{GRAPH_BASE}/users/{from_email}/sendMail",
-            json={
-                "message": {
-                    "subject": asunto,
-                    "body": {"contentType": "HTML", "content": html_body},
-                    "toRecipients": [{"emailAddress": {"address": to_email}}],
-                },
-                "saveToSentItems": True,
-            },
+            json={"message": message, "saveToSentItems": True},
             headers=_gh(token),
             timeout=30,
         )
