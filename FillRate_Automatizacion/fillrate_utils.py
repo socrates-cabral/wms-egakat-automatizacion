@@ -115,8 +115,14 @@ def log(message: str, log_path: Optional[Path] = None) -> None:
     log_path = log_path or build_log_path()
     line = f"[{_now().strftime('%H:%M:%S')}] {sanitize_log_message(message)}"
     print(line, flush=True)
-    with open(log_path, "a", encoding="utf-8") as handle:
-        handle.write(line + "\n")
+    for attempt in range(3):
+        try:
+            with open(log_path, "a", encoding="utf-8") as handle:
+                handle.write(line + "\n")
+            return
+        except PermissionError:
+            if attempt < 2:
+                time.sleep(1)
 
 
 def get_env_value(*names: str, required: bool = False) -> str:
@@ -272,10 +278,18 @@ def graph_request(
             if response.status_code in expected_statuses:
                 return response
             if attempt < retries:
-                log(
-                    f"[WARN] Graph API intento {attempt + 1}/{retries + 1} devolvio {response.status_code}; reintentando.",
-                    log_path,
-                )
+                if response.status_code == 423:
+                    log(
+                        f"[WARN] Graph API intento {attempt + 1}/{retries + 1} devolvio 423 (archivo bloqueado); "
+                        f"esperando 60s antes de reintentar.",
+                        log_path,
+                    )
+                    time.sleep(60)
+                else:
+                    log(
+                        f"[WARN] Graph API intento {attempt + 1}/{retries + 1} devolvio {response.status_code}; reintentando.",
+                        log_path,
+                    )
                 continue
             response.raise_for_status()
         except Exception as exc:
@@ -435,12 +449,18 @@ def send_summary_email(asunto: str, html_body: str, log_path: Optional[Path] = N
 
 
 def get_reporting_window(reference_date: Optional[date] = None) -> Tuple[date, date]:
+    import calendar as _cal
     today = reference_date or date.today()
-    yesterday = today - timedelta(days=1)
-    # On the 1st of the month yesterday is in the previous month; use today as end instead.
-    if yesterday.month != today.month:
-        yesterday = today
+    real_today = date.today()
     start = date(today.year, today.month, 1)
+    # Mes pasado: usar el ultimo dia del mes como fecha_hasta (mes completo)
+    if (today.year, today.month) < (real_today.year, real_today.month):
+        last_day = _cal.monthrange(today.year, today.month)[1]
+        return start, date(today.year, today.month, last_day)
+    # Mes actual: hasta ayer (acumulado parcial)
+    yesterday = real_today - timedelta(days=1)
+    if yesterday.month != real_today.month:
+        yesterday = real_today
     return start, yesterday
 
 
@@ -749,6 +769,7 @@ def ensure_corte_column(
 def build_warnings(client_name: str, rows: Sequence[Sequence[Any]], today: Optional[date] = None) -> List[Dict[str, Any]]:
     today = today or date.today()
     warnings: List[Dict[str, Any]] = []
+    seen_pedidos: set = set()
     for row in rows:
         estado = normalize_state(row[STATE_COLUMN_INDEX - 1])
         if estado not in ESTADOS_ALERTA:
@@ -758,10 +779,14 @@ def build_warnings(client_name: str, rows: Sequence[Sequence[Any]], today: Optio
             continue
         dias = (today - fecha_gen.date()).days
         if dias > WARNING_MAX_DAYS:
+            nro_pedido = row[ORDER_COLUMN_INDEX - 1]
+            if nro_pedido in seen_pedidos:
+                continue
+            seen_pedidos.add(nro_pedido)
             warnings.append(
                 {
                     "cliente": client_name,
-                    "nro_pedido": row[ORDER_COLUMN_INDEX - 1],
+                    "nro_pedido": nro_pedido,
                     "estado": estado,
                     "dias_transcurridos": dias,
                 }
@@ -1108,7 +1133,7 @@ class ClientExecutionResult:
 
 def build_summary_html(results: Sequence[ClientExecutionResult], warnings: Sequence[Dict[str, Any]]) -> str:
     total_clientes = len(results)
-    ok_count = sum(1 for item in results if item.estado == "OK")
+    ok_count = sum(1 for item in results if item.estado in ("OK", "Ya descargado"))
     sin_datos_count = sum(1 for item in results if item.estado == "Sin datos")
     omitidos_count = sum(1 for item in results if item.estado == "Omitido")
     error_count = sum(1 for item in results if item.estado == "Error")
@@ -1136,6 +1161,8 @@ def build_summary_html(results: Sequence[ClientExecutionResult], warnings: Seque
     def render_status_badge(item: ClientExecutionResult) -> Tuple[str, str]:
         if item.estado == "OK":
             return ("&#9989; OK &#8635;" if item.retried_success else "&#9989; OK"), "#ecfdf3"
+        if item.estado == "Ya descargado":
+            return "&#9989; OK", "#ecfdf3"
         if item.estado == "Sin datos":
             return "&#128196; Sin datos", "#f8fafc"
         if item.estado == "Omitido":

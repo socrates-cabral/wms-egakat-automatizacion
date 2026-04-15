@@ -17,7 +17,7 @@ import os
 import re
 import sys
 import time
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -101,23 +101,27 @@ def _checkpoint_path() -> Path:
     return _LOGS_DIR / f"fillrate_checkpoint_{datetime.now().strftime('%Y%m%d')}.json"
 
 
-def _load_checkpoint() -> set:
+def _load_checkpoint() -> Dict[str, Any]:
+    """Retorna dict {nombre: metricas} con los clientes completados hoy."""
     path = _checkpoint_path()
     if not path.exists():
-        return set()
+        return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return set(data.get("completados", []))
+        # Compatibilidad con formato antiguo {completados: [...]}
+        if "completados" in data and isinstance(data["completados"], list):
+            return {nombre: {} for nombre in data["completados"]}
+        return data if isinstance(data, dict) else {}
     except Exception:
-        return set()
+        return {}
 
 
-def _save_checkpoint(client_name: str) -> None:
+def _save_checkpoint(client_name: str, metricas: Optional[Dict[str, Any]] = None) -> None:
     path = _checkpoint_path()
-    completados = _load_checkpoint()
-    completados.add(client_name)
+    data = _load_checkpoint()
+    data[client_name] = metricas or {}
     path.write_text(
-        json.dumps({"completados": sorted(completados)}, ensure_ascii=False),
+        json.dumps(data, ensure_ascii=False, default=str),
         encoding="utf-8",
     )
 
@@ -194,6 +198,11 @@ def parse_args() -> argparse.Namespace:
         "--force",
         action="store_true",
         help="Ignora el checkpoint diario y fuerza la descarga aunque ya se haya ejecutado hoy.",
+    )
+    parser.add_argument(
+        "--mes",
+        metavar="MM/AAAA",
+        help="Backfill: descarga y reemplaza un mes especifico (ej: 03/2026). Implica --force.",
     )
     return parser.parse_args()
 
@@ -399,8 +408,8 @@ def navigate_to_fillrate(page: Page, log_path: Path) -> None:
     page.wait_for_timeout(1_500)
 
 
-def configure_filters(page: Page, client: Dict[str, Any], log_path: Path) -> None:
-    fecha_desde, fecha_hasta = get_reporting_window()
+def configure_filters(page: Page, client: Dict[str, Any], log_path: Path, reference_date: Optional[date] = None) -> None:
+    fecha_desde, fecha_hasta = get_reporting_window(reference_date)
     fecha_desde_txt = format_wms_date(fecha_desde)
     fecha_hasta_txt = format_wms_date(fecha_hasta)
 
@@ -518,7 +527,7 @@ def compute_timeout_for_attempt(client: Dict[str, Any], attempt_number: int) -> 
     return int(base_timeout * (multiplier ** (attempt_number - 1)))
 
 
-def process_client(page: Page, client: Dict[str, Any], usuario: str, clave: str, log_path: Path) -> Dict[str, Any]:
+def process_client(page: Page, client: Dict[str, Any], usuario: str, clave: str, log_path: Path, reference_date: Optional[date] = None) -> Dict[str, Any]:
     login_and_select_deposito(page, usuario, clave, client["deposito_wms"], log_path)
     attempts = int(client.get("download_attempts", DEFAULT_DOWNLOAD_ATTEMPTS))
     last_error: Optional[Exception] = None
@@ -526,7 +535,7 @@ def process_client(page: Page, client: Dict[str, Any], usuario: str, clave: str,
 
     for attempt_number in range(1, attempts + 1):
         navigate_to_fillrate(page, log_path)
-        configure_filters(page, client, log_path)
+        configure_filters(page, client, log_path, reference_date)
         attempt_timeout = compute_timeout_for_attempt(client, attempt_number)
         client_for_attempt = dict(client)
         client_for_attempt["download_timeout_ms"] = attempt_timeout
@@ -580,14 +589,16 @@ def process_client(page: Page, client: Dict[str, Any], usuario: str, clave: str,
         }
 
     # Pendientes desde WMS (no requiere formulas Excel)
-    _now = datetime.now()
-    _month, _year = _now.month, _now.year
+    _ref = reference_date or date.today()
+    _month, _year = _ref.month, _ref.year
     pending_wms = compute_pending_from_wms_rows(rows, _month, _year)
 
     workbook_result = update_sharepoint_workbook(
         client,
         rows,
         log_path=log_path,
+        month=_month,
+        year=_year,
         meses_corte=MESES_CORTE,
     )
 
@@ -650,7 +661,17 @@ def _run(args: argparse.Namespace, log_path: Path, started_at: datetime) -> int:
     if args.wms_user:
         log("Override de usuario WMS recibido por parametro.", log_path)
 
-    completados_hoy = set() if args.force else _load_checkpoint()
+    # Resolver reference_date desde --mes MM/AAAA
+    reference_date: Optional[date] = None
+    if args.mes:
+        try:
+            mes_parts = args.mes.strip().split("/")
+            reference_date = date(int(mes_parts[1]), int(mes_parts[0]), 15)
+            log(f"[BACKFILL] Modo backfill activado para {args.mes} (reference_date={reference_date}).", log_path)
+        except Exception:
+            raise RuntimeError(f"Formato invalido para --mes: '{args.mes}'. Use MM/AAAA (ej: 03/2026).")
+
+    completados_hoy: Dict[str, Any] = {} if (args.force or args.mes) else _load_checkpoint()
     if completados_hoy:
         log(f"[CHECKPOINT] Clientes ya completados hoy: {', '.join(sorted(completados_hoy))}", log_path)
 
@@ -663,16 +684,23 @@ def _run(args: argparse.Namespace, log_path: Path, started_at: datetime) -> int:
         if c.get("active", False) and c["nombre"] not in completados_hoy
     ]
 
-    # Clientes ya completados hoy: agregar al resumen sin tocar WMS
+    # Clientes ya completados hoy: agregar al resumen con métricas guardadas
     for client in selected_clients:
         if client["nombre"] in completados_hoy:
             log(f"[SKIP] {client['nombre']} — ya descargado hoy (checkpoint). Se omite.", log_path)
+            m = completados_hoy.get(client["nombre"]) or {}
+            cp_warnings = m.get("warnings", [])
+            all_warning_items.extend(cp_warnings)
             results.append(
                 ClientExecutionResult(
                     cliente=client["nombre"],
                     cd=client["cd"],
-                    estado="Ya descargado",
-                    detalle="Checkpoint diario activo. Usar --force para forzar.",
+                    estado=m.get("estado", "Ya descargado"),
+                    filas_nuevas=m.get("filas_nuevas"),
+                    filas_reemplazadas=m.get("filas_reemplazadas"),
+                    advertencias=len(cp_warnings),
+                    pendientes=m.get("pendientes"),
+                    otif=m.get("otif"),
                 )
             )
 
@@ -701,7 +729,7 @@ def _run(args: argparse.Namespace, log_path: Path, started_at: datetime) -> int:
                                     f"Reintentando cliente {client['nombre']}.",
                                     log_path,
                                 )
-                            client_outcome = process_client(page, client, usuario, clave, log_path)
+                            client_outcome = process_client(page, client, usuario, clave, log_path, reference_date=reference_date)
                             if client_attempt > 1:
                                 retried_success = True
                             break
@@ -723,8 +751,9 @@ def _run(args: argparse.Namespace, log_path: Path, started_at: datetime) -> int:
                             context.close()
 
                         if client_attempt < MAX_CLIENT_ATTEMPTS:
-                            log(f"Esperando 15s antes del reintento...", log_path)
-                            time.sleep(15)
+                            wait_s = 180 if client_error and "423" in client_error else 15
+                            log(f"Esperando {wait_s}s antes del reintento...", log_path)
+                            time.sleep(wait_s)
 
                     if client_outcome is None:
                         log(
@@ -783,7 +812,14 @@ def _run(args: argparse.Namespace, log_path: Path, started_at: datetime) -> int:
                             otif=client_outcome.get("otif"),
                         )
                     )
-                    _save_checkpoint(client["nombre"])
+                    _save_checkpoint(client["nombre"], {
+                        "estado": client_outcome["status"] if client_outcome["status"] != "SIN_DATOS" else "Sin datos",
+                        "filas_nuevas": client_outcome.get("rows"),
+                        "filas_reemplazadas": client_outcome.get("replaced_rows"),
+                        "pendientes": client_outcome.get("pending"),
+                        "otif": client_outcome.get("otif"),
+                        "warnings": client_outcome.get("warnings", []),
+                    })
             finally:
                 browser.close()
 
