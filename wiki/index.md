@@ -25,7 +25,7 @@
 ## Conceptos ML / Estadística
 
 - [[value-betting]] — Core del agente: detectar cuando prob_modelo > prob_implícita en cuota. Umbral mínimo value > 5%.
-- [[pi-rating]] — Sistema de rating basado en diferencia de goles esperados. Top features del modelo XGBoost.
+- [[conceptos/pi-rating]] — Sistema rating dinámico (Constantinou ~2012): ELO adaptado a goles, decay 0.98, K=0.5. Feature pi_diff en XGBoost. Limitación: no captura contexto ni lesiones.
 - [[xg-expected-goals]] — Fuente: Understat. 10,707 partidos 5 ligas × 6 temporadas (2019-2024).
 - [[kelly-criterion]] — Fórmula de apuesta óptima. Usar Quarter Kelly (×0.25). Cap 10% bankroll.
 - [[xgboost-modelo]] — CV=0.4888, Test=0.5226. Sin data leakage (TimeSeriesSplit). 35 features.
