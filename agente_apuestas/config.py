@@ -11,6 +11,7 @@ load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 # ── API Keys (nombres reales en .env) ────────────────────────────────────────
 API_SPORTS_KEY   = os.getenv("CLAVE_API")             # api-sports.io
 ODDS_API_KEY     = os.getenv("ODDS_KEY")              # the-odds-api.com  (agregar ODDS_KEY= en .env)
+ODDS_IO_KEY      = os.getenv("API_KEY_ODDS")          # odds-api.io v3    (apiKey query param)
 BALLDONTLIE_KEY  = os.getenv("BBALL_KEY")             # balldontlie.io    (agregar BBALL_KEY= en .env)
 # Sportmonks está en .env como URL completa; extraemos solo el token
 _sportmonks_raw  = os.getenv("SPORTMONKS_KEY", "")
@@ -20,6 +21,7 @@ SPORTMONKS_KEY   = _sportmonks_raw.split("api_token=")[-1] if "api_token=" in _s
 APISPORTS_BASE   = "https://v3.football.api-sports.io"
 APISPORTS_BBALL  = "https://v2.basketball.api-sports.io"
 ODDS_BASE        = "https://api.the-odds-api.com/v4"
+ODDS_IO_BASE     = "https://api.odds-api.io/v3"
 BALLDONTLIE_BASE = "https://api.balldontlie.io/v1"
 SPORTMONKS_BASE  = "https://api.sportmonks.com/v3"
 
@@ -160,6 +162,20 @@ TRANSFERMARKT_IDS = {
 
 # ── Temporada actual ──────────────────────────────────────────────────────────
 SEASON_ACTUAL = 2024        # Plan gratuito api-sports: acceso hasta temporada 2024
+
+# ── Ligas en modo OBSERVACIÓN ────────────────────────────────────────────────
+# Detectan value bets y aparecen en reporte HTML, pero NO registran apuestas.
+# Criterio de activación por liga:
+#   UCL          → reentrenamiento con datos UCL (sept 2026) + backtesting n>=20 ROI>0
+#   NBA          → modelo NBA propio (oct 2026) — Poisson retorna 0.5 para lineas >30
+#   MLB / NFL    → fuera del foco principal — revisar Q3 2026
+LIGAS_OBSERVACION = {
+    "Champions League",
+    "UEFA Champions League",
+    "NBA",
+    "MLB",
+    "NFL",
+}
 
 # ── Modo Paper Trading ────────────────────────────────────────────────────────
 # True  → apuestas ficticias, sin dinero real, mensajes Telegram con [PAPER]

@@ -59,7 +59,7 @@ log = logging.getLogger(__name__)
 
 import sys
 sys.path.insert(0, str(BASE_DIR))
-from config import MAX_REQUESTS_DAILY, MIN_CONFIDENCE, LIGAS_FUTBOL, LIMITES_AUTONOMIA, MODO_PAPER_TRADING
+from config import MAX_REQUESTS_DAILY, MIN_CONFIDENCE, LIGAS_FUTBOL, LIMITES_AUTONOMIA, MODO_PAPER_TRADING, LIGAS_OBSERVACION
 
 # ── Importar collectors ───────────────────────────────────────────────────────
 from fixtures_collector   import get_fixtures_futbol_hoy, get_fixtures_basketball_hoy, get_fixtures_otros_deportes_hoy, check_quota
@@ -168,16 +168,22 @@ STOP_RISK_BLOCKED  = "risk_blocked"   # límites de riesgo activos
 STOP_NO_FIXTURES   = "no_fixtures"    # sin partidos hoy
 STOP_ERROR         = "error"          # excepción no manejada
 
-# Orden de prioridad de ligas (las primeras se procesan primero)
+# Orden de prioridad de ligas (las primeras se procesan primero).
+# Serie A al tope — es la única con modelo entrenado y validado.
+# UCL y NBA al fondo — en LIGAS_OBSERVACION, no registran apuestas.
 LIGAS_PRIORIDAD = [
-    "Champions League",
+    "Serie A",
     "Premier League",
     "La Liga",
     "Bundesliga",
-    "Serie A",
     "Ligue 1",
     "Copa Libertadores",
     "Primera Division CL",
+    "Champions League",      # observación — sin modelo propio
+    "UEFA Champions League", # observación — idem
+    "NBA",                   # observación — Poisson no aplica
+    "MLB",                   # observación
+    "NFL",                   # observación
 ]
 
 
@@ -614,6 +620,14 @@ def _auto_registrar(partidos_analizados: list[dict], riesgo: dict) -> int:
         fixture = pd["fixture"]
         liga    = fixture.get("liga_nombre", "Desconocida")
 
+        # Ligas en modo observación — detectan value pero no registran apuestas
+        if liga in LIGAS_OBSERVACION:
+            recs_obs = pd.get("recomendaciones", [])
+            if recs_obs:
+                log.info(f"  [OBS] {liga} — {len(recs_obs)} recomendacion(es) detectada(s) "
+                         f"pero NO registrada(s) (liga en observación)")
+            continue
+
         deporte_fix = fixture.get("deporte", "futbol")
         umbral_auto = MIN_SCORE_AUTO_BET if deporte_fix == "futbol" else MIN_SCORE_AUTO_BET_NO_FOOTBALL
 
@@ -710,6 +724,10 @@ def _notificar_y_registrar(partidos_analizados: list[dict], riesgo: dict) -> int
     for pd in partidos_analizados:
         fixture = pd["fixture"]
         liga    = fixture.get("liga_nombre", "Desconocida")
+
+        # Ligas en modo observación — no notificar ni registrar
+        if liga in LIGAS_OBSERVACION:
+            continue
 
         deporte_notif = fixture.get("deporte", "futbol")
         umbral_notif  = MIN_SCORE_AUTO_BET if deporte_notif == "futbol" else MIN_SCORE_AUTO_BET_NO_FOOTBALL
@@ -1039,4 +1057,15 @@ def main():
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Agente de apuestas deportivas")
+    parser.add_argument(
+        "--max-fixtures", type=int, default=None,
+        help="Límite de partidos a analizar (override de MAX_FIXTURES). "
+             "Mañana: 4 (53 req). Tarde: 2 (31 req). Total < 90 límite diario."
+    )
+    args = parser.parse_args()
+    if args.max_fixtures is not None:
+        MAX_FIXTURES = args.max_fixtures
+        log.info(f"[CONFIG] MAX_FIXTURES override: {MAX_FIXTURES} (vía --max-fixtures)")
     main()

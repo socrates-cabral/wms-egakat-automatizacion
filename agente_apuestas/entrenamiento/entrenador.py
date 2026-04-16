@@ -322,12 +322,12 @@ def entrenar(df_features: pd.DataFrame) -> dict:
 
         # Intentar cv="prefit" (sklearn < 1.8) o fallback manual (sklearn >= 1.8)
         try:
-            calibrador = CalibratedClassifierCV(modelo_para_cal, cv="prefit", method="isotonic")
+            calibrador = CalibratedClassifierCV(modelo_para_cal, cv="prefit", method="sigmoid")
             calibrador.fit(X_cal_sc, y_cal_c)
         except (ValueError, TypeError):
             # sklearn 1.8+: cv="prefit" removido — calibrar con cv=3 sobre holdout
             log("[INFO] sklearn >= 1.8 detectado — usando cv=3 para calibración")
-            calibrador = CalibratedClassifierCV(clone(modelo_xgb), cv=3, method="isotonic")
+            calibrador = CalibratedClassifierCV(clone(modelo_xgb), cv=3, method="sigmoid")
             calibrador.fit(X_train_sc, y_train)
 
         modelo_final = calibrador

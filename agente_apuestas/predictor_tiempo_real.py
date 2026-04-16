@@ -411,6 +411,16 @@ def predecir_partidos_hoy() -> list:
         # Predecir
         try:
             proba = modelo.predict_proba(X_input)[0]
+        except ImportError as e:
+            # _pava_pybind bloqueado por Smart App Control (Task Scheduler) — usar XGBoost raw
+            log(f"[WARN] Calibración bloqueada por SAC ({e}) — usando probabilidades raw XGBoost")
+            try:
+                # CalibratedClassifierCV: base XGBoost en .calibrated_classifiers_[0].estimator
+                base_est = modelo.calibrated_classifiers_[0].estimator if hasattr(modelo, "calibrated_classifiers_") else modelo
+                proba = base_est.predict_proba(X_input)[0]
+            except Exception as e2:
+                log(f"[FALLO] Fallback XGBoost también falló para {home} vs {away}: {e2}")
+                continue
         except Exception as e:
             log(f"[FALLO] Error en predict_proba para {home} vs {away}: {e}")
             continue
