@@ -39,6 +39,17 @@ EAN_DESTINO = Path(r"C:\Users\Socrates Cabral\Grupo Planet SpA\José Caceres - M
 MAX_REINTENTOS = 2
 PAUSA_REINTENTO = 60  # segundos entre reintentos
 
+MESES_ES = {
+    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+    5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+    9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre",
+}
+
+
+def _subcarpeta_mes(dt: datetime | None = None) -> Path:
+    dt = dt or datetime.now()
+    return Path(str(dt.year)) / f"{dt.month:02d}. {MESES_ES[dt.month]}"
+
 LOG_DIR = Path(r"C:\ClaudeWork\logs")
 
 # ─────────────────────────────────────────────
@@ -342,8 +353,9 @@ def ir_a_articulos(page):
 def descargar_maestro(page, context):
     """Selecciona DERCO, busca y descarga el maestro de materiales."""
 
-    archivos_existentes = list(DESTINO.glob("*.xlsx"))
+    subdir = DESTINO / _subcarpeta_mes()
     hoy = datetime.now().date()
+    archivos_existentes = list(subdir.glob("*.xlsx")) if subdir.exists() else []
     archivo_hoy = next(
         (p for p in archivos_existentes
          if datetime.fromtimestamp(p.stat().st_mtime).date() == hoy),
@@ -383,7 +395,7 @@ def descargar_maestro(page, context):
     page.wait_for_timeout(3_000)
     log("  → Búsqueda enviada, esperando resultados...")
 
-    DESTINO.mkdir(parents=True, exist_ok=True)
+    subdir.mkdir(parents=True, exist_ok=True)
 
     href = page.locator("a[href*='downloadlistadearticulos']").get_attribute("href")
     if not href:
@@ -407,7 +419,7 @@ def descargar_maestro(page, context):
     nombre_wms = download.suggested_filename
     log(f"  → Archivo: {nombre_wms}")
 
-    ruta_final = DESTINO / nombre_wms
+    ruta_final = subdir / nombre_wms
     if ruta_final.exists():
         log(f"  [SKIP] Archivo {nombre_wms} ya existe en destino")
     else:
@@ -510,7 +522,7 @@ def main():
         maestro_ean_status = "[OK]" if exito_ean else "[FALLO]"
 
         if exito_ean:
-            ruta_ean = _buscar_archivo_mas_reciente(EAN_DESTINO)
+            ruta_ean = _buscar_archivo_mas_reciente(EAN_DESTINO / _subcarpeta_mes())
             log("  [OK]    EAN Códigos de Barra descargado")
         else:
             maestro_ean_status = "[FALLO] EAN no descargado"
@@ -547,7 +559,7 @@ def main():
             "status": maestro_mat_status,
             "duracion": dur_materiales,
             "archivo": ruta_guardada.name if ruta_guardada else None,
-            "carpeta": DESTINO,
+            "carpeta": DESTINO / _subcarpeta_mes(),
             "detalle": _detalle_error(maestro_mat_status),
         },
         {
@@ -555,7 +567,7 @@ def main():
             "status": maestro_ean_status,
             "duracion": dur_ean,
             "archivo": ruta_ean.name if ruta_ean else None,
-            "carpeta": EAN_DESTINO,
+            "carpeta": EAN_DESTINO / _subcarpeta_mes(),
             "detalle": _detalle_error(maestro_ean_status),
         },
     ]

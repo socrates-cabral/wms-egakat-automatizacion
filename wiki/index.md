@@ -1,5 +1,5 @@
 # Wiki Index — ClaudeWork
-Última compilación: 2026-04-13
+Última compilación: 2026-04-17
 
 ## Proyectos
 
@@ -12,6 +12,7 @@
 
 ## Decisiones técnicas
 - [[decisiones/checkpoint_idempotencia]] — Patrón checkpoint JSON diario en Productividad y FillRate: skip clientes ya OK, row count guardado, --force override.
+- [[decisiones/decision-context-on-request-playwright]] — context.on vs page.on en Playwright: WMS abre Excel en nueva pestaña, page.on no la captura. Siempre usar context.on para descargas WMS.
 - [[proyecto-agente-apuestas]] — Agente ML XGBoost para value bets deportivos. Sprint 17 completo (Tavily enricher activo, umbrales adaptativos). Serie A activa.
 - [[proyectos/fillrate-automatizacion]] — Módulo independiente Fill Rate: 13 clientes, Graph API SharePoint, lock file, 3 reintentos Graph API. Corrió OK 10/04 en 47 min.
 - [[proyectos/agente-apuestas-orquestador]] — run_agent.py: flujo 7 pasos, control riesgo stop-loss 15%/25%, MAX_FIXTURES=6, módulos opcionales graceful import.

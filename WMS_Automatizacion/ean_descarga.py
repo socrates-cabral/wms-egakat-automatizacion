@@ -25,6 +25,17 @@ WMS_PASSWORD = os.getenv("WMS_PASSWORD")
 
 DESTINO = Path(r"C:\Users\Socrates Cabral\Grupo Planet SpA\José Caceres - Maestro EAN")
 
+MESES_ES = {
+    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+    5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+    9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre",
+}
+
+
+def _subcarpeta_mes(dt=None):
+    dt = dt or datetime.now()
+    return Path(str(dt.year)) / f"{dt.month:02d}. {MESES_ES[dt.month]}"
+
 LOG_DIR  = Path(__file__).parent.parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOG_DIR / f"ean_descarga_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
@@ -45,7 +56,19 @@ def main():
     log("ean_descarga.py v1.1 -- Maestro EAN DERCO")
     log("=" * 60)
 
-    DESTINO.mkdir(parents=True, exist_ok=True)
+    subdir = DESTINO / _subcarpeta_mes()
+
+    hoy = datetime.now().date()
+    archivo_hoy = next(
+        (p for p in subdir.glob("*") if p.is_file()
+         and datetime.fromtimestamp(p.stat().st_mtime).date() == hoy),
+        None
+    ) if subdir.exists() else None
+    if archivo_hoy:
+        log(f"[SKIP] Ya existe archivo de hoy: {archivo_hoy.name}")
+        return True
+
+    subdir.mkdir(parents=True, exist_ok=True)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -112,7 +135,7 @@ def main():
             download   = dl_info.value
             nombre     = download.suggested_filename or \
                          f"Codigo_Barras_DERCO_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xls"
-            ruta_final = DESTINO / nombre
+            ruta_final = subdir / nombre
             download.save_as(ruta_final)
 
             tamanio = ruta_final.stat().st_size

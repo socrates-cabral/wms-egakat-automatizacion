@@ -300,6 +300,27 @@ def _select_option_by_label(page, label: str, field_name: str, log_path: Path) -
     raise RuntimeError(f"No se encontro selector para {field_name} con opcion '{label}'.")
 
 
+def _wait_for_option(page, label: str, field_name: str, log_path: Path,
+                     poll_ms: int = 500, timeout_ms: int = 15_000) -> None:
+    """Polling activo: espera hasta que 'label' aparezca en algún <select>.
+    Reemplaza wait_for_timeout fijo cuando el dropdown depende de AJAX.
+    """
+    import time
+    deadline = time.monotonic() + timeout_ms / 1000
+    while time.monotonic() < deadline:
+        selects = page.locator("select")
+        for index in range(selects.count()):
+            options = [
+                " ".join(t.split()).strip()
+                for t in selects.nth(index).locator("option").all_inner_texts()
+            ]
+            if label in options:
+                log(f"[OK] Opcion '{label}' disponible en select[index={index}] tras espera AJAX.", log_path)
+                return
+        page.wait_for_timeout(poll_ms)
+    log(f"[WARN] Timeout {timeout_ms}ms esperando '{label}' en {field_name}. Se intentara igual.", log_path)
+
+
 def _fill_first(page, selectors, value: str, field_name: str, log_path: Path) -> str:
     for selector in selectors:
         locator = page.locator(selector)
@@ -373,7 +394,7 @@ def _download_runtime_export(
             _select_option_by_label(page, client["empresa_wms"], "empresa", log_path)
             page.wait_for_timeout(2000)  # WMS recarga tipo-operacion y cuenta por AJAX tras cambio de empresa
             _select_option_by_label(page, "ORDEN DE PREP. C/STOCK", "tipo de operacion", log_path)
-            page.wait_for_timeout(2000)  # WMS recarga cuenta (Stock Físico) por AJAX tras cambio de tipo
+            _wait_for_option(page, "Stock Físico", "cuenta", log_path, poll_ms=500, timeout_ms=45_000)
             _select_option_by_label(page, "Stock Físico", "cuenta", log_path)
             page.wait_for_timeout(500)
 
@@ -383,16 +404,59 @@ def _download_runtime_export(
             _fill_first(page, ["input[name='vHORAHAS']"], to_time, "hasta hora", log_path)
 
             page.click("input[name='CONFIRMAR']")
-            page.wait_for_timeout(30_000)
+            # Espera dinámica: WMS termina todas las requests antes de intentar el Excel.
+            # Fallback a 30s fijo si networkidle no resuelve en 120s.
+            try:
+                page.wait_for_load_state("networkidle", timeout=120_000)
+            except Exception:
+                pass
+            # Mínimo 15s independiente de networkidle: WMS puede tardar en habilitar el botón Excel.
+            page.wait_for_timeout(15_000)
             if chunk_label:
                 log(f"[OK] Consulta ejecutada para {chunk_label}.", log_path)
             else:
                 log("[OK] Consulta ejecutada.", log_path)
 
-            with page.expect_download(timeout=180_000) as dl_info:
+            download_timeout_ms = client.get("download_timeout_ms", 180_000)
+
+            if client.get("heavy_client"):
+                # Clientes heavy (DERCO): WMS sirve el Excel via URL directa, no via evento download.
+                # Interceptamos el request post-click y descargamos directo (patrón staging_descarga).
+                xls_urls: list[str] = []
+                debug_requests: list[str] = []
+
+                def _on_request(request: object) -> None:
+                    url: str = request.url  # type: ignore[attr-defined]
+                    debug_requests.append(url)
+                    if any(x in url.lower() for x in (".xls", "excel", "salidaexcel", "download", "export")):
+                        xls_urls.append(url)
+
+                context.on("request", _on_request)
                 page.locator("img#W0155SALIDAEXCEL").click()
-            download = dl_info.value
-            download.save_as(str(html_path))
+
+                for _ in range(600):  # poll hasta 60s
+                    if xls_urls:
+                        break
+                    page.wait_for_timeout(100)
+
+                context.remove_listener("request", _on_request)
+
+                if not xls_urls:
+                    for debug_url in debug_requests[-15:]:
+                        log(f"[DEBUG][EXCEL] Request post-click: {debug_url}", log_path)
+                    raise RuntimeError("No se capturó URL del Excel tras 60s — WMS no generó el archivo.")
+
+                url_excel = xls_urls[-1]
+                log(f"[OK] URL Excel capturada via intercepción: {url_excel}", log_path)
+                response = page.request.get(url_excel, timeout=download_timeout_ms)
+                with open(str(html_path), "wb") as f:
+                    f.write(response.body())
+            else:
+                with page.expect_download(timeout=download_timeout_ms) as dl_info:
+                    page.locator("img#W0155SALIDAEXCEL").click()
+                download = dl_info.value
+                download.save_as(str(html_path))
+
             log(f"[OK] Export HTML recibido desde WMS: {html_path}", log_path)
             return html_path
         finally:
@@ -1258,21 +1322,18 @@ def run_daily_operational(args: argparse.Namespace, log_path: Path) -> int:
         log_path,
     )
 
-    if fail_count == 0:
-        email_code = run_final_email(args, log_path, results_detail=results)
-        if email_code != 0:
-            log("[FALLO][DIARIO] La corrida termino bien, pero el correo final no pudo emitirse.", log_path)
-            return 2
-        return 0
-
-    log("[DIARIO] Se omitio el correo final porque hubo incidencias en la corrida.", log_path)
-    return 2
+    email_code = run_final_email(args, log_path, results_detail=results, has_failures=(fail_count > 0))
+    if email_code != 0:
+        log("[FALLO][DIARIO] El correo final no pudo emitirse.", log_path)
+        return 2
+    return 0 if fail_count == 0 else 2
 
 
 def run_final_email(
     args: argparse.Namespace,
     log_path: Path,
     results_detail: list | None = None,
+    has_failures: bool = False,
 ) -> int:
     if results_detail:
         summary_rows = []
@@ -1330,6 +1391,8 @@ def run_final_email(
         active_clients_closed=active_clients,
         log_file=log_path,
     )
+    if has_failures:
+        subject = f"[FALLO PARCIAL] {subject}"
     artifacts = save_productividad_email_artifacts(
         subject=subject,
         html_body=html_body,
@@ -1420,7 +1483,49 @@ def main() -> int:
         return run_production_lightweight(args, log_path)
 
     if args.final_email:
-        return run_final_email(args, log_path)
+        # Detectar fallos desde checkpoint: clientes activos no en completados
+        checkpoint_completados = _load_checkpoint()
+        ACTIVE_KEYS = set(CONTROLLED_EXECUTION_CLIENTS.keys())
+        faltantes = ACTIVE_KEYS - checkpoint_completados
+        has_failures = bool(faltantes)
+        if has_failures:
+            log(f"[EMAIL] Clientes sin completar en checkpoint: {', '.join(sorted(faltantes))}", log_path)
+        # Construir results_detail desde checkpoint
+        ck_data = {}
+        try:
+            ck_path = LOG_DIR / f"productividad_checkpoint_{datetime.now().strftime('%Y%m%d')}.json"
+            if ck_path.exists():
+                ck_data = json.load(open(ck_path, encoding="utf-8"))
+        except Exception:
+            pass
+        rows_map = ck_data.get("rows", {})
+        FALLBACK_CLIENTS_ORDERED = [
+            ("Daikin",          "CD QUILICURA", "daikin"),
+            ("Pochteca",        "CD QUILICURA", "pochteca"),
+            ("Cerveceria ABI",  "CD QUILICURA", "abinbev"),
+            ("BHA",             "CD QUILICURA", "bha"),
+            ("Mascotas Latinas","CD QUILICURA", "mascota_quilicura"),
+            ("Derco",           "CD QUILICURA", "derco"),
+            ("Barentz",         "CD PUDAHUEL",  "barentz"),
+            ("Buraschi",        "CD PUDAHUEL",  "buraschi"),
+            ("Cepas Chile",     "CD PUDAHUEL",  "cepas_chile"),
+            ("Collico",         "CD PUDAHUEL",  "collico"),
+            ("Delibest",        "CD PUDAHUEL",  "delibest"),
+            ("Intime",          "CD PUDAHUEL",  "intime"),
+            ("Tres Montes",     "CD PUDAHUEL",  "tresmontes"),
+            ("Unilever",        "CD PUDAHUEL",  "unilever"),
+            ("Runo SPA",        "CD PUDAHUEL",  "runo"),
+        ]
+        results_detail = []
+        for nombre, cd, key in FALLBACK_CLIENTS_ORDERED:
+            completed = key in checkpoint_completados
+            rows = rows_map.get(key, 0)
+            results_detail.append({
+                "client_key": key,
+                "rows": rows if completed else -1,
+                "code": 0 if completed else 1,
+            })
+        return run_final_email(args, log_path, results_detail=results_detail, has_failures=has_failures)
 
     if args.dry_run:
         log("[DRY-RUN] Catalogo activo cargado. La navegacion WMS aun requiere confirmacion runtime.", log_path)
