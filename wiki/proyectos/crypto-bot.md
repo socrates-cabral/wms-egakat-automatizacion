@@ -23,12 +23,12 @@ Grid Trading clásico con filtro de tendencia EMA 200:
 | Param | Valor |
 |-------|-------|
 | Par | BTC_USDT |
-| Rango | $80,000 – $100,000 |
+| Rango | $65,000 – $85,000 (ajustado 2026-04-17) |
 | Niveles | 20 (step $1,000) |
 | Capital | $1,000 USDT simulado |
 | Capital/nivel | $50 USDT |
-| EMA | 200 periodos diarios |
-| Ciclo | cada 5 min (Task Scheduler) |
+| EMA filter | Desactivado en paper trading |
+| Ciclo | cada 5 min (Task Scheduler via run_bot.bat) |
 | Drawdown max | 10% |
 
 ## Arquitectura
@@ -59,8 +59,10 @@ C:\ClaudeWork\crypto_bot\
 ## Notas de implementación
 - Crypto.com API usa `BTC_USDT` (underscore), no `BTC-USDT`
 - Candlestick retorna timestamps como ISO string, no int
-- EMA 200 diaria: BTC actualmente en $77,226 vs EMA $84,107 → grid_activo=False (solo sells)
-- `is_paper()` en BaseExchange lee config.MODO_PAPER_TRADING en runtime
+- Task Scheduler requiere `run_bot.bat` como intermediario — ruta python tiene espacios ("Socrates Cabral")
+- `EMA_FILTER_ACTIVO = not MODO_PAPER_TRADING` — se desactiva automáticamente en paper
+- Fees: 0.075% maker/taker Crypto.com — absorbible en grid trading
+- Cuenta Crypto.com Exchange pendiente de crear para producción (exchange.crypto.com)
 
 ## Próximas fases
 | Fase | Cuándo | Condición |

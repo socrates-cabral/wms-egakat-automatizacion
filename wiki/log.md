@@ -3,6 +3,13 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-04-17] ingest | Crypto Bot operativo + fixes agente apuestas sesgo Under
+
+Crypto Bot Grid Trading BTC_USDT implementado y corriendo en Task Scheduler.
+Rango ajustado $65K-$85K, EMA filter desactivado en paper, Telegram activo.
+Agente apuestas: 3 fixes sesgo Under (lambda_sospechoso, under_irreal, diversidad).
+Resultado Inter 3-0 Cagliari → Under 2.25 perdida. Histórico: 1/6 (16.7%).
+
 ## [2026-04-09] ingest | Inicialización wiki desde MEMORY.md
 Fuente: MEMORY.md (estado al 2026-03-28)
 Páginas creadas: index.md con 25 entradas en 7 categorías

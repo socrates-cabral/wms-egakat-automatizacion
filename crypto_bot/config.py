@@ -15,14 +15,16 @@ MODO_PAPER_TRADING = True  # NUNCA cambiar a False sin 30 dias paper OK
 PAR = "BTC_USDT"
 
 # Grid (ajustar manualmente cada vez que BTC salga del rango)
-GRID_LOWER = int(os.getenv("GRID_LOWER", "80000"))
-GRID_UPPER = int(os.getenv("GRID_UPPER", "100000"))
+GRID_LOWER = int(os.getenv("GRID_LOWER", "65000"))
+GRID_UPPER = int(os.getenv("GRID_UPPER", "85000"))
 GRID_LEVELS = int(os.getenv("GRID_LEVELS", "20"))
 CAPITAL_USDT = float(os.getenv("USDT_CAPITAL", "1000"))
 
 # Tendencia
 EMA_PERIODO = 200
 EMA_TIMEFRAME = "1D"
+# En paper trading se puede desactivar para probar la mecanica del grid sin restriccion de tendencia
+EMA_FILTER_ACTIVO = not MODO_PAPER_TRADING  # False en paper, True en real
 
 # Riesgo
 MAX_DRAWDOWN_PCT = 10    # >10% perdida -> stop bot + alerta

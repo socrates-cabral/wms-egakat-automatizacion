@@ -3,15 +3,14 @@
 
 $TaskName = "Crypto Bot - Grid Trading"
 $WorkDir = "C:\ClaudeWork"
-$PythonExe = (Get-Command py).Source
-$Script = "crypto_bot\run_bot.py"
+$BatFile = "C:\ClaudeWork\crypto_bot\run_bot.bat"
 
 # Eliminar tarea existente si hay
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 
 $Action = New-ScheduledTaskAction `
-    -Execute $PythonExe `
-    -Argument $Script `
+    -Execute "cmd.exe" `
+    -Argument "/c `"$BatFile`"" `
     -WorkingDirectory $WorkDir
 
 # Trigger: cada 5 minutos, indefinido
@@ -20,7 +19,7 @@ $Trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5
 $Settings = New-ScheduledTaskSettingsSet `
     -ExecutionTimeLimit (New-TimeSpan -Minutes 4) `
     -MultipleInstances IgnoreNew `
-    -RunOnlyIfNetworkAvailable $true
+    -RunOnlyIfNetworkAvailable
 
 $Principal = New-ScheduledTaskPrincipal `
     -UserId $env:USERNAME `

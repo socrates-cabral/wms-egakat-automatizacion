@@ -59,20 +59,24 @@ def main():
     logger.info(f"Risk OK — PnL actual: {riesgo['pnl_pct']:+.4f}%")
 
     # Trend filter
-    try:
-        trend = trend_filter.check_trend(exchange, config.PAR)
-        logger.info(
-            f"Tendencia: {trend['tendencia']} | EMA200: {trend['ema_200']} | "
-            f"Precio: {trend['precio_actual']} | Grid activo: {trend['grid_activo']}"
-        )
-        if not trend["grid_activo"]:
-            notifier.enviar_texto(
-                f"{'[PAPER] ' if config.MODO_PAPER_TRADING else ''}"
-                f"BTC bajo EMA 200 ({trend['ema_200']}) — solo sells activos"
+    if not config.EMA_FILTER_ACTIVO:
+        trend = {"grid_activo": True, "tendencia": "desactivado (paper)"}
+        logger.info("EMA filter desactivado en paper trading — grid completo activo")
+    else:
+        try:
+            trend = trend_filter.check_trend(exchange, config.PAR)
+            logger.info(
+                f"Tendencia: {trend['tendencia']} | EMA200: {trend['ema_200']} | "
+                f"Precio: {trend['precio_actual']} | Grid activo: {trend['grid_activo']}"
             )
-    except Exception as e:
-        logger.warning(f"Trend filter fallo, asumiendo grid_activo=True: {e}")
-        trend = {"grid_activo": True, "tendencia": "neutral"}
+            if not trend["grid_activo"]:
+                notifier.enviar_texto(
+                    f"{'[PAPER] ' if config.MODO_PAPER_TRADING else ''}"
+                    f"BTC bajo EMA 200 ({trend['ema_200']}) — solo sells activos"
+                )
+        except Exception as e:
+            logger.warning(f"Trend filter fallo, asumiendo grid_activo=True: {e}")
+            trend = {"grid_activo": True, "tendencia": "neutral"}
 
     # Inicializar grid si no existe
     if not estado_grid:
