@@ -145,6 +145,15 @@ def run_cycle(exchange: BaseExchange, grid_activo: bool = True) -> dict:
     estado["ultima_actualizacion"] = datetime.now(timezone.utc).isoformat()
     _save_estado(config.ESTADO_GRID_PATH, estado)
 
+    # Sync a Supabase (falla silenciosamente)
+    try:
+        from crypto_bot import supabase_sync
+        supabase_sync.push_estado(estado)
+        for op in ordenes_ejecutadas:
+            supabase_sync.push_operacion(op, config.PAR)
+    except Exception:
+        pass
+
     return {
         "precio_actual": precio_actual,
         "precio_previo": precio_previo,

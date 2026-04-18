@@ -6,17 +6,22 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import json
 import time
+import os
 import requests
 from datetime import datetime, timezone
 
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+from dotenv import load_dotenv
 
-BASE_DIR   = Path(__file__).parent
-ESTADO_PATH   = BASE_DIR / "estado_grid.json"
+load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
+
+BASE_DIR       = Path(__file__).parent
+ESTADO_PATH    = BASE_DIR / "estado_grid.json"
 HISTORICO_PATH = BASE_DIR / "data" / "historico_operaciones.json"
 BACKTEST_PATH  = BASE_DIR / "data" / "backtest_results.json"
+PAR            = "BTC_USDT"
 
 st.set_page_config(
     page_title="Crypto Bot — Grid Trading",
@@ -27,7 +32,19 @@ st.set_page_config(
 REFRESH_SEC = 30
 
 
-# ── helpers ──────────────────────────────────────────────────────────────────
+# ── fuente de datos (Supabase en cloud, JSON local en dev) ────────────────────
+
+def _supabase_client():
+    url = os.getenv("SUPABASE_URL") or st.secrets.get("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY", "")
+    if not url or not key:
+        return None
+    try:
+        from supabase import create_client
+        return create_client(url, key)
+    except Exception:
+        return None
+
 
 @st.cache_data(ttl=REFRESH_SEC)
 def get_btc_price() -> float:
@@ -45,18 +62,42 @@ def get_btc_price() -> float:
 
 @st.cache_data(ttl=REFRESH_SEC)
 def load_estado() -> dict:
-    if not ESTADO_PATH.exists():
-        return {}
-    with open(ESTADO_PATH, encoding="utf-8") as f:
-        return json.load(f)
+    client = _supabase_client()
+    if client:
+        try:
+            resp = client.table("crypto_grid_state").select("estado").eq("par", PAR).single().execute()
+            if resp.data:
+                return resp.data["estado"]
+        except Exception:
+            pass
+    # fallback local
+    if ESTADO_PATH.exists():
+        with open(ESTADO_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
 
 
 @st.cache_data(ttl=REFRESH_SEC)
 def load_historico() -> list[dict]:
-    if not HISTORICO_PATH.exists():
-        return []
-    with open(HISTORICO_PATH, encoding="utf-8") as f:
-        return json.load(f)
+    client = _supabase_client()
+    if client:
+        try:
+            resp = (
+                client.table("crypto_operaciones")
+                .select("tipo, precio, qty, pnl, order_id, timestamp")
+                .eq("par", PAR)
+                .order("timestamp", desc=False)
+                .limit(500)
+                .execute()
+            )
+            return resp.data or []
+        except Exception:
+            pass
+    # fallback local
+    if HISTORICO_PATH.exists():
+        with open(HISTORICO_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    return []
 
 
 @st.cache_data(ttl=3600)
