@@ -23,6 +23,8 @@
 - [[proyectos/inversiones-ia]] — App análisis inversiones institucional (BlackRock/GS/MS/Citadel). Claude + yfinance + Plotly. Puerto 8506. Sprint 1.
 - [[proyectos/productividad-automatizacion]] — Descarga reporte Movimientos WMS por cliente → SharePoint. ~14 clientes, validaciones integridad, backup pre-overwrite. Selectores WMS pendientes de runtime.
 
+- [[proyectos/crypto-bot]] — Grid Trading BTC_USDT + EMA 200 filter. Paper trading activo. Exchange abstraction (Crypto.com + Kraken). 20 niveles $80K-$100K.
+
 ## Conceptos ML / Estadística
 
 - [[value-betting]] — Core del agente: detectar cuando prob_modelo > prob_implícita en cuota. Umbral mínimo value > 5%.

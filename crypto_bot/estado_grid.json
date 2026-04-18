@@ -1,0 +1,140 @@
+{
+  "par": "BTC_USDT",
+  "capital_usdt": 1000.0,
+  "grid_lower": 80000,
+  "grid_upper": 100000,
+  "grid_levels": 20,
+  "nivel_step": 1000.0,
+  "capital_por_nivel": 50.0,
+  "precio_ultimo": 77226.77,
+  "pnl_realizado_usdt": 0.0,
+  "niveles": [
+    {
+      "precio": 80000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 81000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 82000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 83000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 84000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 85000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 86000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 87000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 88000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 89000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 90000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 91000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 92000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 93000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 94000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 95000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 96000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 97000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 98000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 99000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 100000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    }
+  ],
+  "ultima_actualizacion": "2026-04-18T02:12:56.217325+00:00"
+}
