@@ -44,7 +44,7 @@ def _calc_pnl_pct(estado_grid: dict) -> float:
     return round((pnl / capital) * 100, 4)
 
 
-def cancelar_todas_ordenes(exchange, estado_grid: dict):
+def cancelar_todas_ordenes(exchange, estado_grid: dict, estado_path: Path = None):
     from crypto_bot import config
     for nivel in estado_grid.get("niveles", []):
         if nivel.get("order_id"):
@@ -52,6 +52,6 @@ def cancelar_todas_ordenes(exchange, estado_grid: dict):
             nivel["estado"] = "idle"
             nivel["btc_qty"] = 0.0
             nivel["order_id"] = None
-    # Guardar estado actualizado
-    with open(config.ESTADO_GRID_PATH, "w", encoding="utf-8") as f:
+    path = estado_path or config.ESTADO_GRID_PATH
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(estado_grid, f, indent=2, ensure_ascii=False)

@@ -8,14 +8,13 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-RESUMEN_DIARIO_HORA = 22  # hora UTC para enviar resumen
-_FLAG_RESUMEN      = Path(__file__).parent / "data" / ".resumen_enviado_hoy"
-_FLAG_FUERA_RANGO  = Path(__file__).parent / "data" / ".alerta_fuera_rango"
-_ALERTA_COOLDOWN_H = 4  # horas entre alertas de rango para no spamear
+RESUMEN_DIARIO_HORA = 22
+_FLAG_RESUMEN       = Path(__file__).parent / "data" / ".resumen_enviado_hoy"
+_FLAG_FUERA_RANGO   = Path(__file__).parent / "data" / ".alerta_fuera_rango_{par}"
+_ALERTA_COOLDOWN_H  = 4
 
 
 def _debe_enviar_resumen() -> bool:
-    """True si son las 22:xx UTC y no se envio resumen hoy."""
     now = datetime.now(timezone.utc)
     if now.hour != RESUMEN_DIARIO_HORA:
         return False
@@ -31,54 +30,52 @@ def _marcar_resumen_enviado():
 
 
 def _sugerir_rango(precio: float, amplitud: int, step: int) -> tuple[int, int]:
-    """Centra un rango de `amplitud` puntos alrededor del precio actual, alineado a `step`."""
-    mitad = amplitud // 2
-    lower = round((precio - mitad) / step) * step
-    upper = lower + amplitud
-    return int(lower), int(upper)
+    mitad  = amplitud // 2
+    lower  = round((precio - mitad) / step) * step
+    return int(lower), int(lower + amplitud)
 
 
-def _verificar_rango(precio: float, notifier) -> None:
-    """Alerta si BTC salio del grid. Cooldown de _ALERTA_COOLDOWN_H horas."""
+def _verificar_rango(precio: float, par: str, par_cfg: dict, notifier) -> None:
     from crypto_bot import config
+    import time
 
-    dentro = config.GRID_LOWER <= precio <= config.GRID_UPPER
-    if dentro:
-        # Limpiar flag si volvio al rango
-        if _FLAG_FUERA_RANGO.exists():
-            _FLAG_FUERA_RANGO.unlink()
+    lower = par_cfg["grid_lower"]
+    upper = par_cfg["grid_upper"]
+    if lower <= precio <= upper:
+        flag = Path(str(_FLAG_FUERA_RANGO).replace("{par}", par))
+        if flag.exists():
+            flag.unlink()
         return
 
-    # Fuera del rango — verificar cooldown
-    import time
+    flag = Path(str(_FLAG_FUERA_RANGO).replace("{par}", par))
     ahora = time.time()
-    if _FLAG_FUERA_RANGO.exists():
-        ultima = float(_FLAG_FUERA_RANGO.read_text().strip())
-        if ahora - ultima < _ALERTA_COOLDOWN_H * 3600:
-            return  # dentro del cooldown, no spamear
+    if flag.exists():
+        if ahora - float(flag.read_text().strip()) < _ALERTA_COOLDOWN_H * 3600:
+            return
 
-    # Calcular rango sugerido (misma amplitud que el actual, centrado en precio)
-    amplitud  = config.GRID_UPPER - config.GRID_LOWER
-    new_lower, new_upper = _sugerir_rango(precio, amplitud, config.GRID_LEVELS * 100)
+    amplitud  = upper - lower
+    levels    = par_cfg["grid_levels"]
+    # step aproximado alineado a precio del par
+    step_ref  = 1000 if "BTC" in par else 50
+    new_lo, new_hi = _sugerir_rango(precio, amplitud, step_ref)
 
-    direccion = "BAJO" if precio < config.GRID_LOWER else "SUBIO"
+    direccion = "BAJO" if precio < lower else "SUBIO"
     prefijo   = "[PAPER] " if config.MODO_PAPER_TRADING else ""
-    msg = (
-        f"{prefijo}<b>ALERTA: BTC fuera del grid</b>\n"
-        f"BTC {direccion}: ${precio:,.0f}\n"
-        f"Grid actual: ${config.GRID_LOWER:,} – ${config.GRID_UPPER:,}\n\n"
+    coin      = par.split("_")[0]
+    notifier.enviar_texto(
+        f"{prefijo}<b>ALERTA: {coin} fuera del grid</b>\n"
+        f"{coin} {direccion}: ${precio:,.2f}\n"
+        f"Grid actual: ${lower:,} – ${upper:,}\n\n"
         f"Rango sugerido:\n"
-        f"  GRID_LOWER = {new_lower}\n"
-        f"  GRID_UPPER = {new_upper}\n\n"
-        f"Actualizar en config.py o .env y reiniciar el bot."
+        f"  {par.split('_')[0]}_GRID_LOWER = {new_lo}\n"
+        f"  {par.split('_')[0]}_GRID_UPPER = {new_hi}\n\n"
+        f"Actualizar en .env y reiniciar el bot."
     )
-    notifier.enviar_texto(msg)
-
-    _FLAG_FUERA_RANGO.parent.mkdir(exist_ok=True)
-    _FLAG_FUERA_RANGO.write_text(str(ahora))
+    flag.parent.mkdir(exist_ok=True)
+    flag.write_text(str(ahora))
 
 
-def setup_logging() -> logging.Logger:
+def setup_logging() -> tuple:
     from crypto_bot import config
     config.LOG_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
@@ -94,108 +91,164 @@ def setup_logging() -> logging.Logger:
     return logging.getLogger("crypto_bot"), log_path
 
 
-def main():
-    logger, log_path = setup_logging()
+def run_par(exchange, par: str, par_cfg: dict, logger, notifier, trend_filter, grid_strategy, risk_manager) -> bool:
+    """Ejecuta un ciclo completo para un par. Retorna False si hay error bloqueante."""
     from crypto_bot import config
-    from crypto_bot.exchange_client import get_exchange
-    from crypto_bot import risk_manager, trend_filter, grid_strategy, notifier
 
-    modo = "[PAPER]" if config.MODO_PAPER_TRADING else "[REAL]"
-    logger.info(f"=== Crypto Bot iniciado {modo} — {config.PAR} ===")
+    estado_path   = par_cfg["estado_path"]
+    grid_lower    = par_cfg["grid_lower"]
+    grid_upper    = par_cfg["grid_upper"]
+    grid_levels   = par_cfg["grid_levels"]
+    capital       = par_cfg["capital_usdt"]
 
-    # Kill switch
-    if config.KILL_SWITCH_PATH.exists():
-        logger.info("kill_switch.txt detectado. Deteniendo limpiamente.")
-        sys.exit(0)
-
-    exchange = get_exchange()
-
-    # Cargar estado actual
+    # Cargar estado
     estado_grid = {}
-    if config.ESTADO_GRID_PATH.exists():
-        with open(config.ESTADO_GRID_PATH, encoding="utf-8") as f:
+    if estado_path.exists():
+        with open(estado_path, encoding="utf-8") as f:
             estado_grid = json.load(f)
 
     # Risk check
     riesgo = risk_manager.verificar_riesgo(estado_grid)
     if riesgo["bloqueado"]:
-        logger.error(f"[FALLO] Risk manager bloqueo el bot: {riesgo['motivo']}")
+        logger.error(f"[FALLO] [{par}] Risk manager bloqueó: {riesgo['motivo']}")
         if estado_grid:
-            risk_manager.cancelar_todas_ordenes(exchange, estado_grid)
-        notifier.enviar_alerta_riesgo("DRAWDOWN / KILL SWITCH", riesgo["motivo"])
-        sys.exit(1)
+            risk_manager.cancelar_todas_ordenes(exchange, estado_grid, estado_path)
+        notifier.enviar_alerta_riesgo(f"DRAWDOWN / KILL SWITCH [{par}]", riesgo["motivo"])
+        return False
 
-    logger.info(f"Risk OK — PnL actual: {riesgo['pnl_pct']:+.4f}%")
+    logger.info(f"[{par}] Risk OK — PnL: {riesgo['pnl_pct']:+.4f}%")
 
     # Trend filter
     if not config.EMA_FILTER_ACTIVO:
         trend = {"grid_activo": True, "tendencia": "desactivado (paper)"}
-        logger.info("EMA filter desactivado en paper trading — grid completo activo")
     else:
         try:
-            trend = trend_filter.check_trend(exchange, config.PAR)
-            logger.info(
-                f"Tendencia: {trend['tendencia']} | EMA200: {trend['ema_200']} | "
-                f"Precio: {trend['precio_actual']} | Grid activo: {trend['grid_activo']}"
-            )
-            if not trend["grid_activo"]:
-                notifier.enviar_texto(
-                    f"{'[PAPER] ' if config.MODO_PAPER_TRADING else ''}"
-                    f"BTC bajo EMA 200 ({trend['ema_200']}) — solo sells activos"
-                )
+            trend = trend_filter.check_trend(exchange, par)
+            logger.info(f"[{par}] Tendencia: {trend['tendencia']} | EMA200: {trend['ema_200']} | Grid activo: {trend['grid_activo']}")
         except Exception as e:
-            logger.warning(f"Trend filter fallo, asumiendo grid_activo=True: {e}")
+            logger.warning(f"[{par}] Trend filter falló, asumiendo grid_activo=True: {e}")
             trend = {"grid_activo": True, "tendencia": "neutral"}
 
-    # Inicializar grid si no existe
-    if not estado_grid:
-        logger.info("Estado grid no encontrado. Inicializando...")
+    # Inicializar grid si no existe o cambió el rango
+    estado_rango_ok = (
+        estado_grid.get("grid_lower") == grid_lower and
+        estado_grid.get("grid_upper") == grid_upper and
+        estado_grid.get("grid_levels") == grid_levels
+    )
+    if not estado_grid or not estado_rango_ok:
+        logger.info(f"[{par}] Inicializando grid {grid_lower}–{grid_upper} / {grid_levels} niveles")
+        # Override temporalmente para init_grid
+        _orig = (config.PAR, config.GRID_LOWER, config.GRID_UPPER, config.GRID_LEVELS,
+                 config.CAPITAL_USDT, config.ESTADO_GRID_PATH, config.HISTORICO_PATH)
+        config.PAR = par
+        config.GRID_LOWER = grid_lower
+        config.GRID_UPPER = grid_upper
+        config.GRID_LEVELS = grid_levels
+        config.CAPITAL_USDT = capital
+        config.ESTADO_GRID_PATH = estado_path
+        config.HISTORICO_PATH = par_cfg["historico_path"]
         estado_grid = grid_strategy.init_grid(exchange)
+        config.PAR, config.GRID_LOWER, config.GRID_UPPER, config.GRID_LEVELS, \
+            config.CAPITAL_USDT, config.ESTADO_GRID_PATH, config.HISTORICO_PATH = _orig
         notifier.enviar_texto(
-            f"{'[PAPER] ' if config.MODO_PAPER_TRADING else ''}Crypto Bot iniciado.\n"
-            f"Grid: ${config.GRID_LOWER:,} - ${config.GRID_UPPER:,} | "
-            f"{config.GRID_LEVELS} niveles | Capital: ${config.CAPITAL_USDT:,.0f} USDT"
+            f"{'[PAPER] ' if config.MODO_PAPER_TRADING else ''}Grid {par} iniciado.\n"
+            f"Rango: ${grid_lower:,}–${grid_upper:,} | {grid_levels} niveles | ${capital:,.0f} USDT"
         )
 
-    # Ejecutar ciclo grid
+    # Ciclo grid
     try:
+        _orig = (config.PAR, config.GRID_LOWER, config.GRID_UPPER, config.GRID_LEVELS,
+                 config.CAPITAL_USDT, config.ESTADO_GRID_PATH, config.HISTORICO_PATH)
+        config.PAR = par
+        config.GRID_LOWER = grid_lower
+        config.GRID_UPPER = grid_upper
+        config.GRID_LEVELS = grid_levels
+        config.CAPITAL_USDT = capital
+        config.ESTADO_GRID_PATH = estado_path
+        config.HISTORICO_PATH = par_cfg["historico_path"]
+
         resumen = grid_strategy.run_cycle(exchange, grid_activo=trend["grid_activo"])
+
+        config.PAR, config.GRID_LOWER, config.GRID_UPPER, config.GRID_LEVELS, \
+            config.CAPITAL_USDT, config.ESTADO_GRID_PATH, config.HISTORICO_PATH = _orig
+
         logger.info(
-            f"Ciclo OK — Precio: ${resumen['precio_actual']:,.2f} | "
-            f"Ordenes: {len(resumen['ordenes'])} | "
-            f"PnL delta: {resumen['pnl_delta']:+.4f} USDT | "
-            f"PnL total: {resumen['pnl_total']:+.4f} USDT | "
-            f"Niveles abiertos: {resumen['open_levels']}"
+            f"[{par}] Ciclo OK — Precio: ${resumen['precio_actual']:,.2f} | "
+            f"Órdenes: {len(resumen['ordenes'])} | "
+            f"PnL delta: {resumen['pnl_delta']:+.4f} | "
+            f"PnL total: {resumen['pnl_total']:+.4f} USDT"
         )
 
         if config.NOTIF_CADA_ORDEN and resumen["ordenes"]:
             for orden in resumen["ordenes"]:
                 notifier.enviar_orden(
-                    tipo=orden["tipo"],
-                    par=config.PAR,
-                    precio=orden["precio"],
-                    qty=orden["qty"],
+                    tipo=orden["tipo"], par=par,
+                    precio=orden["precio"], qty=orden["qty"],
                     pnl_acum=resumen["pnl_total"],
                 )
 
-    except Exception as e:
-        logger.error(f"[FALLO] Error en ciclo grid: {e}")
-        notifier.enviar_alerta_riesgo("ERROR CICLO", str(e))
-        sys.exit(1)
+        _verificar_rango(resumen["precio_actual"], par, par_cfg, notifier)
 
-    # Verificar si BTC salio del grid
-    _verificar_rango(resumen["precio_actual"], notifier)
+    except Exception as e:
+        logger.error(f"[FALLO] [{par}] Error en ciclo: {e}")
+        notifier.enviar_alerta_riesgo(f"ERROR CICLO [{par}]", str(e))
+        return False
+
+    return True
+
+
+def main():
+    logger, _ = setup_logging()
+    from crypto_bot import config
+    from crypto_bot.exchange_client import get_exchange
+    from crypto_bot import risk_manager, trend_filter, grid_strategy, notifier
+
+    modo = "[PAPER]" if config.MODO_PAPER_TRADING else "[REAL]"
+    logger.info(f"=== Crypto Bot {modo} — Pares: {config.PARES_ACTIVOS} ===")
+
+    if config.KILL_SWITCH_PATH.exists():
+        logger.info("kill_switch.txt detectado. Deteniendo.")
+        sys.exit(0)
+
+    exchange = get_exchange()
+    errores  = 0
+
+    for par in config.PARES_ACTIVOS:
+        if par not in config.PARES_CONFIG:
+            logger.warning(f"Par {par} no está en PARES_CONFIG — saltando")
+            continue
+        par_cfg = config.PARES_CONFIG[par]
+        ok = run_par(exchange, par, par_cfg, logger, notifier, trend_filter, grid_strategy, risk_manager)
+        if not ok:
+            errores += 1
 
     # Resumen diario a las 22:00 UTC
     if _debe_enviar_resumen():
         try:
-            with open(config.ESTADO_GRID_PATH, encoding="utf-8") as f:
-                estado_actual = json.load(f)
-            notifier.enviar_resumen_diario(estado_actual)
+            lineas = []
+            for par in config.PARES_ACTIVOS:
+                cfg = config.PARES_CONFIG.get(par, {})
+                ep  = cfg.get("estado_path")
+                if ep and ep.exists():
+                    with open(ep, encoding="utf-8") as f:
+                        e = json.load(f)
+                    pnl = e.get("pnl_realizado_usdt", 0)
+                    open_n = sum(1 for n in e.get("niveles", []) if n["estado"] != "idle")
+                    precio = e.get("precio_ultimo", 0)
+                    lineas.append(f"{par}: PnL {pnl:+.4f} USDT | {open_n} abiertos | ${precio:,.2f}")
+            if lineas:
+                prefijo = "[PAPER] " if config.MODO_PAPER_TRADING else ""
+                notifier.enviar_texto(
+                    f"{prefijo}<b>Resumen diario Crypto Bot</b>\n" + "\n".join(lineas)
+                )
             _marcar_resumen_enviado()
-            logger.info("Resumen diario enviado a Telegram")
+            logger.info("Resumen diario enviado")
         except Exception as e:
             logger.warning(f"No se pudo enviar resumen diario: {e}")
+
+    if errores:
+        logger.error(f"[FALLO] {errores} par(es) con error en este ciclo")
+        sys.exit(1)
 
     logger.info("=== Ciclo completado ===")
 
