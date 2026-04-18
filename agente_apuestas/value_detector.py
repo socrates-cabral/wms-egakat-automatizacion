@@ -483,8 +483,9 @@ def _lambda_esperado(prediccion: dict, stats: dict, deporte: str = "futbol",
         "basketball": 180.0,  # NBA: mínimo realista (~220 pts promedio)
         "nfl":        35.0,   # NFL: mínimo realista (~47 pts promedio)
     }
-    # Lambda defaults cuando no hay datos en absoluto
+    # Lambda defaults — prior neutro cuando no hay datos o los datos son poco confiables
     LAMBDA_DEFAULT = {
+        "futbol":     2.5,    # promedio histórico PL/La Liga (prior neutro)
         "baseball":   _MLB_LAMBDA_DEFAULT,
         "basketball": _NBA_LAMBDA_DEFAULT,
         "nfl":        _NFL_LAMBDA_DEFAULT,
@@ -496,8 +497,8 @@ def _lambda_esperado(prediccion: dict, stats: dict, deporte: str = "futbol",
     peso_total = sum(f[1] for f in fuentes)
     lam_calculado = sum(f[0] * f[1] / peso_total for f in fuentes)
 
-    # Aplicar mínimo por deporte — si el calculado es irreal (datos vacíos/cero de API),
-    # usar el mínimo para ese deporte en vez de dar probabilidades absurdas
+    # Si el lambda calculado es irreal (datos vacíos/cero de API), usar prior neutro
+    # — NO usar lam_min (1.0) porque eso daría P(Under 2.5) ≈ 92% sin fundamento real
     lam_min = LAMBDA_MINIMO.get(deporte, 0.0)
     if lam_calculado < lam_min:
         return LAMBDA_DEFAULT.get(deporte, lam_min)
@@ -607,6 +608,18 @@ def detectar_value_bets(
             prob_implicita = 1 / cuota
             value = prob_modelo - prob_implicita
 
+            # Señal de calidad: lambda vs línea de mercado
+            # Fútbol: lambda < 1.5 → API sin datos reales
+            # No-fútbol: si la línea difiere >30% del lambda → modelo no confiable
+            # (ej: lambda MLB=8.5 vs línea 11.5 → ratio=1.35 → Under artificialmente inflado)
+            ratio_linea = punto / lam if lam > 0 else 1.0
+            lambda_sospechoso = (
+                (deporte == "futbol" and lam < 1.5) or
+                (deporte != "futbol" and abs(ratio_linea - 1.0) > 0.30)
+            )
+            # Under con línea >> lambda = value falso: Poisson subestima goles reales
+            under_irreal = (tipo == "Under" and ratio_linea > 1.25 and deporte != "futbol")
+
             bets.append({
                 "fixture_id":         fid,
                 "home":               home,
@@ -617,8 +630,11 @@ def detectar_value_bets(
                 "prob_implicita":     round(prob_implicita, 4),
                 "value":              round(value, 4),
                 "cuota":              cuota,
-                "tiene_value":        value >= VALUE_THRESHOLD,
+                "tiene_value":        value >= VALUE_THRESHOLD and not lambda_sospechoso and not under_irreal,
                 "lambda":             round(lam, 2),
+                "lambda_sospechoso":  lambda_sospechoso,
+                "ratio_linea":        round(ratio_linea, 3),
+                "under_irreal":       under_irreal,
                 "fuente_cuota":       "the-odds-api",
                 "steam_move":         steam["steam_move"],
                 "steam_direccion":    steam["direccion"],

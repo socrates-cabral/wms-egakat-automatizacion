@@ -127,5 +127,30 @@
     "retorno": -5000,
     "cuota_cierre": null,
     "clv": null
+  },
+  {
+    "id": "b5366c5a3481",
+    "fixture_id": 1378185,
+    "fecha_partido": "2026-04-17T18:45:00+00:00",
+    "fecha_registro": "2026-04-17T09:02:57",
+    "liga": "Serie A",
+    "home": "Inter",
+    "away": "Cagliari",
+    "tipo_apuesta": "OVER_UNDER",
+    "seleccion": "Under 2.25",
+    "cuota": 2.78,
+    "cuota_apertura": 2.78,
+    "prob_modelo": 0.5438,
+    "prob_implicita": 0.3597,
+    "value": 0.1841,
+    "monto_apostado": 5000,
+    "estrategia": "flat",
+    "bankroll_antes": 84510.0,
+    "resultado_real": "Under 2.25",
+    "score_final": "3-0",
+    "ganado": false,
+    "retorno": -5000,
+    "cuota_cierre": null,
+    "clv": null
   }
 ]

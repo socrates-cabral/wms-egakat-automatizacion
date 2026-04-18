@@ -21,9 +21,36 @@ Penalizaciones basketball (se restan del score base):
 """
 
 from pathlib import Path
+import json
 import sys
 sys.path.insert(0, str(Path(__file__).parent))
 from config import VALUE_THRESHOLD, MIN_CONFIDENCE
+
+
+def _cargar_historico_reciente(n: int = 10) -> list:
+    """Carga las últimas N apuestas del histórico para análisis de diversidad."""
+    try:
+        path = Path(__file__).parent / "backtesting" / "historico_apuestas.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data[-n:] if data else []
+    except Exception:
+        return []
+
+
+def _score_diversidad(tipo_apuesta: str) -> int:
+    """Penaliza si el histórico reciente está sobrerepresentado por el mismo tipo.
+    Evita que el modelo recomiende todo OVER_UNDER por bias de lambda.
+    """
+    historico = _cargar_historico_reciente(10)
+    if len(historico) < 3:
+        return 0
+    mismo_tipo = sum(1 for r in historico if r.get("tipo_apuesta") == tipo_apuesta)
+    pct = mismo_tipo / len(historico)
+    if pct >= 0.80:
+        return -20
+    if pct >= 0.60:
+        return -10
+    return 0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -242,10 +269,10 @@ def calcular_confianza(
     # NBA/MLB/NFL/tenis solo tienen cuotas → escalar score proporcionalmente
     # ya que muchas señales (predicciones, lineup, H2H api) no están disponibles
     if sin_apisports:
-        # Calcular qué % del score máximo teórico obtuvieron las señales disponibles
-        # y escalar al rango completo 0-100 para que sea comparable
-        max_teorico_sin_api = 15 + 20 + 15 + 5 + 15 + 3 + 3   # 76 (sin prediction/lineup completo)
-        factor_escala = 100 / max_teorico_sin_api if max_teorico_sin_api > 0 else 1.0
+        # Escalar pero con cap más conservador — antes 1.32x inflaba scores basura
+        # Deportes sin api-sports tienen menos señales → umbral más exigente, no más laxo
+        max_teorico_sin_api = 15 + 20 + 15 + 5 + 15 + 3 + 3   # 76
+        factor_escala = min(100 / max_teorico_sin_api, 1.15)    # cap en 1.15x (antes sin cap)
         score_base = min(int(score_base * factor_escala), 100)
         desglose["ajuste_no_apisports"] = f"x{factor_escala:.2f}"
 
@@ -289,7 +316,21 @@ def calcular_confianza(
         desglose["clima_penalty"] = pen_wx
         pen_capa4 += pen_wx
 
-    score = max(0, min(score_base + pen_basketball + pen_capa4, 100))
+    # ── Penalización lambda sospechoso (O/U sin datos reales o línea irreal) ────
+    pen_lambda = 0
+    if value_bet.get("lambda_sospechoso"):
+        pen_lambda -= 20
+        desglose["lambda_datos_insuficientes"] = -20
+    if value_bet.get("under_irreal"):
+        pen_lambda -= 25
+        desglose["under_linea_irreal"] = -25
+
+    # ── Penalización por sobrerepresentación del tipo de apuesta ─────────────
+    pen_diversidad = _score_diversidad(tipo)
+    if pen_diversidad != 0:
+        desglose["diversidad_historico"] = pen_diversidad
+
+    score = max(0, min(score_base + pen_basketball + pen_capa4 + pen_lambda + pen_diversidad, 100))
 
     # Umbral adaptativo: deportes sin api-sports tienen menos señales disponibles
     # → usar umbral ligeramente más bajo pero no tan permisivo como para dejar pasar
