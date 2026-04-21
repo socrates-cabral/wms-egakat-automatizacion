@@ -1822,8 +1822,11 @@ def build_productividad_summary_table(rows: Sequence[Dict[str, Any]]) -> str:
         if estado == "FALLO":
             icono, bg = "&#10060; Fallo", "#fdecea"
             mov_html = "&#8212;"
+        elif estado == "AL_DIA":
+            icono, bg = "&#9989; Al d&iacute;a", "#eafaf1"
+            mov_html = "&#8212;"
         elif estado == "SIN_DATOS":
-            icono, bg = "&#8212; Sin datos", "#f5f5f5"
+            icono, bg = "&#8212; Sin movimientos", "#f5f5f5"
             mov_html = "0"
         elif estado == "PARCIAL":
             icono, bg = "&#9888;&#65039; Con observaciones", "#fef9e7"
@@ -1832,12 +1835,9 @@ def build_productividad_summary_table(rows: Sequence[Dict[str, Any]]) -> str:
             icono, bg = "&#9989; OK", "#eafaf1"
             mov_html = f"{movimientos:,}".replace(",", ".") if movimientos is not None else "&#8212;"
 
-        detalle = row.get("detalle", "")
-        detalle_html = f"<br><span style='font-size:11px;color:#666'>{detalle}</span>" if detalle else ""
-
         body += f"""
         <tr style="background:{bg}">
-          <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;width:34%">{row['cliente']}{detalle_html}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;width:34%">{row['cliente']}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;width:22%">{row.get('cd', '')}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;text-align:right;width:16%">{mov_html}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #ddd;font-family:Calibri;font-size:13px;font-weight:bold;width:28%">{icono}</td>
@@ -1870,7 +1870,7 @@ def build_productividad_closure_email(
     generated_at: Optional[datetime] = None,
 ) -> tuple[str, str, Dict[str, Any]]:
     generated_at = generated_at or datetime.now()
-    any_failures = any(row["estado"] in {"FALLO", "PARCIAL"} for row in summary_rows)
+    any_failures = any(row["estado"] in {"FALLO", "PARCIAL", "ERROR"} for row in summary_rows)
     overall_status = "CON_FALLOS" if any_failures else "OK"
     header_color = "#c0392b" if any_failures else "#27ae60"
     header_text = "&#10060; Proceso con incidencias relevantes" if any_failures else "&#9989; Proceso finalizado correctamente"

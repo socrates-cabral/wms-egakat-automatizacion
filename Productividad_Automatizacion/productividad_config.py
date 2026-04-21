@@ -42,6 +42,7 @@ RANGE_END_TIME = "06:00:00"
 DERCO_HEAVY_CHUNK_DAYS = (7, 3, 1)
 DERCO_HEAVY_RETRY_ATTEMPTS = 2
 DERCO_HEAVY_RETRY_PAUSE_SECONDS = 60
+DERCO_HEAVY_DOWNLOAD_TIMEOUT_MS = 360_000  # 6 min: DERCO genera Excel grande en servidor
 
 VALID_SHEET_NAMES = (
     "Reporte de Movimientos",
@@ -270,6 +271,7 @@ CONTROLLED_HEAVY_CLIENTS = {
         "chunk_days": DERCO_HEAVY_CHUNK_DAYS,
         "chunk_retry_attempts": DERCO_HEAVY_RETRY_ATTEMPTS,
         "chunk_retry_pause_seconds": DERCO_HEAVY_RETRY_PAUSE_SECONDS,
+        "download_timeout_ms": DERCO_HEAVY_DOWNLOAD_TIMEOUT_MS,
         "runtime_notes": (
             "Cliente heavy: requiere chunking exacto por rango operativo, "
             "deduplicacion deterministica y consolidacion previa a SharePoint."
