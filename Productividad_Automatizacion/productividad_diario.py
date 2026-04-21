@@ -65,7 +65,7 @@ from productividad_utils import (
 
 # Modo prueba: True = solo envia correo a TESTING_EMAIL, no a destinatarios reales.
 # Cambiar a False cuando el script esté validado en producción.
-TESTING_MODE = True
+TESTING_MODE = False
 TESTING_EMAIL = "socrates.cabral@egakat.cl"
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
