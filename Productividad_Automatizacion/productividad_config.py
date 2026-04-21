@@ -261,6 +261,9 @@ CONTROLLED_LIGHTWEIGHT_CLIENTS = {
         "empresa_wms": "NATIVO DRINKS SPA",
         "deposito_wms_origen": "PUDAHUEL",
         "carpeta_destino_historica": "CD PUDAHUEL",
+        "historical_reference": (
+            r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\datos para Dashboard EK\Productividad\CD PUDAHUEL\2026\01. Enero\MovBarentz.xlsx"
+        ),
         "test_from": "01/04/26",
         "test_to": "21/04/26",
     },
@@ -270,6 +273,9 @@ CONTROLLED_LIGHTWEIGHT_CLIENTS = {
         "empresa_wms": "OMNITECH",
         "deposito_wms_origen": "PUDAHUEL",
         "carpeta_destino_historica": "CD PUDAHUEL",
+        "historical_reference": (
+            r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\datos para Dashboard EK\Productividad\CD PUDAHUEL\2026\01. Enero\MovBarentz.xlsx"
+        ),
         "test_from": "01/04/26",
         "test_to": "21/04/26",
     },
