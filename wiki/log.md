@@ -3,6 +3,12 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-04-21] ingest | Productividad — script diario operativo, 2 clientes nuevos, diagnóstico fechas
+
+productividad_diario.py operativo desde hoy. 17 clientes (+ NATIVO DRINKS SPA + OMNITECH).
+Diagnóstico fechas históricas: archivos del script viejo tenían formato MM/DD — corregidos manualmente.
+WMS usa formato DD-MM-YYYY con guiones. Nuevo verificar_fechas.py para auditoría.
+
 ## [2026-04-17] ingest | Crypto Bot operativo + fixes agente apuestas sesgo Under
 
 Crypto Bot Grid Trading BTC_USDT implementado y corriendo en Task Scheduler.

@@ -255,6 +255,24 @@ CONTROLLED_LIGHTWEIGHT_CLIENTS = {
         "test_from": "01/04/26",
         "test_to": "10/04/26",
     },
+    "nativo_drinks": {
+        "cd": "CD PUDAHUEL",
+        "alias_archivo": "MovNativoDrinks",
+        "empresa_wms": "NATIVO DRINKS SPA",
+        "deposito_wms_origen": "PUDAHUEL",
+        "carpeta_destino_historica": "CD PUDAHUEL",
+        "test_from": "01/04/26",
+        "test_to": "21/04/26",
+    },
+    "omnitech": {
+        "cd": "CD PUDAHUEL",
+        "alias_archivo": "MovOmnitech",
+        "empresa_wms": "OMNITECH",
+        "deposito_wms_origen": "PUDAHUEL",
+        "carpeta_destino_historica": "CD PUDAHUEL",
+        "test_from": "01/04/26",
+        "test_to": "21/04/26",
+    },
 }
 
 CONTROLLED_HEAVY_CLIENTS = {
@@ -299,6 +317,8 @@ PRODUCTION_LIGHTWEIGHT_CLIENTS = (
     "tresmontes",
     "unilever",
     "runo",
+    "nativo_drinks",
+    "omnitech",
 )
 
 # Compatibilidad temporal con la corrida controlada inicial de DAIKIN.
@@ -478,6 +498,24 @@ CLIENTS: List[CatalogRow] = [
         "carpeta_destino_historica": "CD QUILICURA",
         "active": True,
         "runtime_notes": "Cliente historico activo. Validar disponibilidad real en dropdown WMS.",
+    },
+    {
+        "cd": "CD PUDAHUEL",
+        "alias_archivo": "MovNativoDrinks",
+        "empresa_wms": "NATIVO DRINKS SPA",
+        "deposito_wms_origen": "PUDAHUEL",
+        "carpeta_destino_historica": "CD PUDAHUEL",
+        "active": True,
+        "runtime_notes": "Nuevo cliente activo desde abril 2026.",
+    },
+    {
+        "cd": "CD PUDAHUEL",
+        "alias_archivo": "MovOmnitech",
+        "empresa_wms": "OMNITECH",
+        "deposito_wms_origen": "PUDAHUEL",
+        "carpeta_destino_historica": "CD PUDAHUEL",
+        "active": True,
+        "runtime_notes": "Nuevo cliente activo desde abril 2026.",
     },
 ]
 
