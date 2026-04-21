@@ -1023,8 +1023,6 @@ def run_sharepoint_publish_for_client(
     )
 
     log(f"[SP] Destino oficial SharePoint: {plan.sharepoint_target_path}", log_path)
-    if plan.remote_backup_target_path:
-        log(f"[SP] Politica backup remoto previa: {plan.remote_backup_target_path}", log_path)
     for warning in plan.warnings:
         log(f"[WARN][SP] {warning}", log_path)
     for issue in plan.issues:
@@ -1057,25 +1055,6 @@ def run_sharepoint_publish_for_client(
         return 0
 
     try:
-        backup_state = None
-        if remote_before.exists:
-            backup_state = create_sharepoint_remote_backup(
-                token=token,
-                drive_id=drive_id,
-                client=client,
-                plan=plan,
-                target_year=target_year,
-                target_month=target_month,
-            )
-            if backup_state:
-                log(
-                    (
-                        "[SP] Backup remoto creado antes del overwrite: "
-                        f"{plan.remote_backup_target_path} | size={backup_state.size}"
-                    ),
-                    log_path,
-                )
-
         ok = upload_file_to_sharepoint(
             token=token,
             drive_id=drive_id,
@@ -1101,7 +1080,7 @@ def run_sharepoint_publish_for_client(
             target_year=target_year,
             target_month=target_month,
             remote_before=remote_before,
-            backup_state=backup_state,
+            backup_state=None,
         )
     except Exception as exc:
         log(f"[FALLO][SP] Error durante la verificacion post-subida: {exc}", log_path)

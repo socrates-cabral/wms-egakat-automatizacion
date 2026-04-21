@@ -41,7 +41,6 @@ from productividad_config import (
     MONTH_FOLDERS,
     RANGE_END_TIME,
     RANGE_START_TIME,
-    SHAREPOINT_BACKUP_ROOT,
     SHAREPOINT_PRODUCTIVIDAD_ROOT,
     WMS_LOGIN_URL,
 )
@@ -656,23 +655,6 @@ def _upload_df_to_sharepoint(
     existing_bytes: Optional[bytes],
     log_path: Path,
 ) -> bool:
-    # Backup del archivo previo antes de sobreescribir
-    if existing_bytes:
-        backup_folder = "/".join([
-            SHAREPOINT_PRODUCTIVIDAD_ROOT,
-            SHAREPOINT_BACKUP_ROOT,
-            client["carpeta_destino_historica"],
-            str(year),
-            MONTH_FOLDERS.get(month, str(month)),
-            client["alias_archivo"],
-        ])
-        backup_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
-        ok_backup = upload_bytes_to_sharepoint(token, drive_id, backup_folder, backup_name, existing_bytes)
-        if ok_backup:
-            log(f"[BACKUP] {backup_folder}/{backup_name}", log_path)
-        else:
-            log("[WARN] No se pudo subir backup previo. Continuando con la subida.", log_path)
-
     payload = _df_to_xlsx_bytes(df, client, year, month)
     ok = upload_bytes_to_sharepoint(token, drive_id, folder_path, filename, payload)
     if ok:
