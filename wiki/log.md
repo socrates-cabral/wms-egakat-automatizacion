@@ -3,11 +3,12 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
-## [2026-04-21] ingest | Productividad — script diario operativo, 2 clientes nuevos, diagnóstico fechas
+## [2026-04-21] ingest | Productividad — 17 clientes, backup eliminado, diario en producción
 
-productividad_diario.py operativo desde hoy. 17 clientes (+ NATIVO DRINKS SPA + OMNITECH).
-Diagnóstico fechas históricas: archivos del script viejo tenían formato MM/DD — corregidos manualmente.
-WMS usa formato DD-MM-YYYY con guiones. Nuevo verificar_fechas.py para auditoría.
+productividad_diario.py operativo (TESTING_MODE=True). 17 clientes (+ NATIVO DRINKS SPA + OMNITECH).
+Fechas históricas en MM/DD corregidas manualmente. WMS usa DD-MM-YYYY con guiones.
+Backup SharePoint eliminado de ambos scripts + carpeta _backups borrada.
+productividad_descarga.py sigue activo para reprocesos manuales.
 
 ## [2026-04-17] ingest | Crypto Bot operativo + fixes agente apuestas sesgo Under
 
