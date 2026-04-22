@@ -26,6 +26,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 import os
 import csv
+import json
 import logging
 import argparse
 import requests
@@ -45,8 +46,8 @@ load_dotenv(dotenv_path=_HERE / ".env", override=True)
 WMS_URL_LOGIN = "https://egakatwms.cl/sglwms_EGA_prod/hdis.aspx"
 
 USUARIOS = [
-    {"user": os.getenv("WMS_USUARIO",   "SCABRAL"),  "pwd": os.getenv("WMS_PASSWORD",  "")},
     {"user": os.getenv("WMS_USUARIO_2", "SCABRAL2"), "pwd": os.getenv("WMS_PASSWORD2", "")},
+    {"user": os.getenv("WMS_USUARIO",   "SCABRAL"),  "pwd": os.getenv("WMS_PASSWORD",  "")},
 ]
 
 DEFAULT_DEPOSITO = os.getenv("WMS_DEPOSITO", "QUILICURA")
@@ -305,7 +306,30 @@ def balancear_despacho(page, viaje):
 
 
 # ─────────────────────────────────────────────────────────────────
-# EMAIL
+# PIPELINE — guarda resumen para que confirmar_salida.py envíe el correo
+# ─────────────────────────────────────────────────────────────────
+PIPELINE_JSON = LOG_DIR / "pipeline_resumen_temp.json"
+
+
+def guardar_resumen_pipeline(empresa, deposito, viajes_procesados, viajes_saltados,
+                              total_plts, resultados_viaje, abortado):
+    data = {
+        "empresa":            empresa,
+        "deposito":           deposito,
+        "hora":               datetime.now().strftime("%H:%M"),
+        "fecha":              HOY,
+        "viajes_procesados":  viajes_procesados,
+        "viajes_saltados":    viajes_saltados,
+        "total_plts":         total_plts,
+        "abortado":           abortado,
+        "resultados_viaje":   resultados_viaje,
+    }
+    PIPELINE_JSON.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    log.info(f"📄 Resumen pipeline guardado → {PIPELINE_JSON.name}")
+
+
+# ─────────────────────────────────────────────────────────────────
+# EMAIL (standalone — solo si se usa despacho.py sin pipeline)
 # ─────────────────────────────────────────────────────────────────
 def _build_tabla_viajes(resultados_viaje: list[dict]) -> str:
     body = ""
@@ -576,8 +600,8 @@ def main():
         browser.close()
 
         if not args.dry_run:
-            enviar_resumen(empresa, deposito, viajes_procesados, viajes_saltados,
-                           total_plts, resultados_viaje, abortado)
+            guardar_resumen_pipeline(empresa, deposito, viajes_procesados,
+                                     viajes_saltados, total_plts, resultados_viaje, abortado)
 
 
 if __name__ == "__main__":

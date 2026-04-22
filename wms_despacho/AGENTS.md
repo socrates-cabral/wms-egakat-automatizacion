@@ -1,16 +1,21 @@
 # AGENTS.md — wms_despacho
 
 ## Propósito
-Automatización de despacho por contenedor en WMS Egakat RF (Módulo 11).
-Procesa todos los viajes pendientes despachando cada PLT hasta vaciar la lista diaria.
+Pipeline de despacho diario WMS Egakat:
+1. `despacho.py` — RF Módulo 11: despacha PLTs por contenedor
+2. `confirmar_salida.py` — WEB: confirma salida de viajes después del RF
 
 ## Archivos clave
 | Archivo | Rol |
 |---|---|
-| `despacho.py` | Script principal Playwright |
-| `run_despacho.bat` | Lanzador para Task Scheduler |
-| `logs/despacho_YYYY-MM-DD.log` | Log completo diario |
-| `logs/despacho_YYYY-MM-DD.csv` | Resumen por PLT (Excel) |
+| `despacho.py` | Script RF — despacha PLTs (Módulo 11) |
+| `confirmar_salida.py` | Script WEB — confirma salida de viajes |
+| `run_pipeline.bat` | Orquesta ambos scripts en secuencia |
+| `ejecutar_pipeline_silencioso.vbs` | Lanzador silencioso para Task Scheduler |
+| `crear_tareas_pipeline.ps1` | Crea las 3 tareas programadas del pipeline |
+| `logs/despacho_YYYY-MM-DD.log` | Log RF diario |
+| `logs/confirmar_salida_YYYY-MM-DD.log` | Log WEB diario |
+| `logs/pipeline_YYYY-MM-DD.log` | Log combinado del pipeline |
 
 ## Selectores HTML confirmados (DevTools 2026-04-22)
 | Elemento | Selector |
@@ -61,10 +66,34 @@ WMS_EMPRESA=DERCO        # opcional, default
 | TIMEOUT | Página tardó demasiado |
 | ERROR | Error inesperado |
 
-## Task Scheduler (automatización diaria)
+## Selectores WEB (hinicio / trabajarconwms)
+| Elemento | Selector |
+|---|---|
+| Usuario login WEB | `input#vUSR` |
+| Clave login WEB | `input#vPASSWORD` |
+| Botón INGRESAR (hinicio) | `input[name="BUTTON3"]` |
+| Procesos WMS | `a[href="./trabajarconwms.aspx"]` |
+| Viajes pendientes de salida | `a[href="viajespendientesdesalida.aspx"]` |
+| Select Depósito | `select#vSUCURSAL` (value="1"=QUILICURA, "2"=PUDAHUEL) |
+| Botón Aplicar | `input[name="BUTTON1"]` |
+| Checkboxes viajes | `input[name*="vOP_"]` |
+| Tildar Todo | `page.evaluate("tildaTodo()")` |
+| Confirmar Salida | `input[name="CONFIRMARSALIDA"]` |
+
+**Nota:** selectores de depósito en hinicio.aspx pendientes de confirmar con DevTools.
+
+## Usuarios por script
+| Script | Principal | Fallback |
+|---|---|---|
+| `despacho.py` | SCABRAL2 | SCABRAL |
+| `confirmar_salida.py` | SCABRAL2 | SCABRAL |
+| `productividad_diario.py` | SCABRAL | SCABRAL2 |
+
+## Pipeline — Task Scheduler
 ```
-Programa  : C:\Windows\System32\cmd.exe
-Argumentos: /c C:\ClaudeWork\wms_despacho\run_despacho.bat
-Directorio: C:\ClaudeWork\wms_despacho
-Horario   : Lunes a Viernes, hora definida por operaciones
+Programa : wscript.exe
+Argumento: C:\ClaudeWork\wms_despacho\ejecutar_pipeline_silencioso.vbs
+Horario  : Lunes a Viernes 08:00 / 13:00 / 17:00
+Crear    : powershell -ExecutionPolicy Bypass -File crear_tareas_pipeline.ps1
 ```
+Eliminar las tareas antiguas "WMS Despacho - *" tras validar el pipeline.
