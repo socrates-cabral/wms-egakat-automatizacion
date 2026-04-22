@@ -505,10 +505,10 @@ def _download_sharepoint_df(
         wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
         ws = wb[wb.sheetnames[0]]
 
-        # Leer header desde fila 9 — leer todas las columnas usadas
-        max_col = ws.max_column or 50
-        header_raw = [str(ws.cell(row=9, column=c).value or "").strip() for c in range(1, max_col + 1)]
-        last_h = max((i for i, v in enumerate(header_raw, 1) if v), default=0)
+        # Header fila 9 via iter_rows — evita random-access lento en read_only
+        header_row = next(ws.iter_rows(min_row=9, max_row=9, values_only=True), ())
+        header_raw = [str(v or "").strip() for v in header_row]
+        last_h = max((i for i, v in enumerate(header_raw, 1) if v), default=0) or 50
         raw_headers = header_raw[:last_h]
 
         # Deduplicar nombres igual que en _parse_wms_html_to_df
@@ -522,14 +522,20 @@ def _download_sharepoint_df(
                 seen[h] = 0
                 headers.append(h)
 
+        # iter_rows en vez de range(ws.max_row) — evita iterar 1M filas vacías
+        # Corte automático tras 5 filas vacías consecutivas
         rows_data = []
-        for r in range(10, (ws.max_row or 10) + 1):
-            row = [ws.cell(row=r, column=c).value for c in range(1, last_h + 1)]
+        empty_streak = 0
+        for row_vals in ws.iter_rows(min_row=10, max_col=last_h, values_only=True):
+            row = list(row_vals)
             non_none = [v for v in row if v is not None and str(v).strip() != ""]
             if not non_none:
+                empty_streak += 1
+                if empty_streak >= 5:
+                    break
                 continue
+            empty_streak = 0
             first_str = str(row[0] or "").strip()
-            # Saltar footer "El reporte esta ordenado..."
             if first_str.startswith("El reporte"):
                 continue
             rows_data.append(row)
