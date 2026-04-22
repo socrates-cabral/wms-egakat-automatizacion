@@ -26,6 +26,9 @@
 
 - [[proyectos/crypto-bot]] — Grid Trading BTC_USDT + EMA 200 filter. Paper trading activo. Exchange abstraction (Crypto.com + Kraken). 20 niveles $80K-$100K.
 
+## Documentos & Presentaciones
+- Presentacion_GrupoPlanet_Automatizacion.pptx — 8 slides, 2.440 hrs/año ahorradas, 6 procesos automatizados. Generador: Documentos/generar_presentacion_grupo_planet.py (gitignored)
+
 ## Conceptos ML / Estadística
 
 - [[value-betting]] — Core del agente: detectar cuando prob_modelo > prob_implícita en cuota. Umbral mínimo value > 5%.
