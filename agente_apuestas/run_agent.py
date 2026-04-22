@@ -236,14 +236,16 @@ def verificar_limites_riesgo() -> dict:
     lunes    = (date.today() - timedelta(days=date.today().weekday())).isoformat()
 
     # ── Calcular bankroll actual ──────────────────────────────────────────────
-    resueltas = [a for a in apuestas if a.get("retorno") is not None]
+    # Excluir apuestas marcadas como sospechosas (lambda bug, auditoría, etc.)
+    apuestas_validas = [a for a in apuestas if not a.get("lambda_sospechoso")]
+    resueltas = [a for a in apuestas_validas if a.get("retorno") is not None]
     bankroll_base = BANKROLL_INICIAL + sum(a.get("retorno", 0) for a in resueltas)
 
     # Descontar apuestas pendientes (apostado pero sin resultado aún)
     # Representan exposición real aunque no estén resueltas
     pendientes_monto = sum(
         a.get("monto_apostado", 0)
-        for a in apuestas
+        for a in apuestas_validas
         if a.get("retorno") is None and a.get("monto_apostado")
     )
     bankroll = bankroll_base - pendientes_monto
@@ -324,7 +326,7 @@ def verificar_limites_riesgo() -> dict:
 
     # ── Racha negativa ────────────────────────────────────────────────────────
     # Últimas apuestas con resultado conocido (ordenadas cronológicamente desc)
-    ultimas = sorted(resueltas, key=lambda a: a.get("fecha_registro", ""), reverse=True)
+    ultimas = sorted(resueltas, key=lambda a: a.get("fecha_registro", ""), reverse=True)  # ya filtradas por lambda_sospechoso
     if ultimas:
         resultados_recientes = [bool(a.get("ganado")) for a in ultimas[:5]]
         racha_3 = resultados_recientes[:3]
