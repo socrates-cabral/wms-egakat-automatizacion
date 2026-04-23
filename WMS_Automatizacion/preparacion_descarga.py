@@ -1,7 +1,7 @@
 """
 WMS EGAKAT — Módulo 7: Descarga de Pedidos Preparados
 Autor: Sócrates Cabral - Control de Gestión y Mejora Continua
-Versión: 1.5
+Versión: 1.7
 Flujo:
   1. Login → Depósito QUILICURA → Aceptar
   2. Navegar directamente a pedidospreparadoswp.aspx
@@ -9,6 +9,16 @@ Flujo:
      → Detalle de Picking (sin Aplicar) → Exportar Excel
   4. Guardar en OneDrive → {CLIENTE}/Preparación/{AÑO}/{MM Mes}/Pedidos Preparados.xlsx
   5. Al sobrescribir el archivo, Power BI siempre lee datos del mes acumulado
+Cambios v1.7:
+  - Fix detección "No existen OPs": el mensaje aparece POST-clic en BUTTON7, no antes
+  - _bajar_excel: listener de descarga registrado ANTES del clic (evita race condition)
+  - Poll 10s post-clic: si aparece #span_vMSGEXCEL → archivo vacío + return True
+  - Si no aparece mensaje ni descarga en 10s → espera TIMEOUT_DESCARGA restante
+  - CERVECERIA ABI removido de CLIENTES_CHUNKED — el problema era "sin pedidos", no volumen
+Cambios v1.6:
+  - CERVECERIA ABI ahora usa descarga particionada en chunks de 5 días (igual que DERCO)
+  - descargar_derco() renombrada a descargar_chunked() — acepta cualquier empresa de alto volumen
+  - CLIENTES_CHUNKED: set con clientes que requieren chunking
 Cambios v1.5:
   - Retry automático en descargar_cliente: 2 intentos con 60s de pausa entre ellos
   - Cubre timeouts por WMS lento (e.g. CERVECERIA ABI con volumen alto)
@@ -67,7 +77,9 @@ MESES = {
 }
 
 # Empresa WMS → carpeta destino en OneDrive
-# DERCO se descarga particionado — no necesita timeout largo por chunk
+# Clientes que requieren descarga particionada en chunks (alto volumen → timeout en descarga única)
+CLIENTES_CHUNKED = {"DERCO"}
+
 CLIENTES = {
     "CERVECERIA ABI":   "ABINBEV",
     "DAIKIN":           "DAIKIN",
@@ -160,7 +172,7 @@ def login(page):
 
 # ── DESCARGA DE UN RANGO (bloque atómico) ─────────────────────────────────────
 
-def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo):
+def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo, estado_filtro="Preparados"):
     """
     Descarga un Excel para empresa/fechas dadas y lo guarda en ruta_archivo.
     Si no hay registros, crea un archivo vacío (solo headers).
@@ -174,7 +186,7 @@ def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo):
     page.wait_for_timeout(500)
     page.select_option("select[name='vCOD_EMP']", label=empresa_wms)
     page.wait_for_timeout(500)
-    page.select_option("select[name='vESTADO']", label="Preparados")
+    page.select_option("select[name='vESTADO']", label=estado_filtro)
     page.wait_for_timeout(500)
 
     page.fill("input[name='vFDESDE']", "")
@@ -193,37 +205,56 @@ def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo):
     page.select_option("select[name='vCOMBOEXCEL']", label="Excel General")
     page.wait_for_timeout(500)
 
-    # Detectar mensaje WMS "sin resultados" — aparece cuando el cliente no tiene pedidos
-    # preparados en el período (condición normal, no un error del sistema)
-    try:
-        page.wait_for_selector(
-            "text=No existen OPs que coincidan con los filtros de la pantalla.",
-            timeout=4000
-        )
-        df_vacio = pd.DataFrame()
-        df_vacio.to_excel(ruta_archivo, index=False, engine="openpyxl")
-        log(f"     [ADVERTENCIA] Sin pedidos preparados en el periodo — archivo vacío creado")
-        return True
-    except Exception:
-        pass  # Mensaje no presente → hay registros, continuar con descarga
+    # Registrar listener ANTES del clic para no perder el evento de descarga
+    _descargas: list = []
+    def _on_dl(dl): _descargas.append(dl)
+    page.on("download", _on_dl)
 
-    with page.expect_download(timeout=TIMEOUT_DESCARGA) as dl_info:
+    try:
         page.click("input[name='BUTTON7']")
 
-    download = dl_info.value
-    download.save_as(ruta_archivo)
-    return True
+        # Poll 10s post-clic: el WMS responde con descarga O con mensaje "sin resultados"
+        # El mensaje aparece en #span_vMSGEXCEL solo si no hay OPs en el período
+        for _ in range(20):  # 20 × 500ms = 10s
+            page.wait_for_timeout(500)
+            el = page.query_selector("#span_vMSGEXCEL")
+            if el and "No existen OPs" in (el.inner_text() or ""):
+                pd.DataFrame().to_excel(ruta_archivo, index=False, engine="openpyxl")
+                log("[ADVERTENCIA] Sin pedidos preparados en el periodo — archivo vacío creado")
+                return True
+            if _descargas:
+                break
+
+        # Si no inició descarga en 10s, esperar el tiempo restante del timeout
+        if not _descargas:
+            inicio = datetime.now()
+            limite = TIMEOUT_DESCARGA / 1000 - 10
+            while (datetime.now() - inicio).total_seconds() < limite:
+                page.wait_for_timeout(2_000)
+                if _descargas:
+                    break
+            if not _descargas:
+                raise TimeoutError(
+                    f"Sin descarga ni respuesta WMS para {empresa_wms} "
+                    f"tras {TIMEOUT_DESCARGA/1000:.0f}s"
+                )
+
+        _descargas[0].save_as(ruta_archivo)
+        return True
+
+    finally:
+        page.remove_listener("download", _on_dl)
 
 # ── DESCARGA CLIENTE NORMAL (1 rango completo) ────────────────────────────────
 
-def descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta):
+def descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta, estado_filtro="Preparados"):
     fd_str = fd_dt.strftime("%d/%m/%Y")
     fh_str = fh_dt.strftime("%d/%m/%Y")
     archivo_final = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
     for intento in range(1, 3):  # 2 intentos
         try:
             log(f"  -> Fechas: {fd_str} a {fh_str} (intento {intento}/2)")
-            _bajar_excel(page, empresa_wms, fd_str, fh_str, archivo_final)
+            _bajar_excel(page, empresa_wms, fd_str, fh_str, archivo_final, estado_filtro)
             log(f"  -> [OK] Guardado: {archivo_final}")
             return True
         except Exception as e:
@@ -238,9 +269,9 @@ def descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str,
     log(f"  -> [FALLO] {empresa_wms} no descargó tras 2 intentos")
     return False
 
-# ── DESCARGA DERCO PARTICIONADA (chunks de 5 días + merge) ────────────────────
+# ── DESCARGA PARTICIONADA (chunks de 5 días + merge) — DERCO, CERVECERIA ABI ──
 
-def descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta):
+def descargar_chunked(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta, estado_filtro="Preparados"):
     chunks = partir_en_chunks(fd_dt, fh_dt, DERCO_CHUNK_DIAS)
     log(f"  -> Particionando en {len(chunks)} chunk(s) de {DERCO_CHUNK_DIAS} dias")
 
@@ -257,7 +288,7 @@ def descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta):
         tmp.close()
 
         try:
-            _bajar_excel(page, "DERCO", fd_str, fh_str, tmp_path)
+            _bajar_excel(page, empresa_wms, fd_str, fh_str, tmp_path, estado_filtro)
             df = pd.read_excel(tmp_path, engine="openpyxl")
             log(f"     {len(df)} filas descargadas")
             dataframes.append(df)
@@ -321,10 +352,18 @@ def run():
     parser = argparse.ArgumentParser(description="Modulo 7 — Pedidos Preparados")
     parser.add_argument("--mes", action="append", metavar="MM/AAAA",
                         help="Mes a descargar (repetible). Sin argumento: mes actual.")
+    parser.add_argument("--estado", default="Preparados",
+                        help="Filtro Estado WMS (default: 'Preparados'). Backfill histórico: 'Todos los estados'.")
+    parser.add_argument("--forzar", action="store_true",
+                        help="Ignorar checkpoints y re-descargar aunque el archivo exista hoy.")
     args = parser.parse_args()
 
     meses_arg = args.mes or [None]
     periodos  = [calcular_periodo(m) for m in meses_arg]
+    ESTADO_FILTRO = args.estado
+    FORZAR        = args.forzar
+    if FORZAR:
+        log(f"[FORZAR] Checkpoints ignorados — re-descarga completa")
 
     # Graph API init (una sola vez para todos los clientes)
     _sp_token, _sp_drive_id = None, None
@@ -361,14 +400,18 @@ def run():
 
                 archivo_hoy = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
 
-                if empresa_wms == "DERCO":
-                    # DERCO escribe archivo parcial aunque falle → marcador en logs/ (no OneDrive)
-                    marker_ok = str(Path(__file__).parent.parent / "logs" / f"derco_preparacion_{hoy_str}.ok")
-                    if os.path.exists(marker_ok):
-                        log(f"  >> [SKIP] DERCO completado hoy (marcador OK)")
+                if empresa_wms in CLIENTES_CHUNKED:
+                    # Clientes de alto volumen: descarga particionada en chunks
+                    slug_marker = empresa_wms.lower().replace(" ", "_")
+                    marker_ok = str(Path(__file__).parent.parent / "logs" / f"{slug_marker}_preparacion_{hoy_str}.ok")
+                    if not FORZAR and os.path.exists(marker_ok):
+                        log(f"  >> [SKIP] {empresa_wms} completado hoy (marcador OK)")
                         resultados.append((empresa_wms, mes_carpeta, True))
                         continue
-                    ok = descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta)
+                    if FORZAR and os.path.exists(marker_ok):
+                        os.remove(marker_ok)
+                        log(f"  >> [FORZAR] Marcador eliminado — re-descargando {empresa_wms}")
+                    ok = descargar_chunked(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta, ESTADO_FILTRO)
                     if ok:
                         open(marker_ok, "w").close()
                         if _sp_token:
@@ -376,18 +419,18 @@ def run():
                                 ok_sp = subir_archivo_sp(_sp_token, _sp_drive_id,
                                     f"Clientes EK/{carpeta_cliente}/Preparación/{ano_str}/{mes_carpeta}",
                                     Path(archivo_hoy))
-                                log(f"  -> [SP] {'OK' if ok_sp else 'WARN'} SharePoint Preparacion DERCO")
+                                log(f"  -> [SP] {'OK' if ok_sp else 'WARN'} SharePoint Preparacion {empresa_wms}")
                             except Exception as e_sp:
                                 log(f"  -> [WARN SP] {e_sp}")
                 else:
                     # Clientes normales: solo escriben archivo en éxito → mtime es suficiente
-                    if os.path.exists(archivo_hoy):
+                    if not FORZAR and os.path.exists(archivo_hoy):
                         mtime = datetime.fromtimestamp(os.path.getmtime(archivo_hoy)).date()
                         if mtime == hoy:
                             log(f"  >> [SKIP] Ya descargado hoy: {empresa_wms}")
                             resultados.append((empresa_wms, mes_carpeta, True))
                             continue
-                    ok = descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta)
+                    ok = descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta, ESTADO_FILTRO)
                     if ok and _sp_token:
                         try:
                             ok_sp = subir_archivo_sp(_sp_token, _sp_drive_id,

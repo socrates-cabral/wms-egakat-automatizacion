@@ -288,10 +288,15 @@ def run():
     parser = argparse.ArgumentParser(description="Modulo 8 — Recepciones Recibidas")
     parser.add_argument("--mes", action="append", metavar="MM/AAAA",
                         help="Mes a descargar (repetible). Sin argumento: mes actual.")
+    parser.add_argument("--forzar", action="store_true",
+                        help="Ignorar checkpoints y re-descargar aunque el archivo exista hoy.")
     args = parser.parse_args()
 
     meses_arg = args.mes or [None]
     periodos  = [calcular_periodo(m) for m in meses_arg]
+    FORZAR    = args.forzar
+    if FORZAR:
+        log(f"[FORZAR] Checkpoints ignorados — re-descarga completa")
 
     # Graph API init (una sola vez para todos los clientes)
     _sp_token, _sp_drive_id = None, None
@@ -329,12 +334,14 @@ def run():
                 archivo_hoy = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
 
                 if empresa_wms == "DERCO":
-                    # DERCO escribe archivo parcial aunque falle → marcador en logs/ (no OneDrive)
                     marker_ok = str(Path(__file__).parent.parent / "logs" / f"derco_recepciones_{hoy_str}.ok")
-                    if os.path.exists(marker_ok):
+                    if not FORZAR and os.path.exists(marker_ok):
                         log(f"  >> [SKIP] DERCO completado hoy (marcador OK)")
                         resultados.append((empresa_wms, mes_carpeta, True))
                         continue
+                    if FORZAR and os.path.exists(marker_ok):
+                        os.remove(marker_ok)
+                        log(f"  >> [FORZAR] Marcador eliminado — re-descargando DERCO")
                     ok = descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta)
                     if ok:
                         open(marker_ok, "w").close()
@@ -348,7 +355,7 @@ def run():
                                 log(f"  -> [WARN SP] {e_sp}")
                 else:
                     # Clientes normales: solo escriben archivo en éxito → mtime es suficiente
-                    if os.path.exists(archivo_hoy):
+                    if not FORZAR and os.path.exists(archivo_hoy):
                         mtime = datetime.fromtimestamp(os.path.getmtime(archivo_hoy)).date()
                         if mtime == hoy:
                             log(f"  >> [SKIP] Ya descargado hoy: {empresa_wms}")

@@ -192,8 +192,9 @@ def obtener_empresa_viaje(page) -> str:
 def obtener_plts(page) -> list[str]:
     try:
         spans = page.query_selector_all("span[id^='span_vEVENTOS_EVPLTASO_']")
-        return [s.inner_text().strip() for s in spans
-                if s.inner_text().strip().startswith("PL")]
+        # Sin filtro de prefijo — acepta PLT1234 y también códigos de barra como 4011558031428
+        # El WMS valida el código; si es incorrecto devuelve error clasificable
+        return [s.inner_text().strip() for s in spans if s.inner_text().strip()]
     except Exception as e:
         log.error(f"Error leyendo PLTs: {e}")
         return []
