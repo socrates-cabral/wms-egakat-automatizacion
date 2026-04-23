@@ -64,6 +64,18 @@ C:\ClaudeWork\crypto_bot\
 - Fees: 0.075% maker/taker Crypto.com — absorbible en grid trading
 - Cuenta Crypto.com Exchange pendiente de crear para producción (exchange.crypto.com)
 
+## Bug fixes
+
+### 2026-04-22
+- **`notifier.py`** — `enviar_orden()` tenía `"BTC"` hardcodeado en la línea de qty. Fix: `asset = par.split("_")[0]`. Ahora ETH muestra "ETH", BTC muestra "BTC".
+- **`run_bot.py`** — errores de red (SSL EOF, Max retries) usaban `enviar_alerta_riesgo` mezclándose con alertas de drawdown real. Fix: detectar keywords de conectividad y usar `enviar_texto` con título "CONECTIVIDAD". Keywords: `SSL`, `Max retries`, `ConnectionError`, `RemoteDisconnected`, `Timeout`, `EOF`.
+
+## Análisis sesión 2026-04-22
+- BTC PnL: +11.73 USDT (+1.17%) | ETH PnL: +11.54 USDT (+1.15%)
+- Comportamiento: 7 ciclos BUY+SELL en nivel $79k (churning normal por oscilación lateral)
+- Cada ciclo BUY+SELL en $79k: $1,000 step × 0.00063291 BTC = +$0.63 USDT
+- Error SSL al final: error de red, no de lógica — ahora reporta como CONECTIVIDAD
+
 ## Próximas fases
 | Fase | Cuándo | Condición |
 |------|--------|-----------|

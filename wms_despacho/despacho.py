@@ -305,6 +305,28 @@ def balancear_despacho(page, viaje):
         log.warning(f"     ⚠️   BTNBALANCEARDESPACHO no encontrado en viaje {viaje}")
 
 
+def _reiniciar_pagina(ctx, old_page, creds, deposito, empresa, debug):
+    """Cuando el renderer crashea, cierra la pestaña rota y abre una nueva."""
+    try:
+        old_page.close()
+    except Exception:
+        pass
+    new_page = ctx.new_page()
+    for cred in creds:
+        if not cred["pwd"]:
+            continue
+        if hacer_login(new_page, cred["user"], cred["pwd"], debug):
+            try:
+                navegar_a_despacho(new_page, deposito, empresa, debug)
+                log.info("[CRASH-RECOVERY] ✅ Nueva página lista — continuando")
+                return new_page, True
+            except Exception as e:
+                log.error(f"[CRASH-RECOVERY] Error navegando tras recovery: {e}")
+                return new_page, False
+    log.error("[CRASH-RECOVERY] Login fallido tras recovery")
+    return new_page, False
+
+
 # ─────────────────────────────────────────────────────────────────
 # PIPELINE — guarda resumen para que confirmar_salida.py envíe el correo
 # ─────────────────────────────────────────────────────────────────
@@ -498,7 +520,8 @@ def main():
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=not args.show, slow_mo=50)
-        page    = browser.new_context(viewport={"width": 1280, "height": 900}).new_page()
+        ctx     = browser.new_context(viewport={"width": 1280, "height": 900})
+        page    = ctx.new_page()
 
         # LOGIN — intenta SCABRAL, fallback SCABRAL2
         logueado = False
@@ -553,38 +576,67 @@ def main():
         abortado       = False
         resultados_viaje = []
 
+        MAX_CRASH_RETRIES = 2
         for idx, viaje in enumerate(viajes, 1):
             log.info(f"\n[{idx}/{len(viajes)}] " + "─" * 38)
-            try:
-                plts, motivo = procesar_viaje(page, viaje, empresa, deposito, args.debug)
-                total_plts += plts
-                saltado = plts == 0 and bool(motivo)
-                resultados_viaje.append({"viaje": viaje, "plts": plts, "saltado": saltado, "motivo": motivo})
-            except RuntimeError as e:
-                if "DOBLE_SESION" in str(e):
-                    log.error("[FALLO] Sesión expulsada por doble login. Abortando.")
-                    abortado = True
-                    resultados_viaje.append({"viaje": viaje, "plts": 0, "saltado": True, "motivo": "doble sesión"})
-                    break
-                log.error(f"[FALLO] Error crítico en viaje {viaje}: {e}")
-                resultados_viaje.append({"viaje": viaje, "plts": 0, "saltado": False, "motivo": str(e)[:50]})
+            crash_intentos = 0
+            viaje_listo    = False
+
+            while not viaje_listo:
                 try:
-                    page.reload(wait_until="domcontentloaded", timeout=15_000)
-                    page.wait_for_selector("select#vVIAJEOPCONCAT", timeout=8_000)
-                except Exception:
-                    log.error("[FALLO] No se pudo recuperar la página. Abortando.")
-                    abortado = True
-                    break
-            except Exception as e:
-                log.error(f"[FALLO] Error crítico en viaje {viaje}: {e}")
-                resultados_viaje.append({"viaje": viaje, "plts": 0, "saltado": False, "motivo": str(e)[:50]})
-                try:
-                    page.reload(wait_until="domcontentloaded", timeout=15_000)
-                    page.wait_for_selector("select#vVIAJEOPCONCAT", timeout=8_000)
-                except Exception:
-                    log.error("[FALLO] No se pudo recuperar la página. Abortando.")
-                    abortado = True
-                    break
+                    plts, motivo = procesar_viaje(page, viaje, empresa, deposito, args.debug)
+                    total_plts += plts
+                    saltado = plts == 0 and bool(motivo)
+                    resultados_viaje.append({"viaje": viaje, "plts": plts, "saltado": saltado, "motivo": motivo})
+                    viaje_listo = True
+
+                except RuntimeError as e:
+                    if "DOBLE_SESION" in str(e):
+                        log.error("[FALLO] Sesión expulsada por doble login. Abortando.")
+                        abortado = True
+                        resultados_viaje.append({"viaje": viaje, "plts": 0, "saltado": True, "motivo": "doble sesión"})
+                    else:
+                        log.error(f"[FALLO] Error en viaje {viaje}: {e}")
+                        resultados_viaje.append({"viaje": viaje, "plts": 0, "saltado": False, "motivo": str(e)[:50]})
+                        try:
+                            page.reload(wait_until="domcontentloaded", timeout=15_000)
+                            page.wait_for_selector("select#vVIAJEOPCONCAT", timeout=8_000)
+                        except Exception:
+                            log.error("[FALLO] No se pudo recuperar la página. Abortando.")
+                            abortado = True
+                    viaje_listo = True
+
+                except Exception as e:
+                    err_str = str(e)
+                    if "Target crashed" in err_str and crash_intentos < MAX_CRASH_RETRIES:
+                        crash_intentos += 1
+                        log.warning(f"[CRASH] Renderer crasheó en viaje {viaje} — recovery {crash_intentos}/{MAX_CRASH_RETRIES}")
+                        page, ok = _reiniciar_pagina(ctx, page, USUARIOS, deposito, empresa, args.debug)
+                        if ok:
+                            log.info(f"[CRASH] Reintentando viaje {viaje}...")
+                            # continúa el while — reintenta el mismo viaje
+                        else:
+                            log.error("[FALLO] Recovery fallido. Saltando viaje.")
+                            resultados_viaje.append({"viaje": viaje, "plts": 0, "saltado": False, "motivo": "crash irrecuperable"})
+                            abortado = True
+                            viaje_listo = True
+                    else:
+                        log.error(f"[FALLO] Error crítico en viaje {viaje}: {e}")
+                        resultados_viaje.append({"viaje": viaje, "plts": 0, "saltado": False, "motivo": err_str[:50]})
+                        if "Target crashed" in err_str:
+                            log.error("[FALLO] Máx reintentos de crash alcanzados. Saltando viaje.")
+                            # No abortar — continúa con el siguiente viaje
+                        else:
+                            try:
+                                page.reload(wait_until="domcontentloaded", timeout=15_000)
+                                page.wait_for_selector("select#vVIAJEOPCONCAT", timeout=8_000)
+                            except Exception:
+                                log.error("[FALLO] No se pudo recuperar la página. Abortando.")
+                                abortado = True
+                        viaje_listo = True
+
+            if abortado:
+                break
             page.wait_for_timeout(800)
 
         viajes_procesados = sum(1 for r in resultados_viaje if not r["saltado"] and r["plts"] > 0)

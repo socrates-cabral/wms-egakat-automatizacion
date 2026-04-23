@@ -98,6 +98,18 @@ Task Scheduler (08:00 / 13:00 / 17:00 Lun–Vie)
 **`.env` raíz:** credenciales WMS y Graph API
 **`wms_despacho/.env`:** destinatarios email (`EMAIL_DESTINO`, `EMAIL_CC`) + credenciales WMS locales
 
+## Manejo de errores — Target crashed (fix 2026-04-22)
+
+El renderer Chromium puede crashear mid-viaje ("Target crashed"). `page.reload()` no funciona en ese estado — requiere nueva pestaña.
+
+**Solución implementada en `despacho.py`:**
+- Se almacena el context: `ctx = browser.new_context(...)`, `page = ctx.new_page()`
+- `_reiniciar_pagina(ctx, old_page, ...)` → cierra la pestaña rota, abre nueva desde el mismo `ctx`, re-login y navega a Despacho
+- Loop de viajes con `while not viaje_listo` + contador `crash_intentos`
+- Hasta `MAX_CRASH_RETRIES=2` reintentos por viaje; si se agotan → salta el viaje (no aborta el pipeline)
+- Los PLTs ya despachados no reaparecen en la lista WMS → retry del viaje es seguro
+
 ## Estado
 
 - **2026-04-22:** Pipeline completo validado en producción. 16 viajes confirmados, 102 PLTs despachados en prueba final. Email combinado aprobado. Destinatarios: socrates.cabral + mariana.varela. Task Scheduler activo: 08:00 / 13:00 / 17:00.
+- **2026-04-22:** Fix Target crashed — recovery con nueva pestaña + retry automático hasta 2 intentos por viaje.

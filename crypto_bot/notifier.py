@@ -28,10 +28,11 @@ def enviar_orden(tipo: str, par: str, precio: float, qty: float, pnl_acum: float
     prefijo = "[PAPER] " if config.MODO_PAPER_TRADING else ""
     emoji = "BUY" if tipo == "BUY" else "SELL"
     pnl_str = f"+{pnl_acum:.2f}" if pnl_acum >= 0 else f"{pnl_acum:.2f}"
+    asset = par.split("_")[0]
     msg = (
         f"{prefijo}<b>{emoji} {par}</b>\n"
         f"Precio: ${precio:,.2f}\n"
-        f"Qty: {qty:.8f} BTC\n"
+        f"Qty: {qty:.8f} {asset}\n"
         f"PnL acum: {pnl_str} USDT"
     )
     _send(config.TELEGRAM_BOT_TOKEN, config.TELEGRAM_CHAT_ID, msg)

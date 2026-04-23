@@ -191,7 +191,13 @@ def run_par(exchange, par: str, par_cfg: dict, logger, notifier, trend_filter, g
 
     except Exception as e:
         logger.error(f"[FALLO] [{par}] Error en ciclo: {e}")
-        notifier.enviar_alerta_riesgo(f"ERROR CICLO [{par}]", str(e))
+        err_str = str(e)
+        _connectivity_keywords = ("SSL", "Max retries", "ConnectionError", "RemoteDisconnected", "Timeout", "EOF")
+        if any(k in err_str for k in _connectivity_keywords):
+            prefijo = "[PAPER] " if config.MODO_PAPER_TRADING else ""
+            notifier.enviar_texto(f"{prefijo}<b>CONECTIVIDAD [{par}]</b>\n{err_str[:300]}")
+        else:
+            notifier.enviar_alerta_riesgo(f"ERROR CICLO [{par}]", err_str)
         return False
 
     return True
