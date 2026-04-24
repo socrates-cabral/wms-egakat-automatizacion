@@ -20,7 +20,7 @@ Un solo correo HTML combinado al finalizar, vía Graph API.
 ```
 Task Scheduler (08:00 / 13:00 / 17:00 Lun–Vie)
     → ejecutar_pipeline_silencioso.vbs
-        → run_pipeline.bat
+        → run_pipeline.py  (reemplazó run_pipeline.bat el 2026-04-23)
             → despacho.py (headless)
                 → Login RF (SCABRAL2)
                 → menurf.aspx: depósito + empresa + Módulo 11
@@ -112,4 +112,5 @@ El renderer Chromium puede crashear mid-viaje ("Target crashed"). `page.reload()
 ## Estado
 
 - **2026-04-22:** Pipeline completo validado en producción. 16 viajes confirmados, 102 PLTs despachados en prueba final. Email combinado aprobado. Destinatarios: socrates.cabral + mariana.varela. Task Scheduler activo: 08:00 / 13:00 / 17:00.
+- **2026-04-23:** `run_pipeline.py` reemplaza `run_pipeline.bat` — lock file, log estándar, abort en paso 1. VBS actualizado. Corrida nocturna: 24 viajes / 90 PLTs / 25 confirmados OK.
 - **2026-04-22:** Fix Target crashed — recovery con nueva pestaña + retry automático hasta 2 intentos por viaje.
