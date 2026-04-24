@@ -23,6 +23,7 @@
 - [[proyectos/inversiones-ia]] — App análisis inversiones institucional (BlackRock/GS/MS/Citadel). Claude + yfinance + Plotly. Puerto 8506. Sprint 1.
 - [[proyectos/productividad-automatizacion]] — OPERATIVO 2026-04-21. productividad_diario.py: append incremental diario, 17 clientes (incl. NATIVO DRINKS + OMNITECH), checkpoint JSON, dedup, token Graph API por cliente.
 - [[proyectos/wms-despacho-automatico]] — OPERATIVO 2026-04-22. Pipeline RF+WEB: despacho PLTs + confirmación salida viajes. SCABRAL2 principal. Email combinado Graph API. Task Scheduler 08:00/13:00/17:00.
+- [[proyectos/softnet-ventas]] — OPERATIVO 2026-04-24. Libro de Ventas Softnet → SharePoint vía Graph API. Correo diario con CxC, vencidas, alto monto, pagos del día. L-V 16:00.
 
 - [[proyectos/crypto-bot]] — Grid Trading BTC_USDT + EMA 200 filter. Paper trading activo. Exchange abstraction (Crypto.com + Kraken). 20 niveles $80K-$100K.
 

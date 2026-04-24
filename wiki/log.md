@@ -3,6 +3,12 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-04-24] ingest | Softnet Ventas — nuevo proyecto en producción
+
+Pipeline completo Softnet ERP → SharePoint. Playwright headless, Graph API, correo HTML con CxC/vencidas/alto monto/pagos. Task Scheduler L-V 16:00. MODO_TEST=false activado.
+
+---
+
 ## [2026-04-21] ingest | Productividad — 17 clientes, backup eliminado, diario en producción
 
 productividad_diario.py operativo (TESTING_MODE=True). 17 clientes (+ NATIVO DRINKS SPA + OMNITECH).

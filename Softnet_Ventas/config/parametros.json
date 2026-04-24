@@ -1,0 +1,26 @@
+{
+  "ventana_dias": 365,
+  "año_inicio": 2026,
+  "dias_vencimiento": 60,
+  "umbral_alto_monto": 5000000,
+  "softnet": {
+    "url_login": "https://www.softnet.cl/sistems/contabilidad/login.php",
+    "url_libro_ventas": "https://www.softnet.cl/sistems/contabilidad/m_venta.php",
+    "timeout_default_ms": 60000,
+    "timeout_download_ms": 180000,
+    "retry_attempts": 3,
+    "retry_backoff_seconds": [60, 120, 180]
+  },
+  "sharepoint": {
+    "hostname": "egakatcom.sharepoint.com",
+    "site_path": "/sites/FinanzasyMejoraContinua",
+    "drive_name": "Documentos",
+    "ruta_base": "Informe Ventas Mensual"
+  },
+  "notificacion": {
+    "destinatarios": [
+      "socrates.cabral@egakat.cl"
+    ],
+    "enviar_siempre": true
+  }
+}
