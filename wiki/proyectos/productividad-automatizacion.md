@@ -86,9 +86,22 @@ Sync local: `OneDrive - EGA KAT LOGISTICA SPA\Datos para Dashboard - Productivid
 | `logs/productividad_diario_checkpoint.json` | Checkpoint por cliente |
 | `verificar_fechas.py` | Auditoría fechas archivos OneDrive local |
 
-## Task Scheduler
-- **ACTIVA**: `Productividad Diario - EGA KAT` — Lun-Vie 10:30 AM → productividad_diario.py
+## Task Scheduler (actualizado 2026-04-23)
+- **ACTIVA**: `Productividad Diario - EGA KAT` — Lun-Vie **10:30 AM y 14:00** → productividad_diario.py
+  - 10:30 = corrida principal
+  - 14:00 = reproceso automático de fallos del día
 - **DESHABILITADA**: `Productividad Egakat - Descarga Diaria` (script viejo)
+
+## Early-exit sin pendientes (2026-04-23)
+`productividad_diario.py` verifica al inicio cuántos clientes tienen `from_dt < to_dt`.
+Si ninguno → sale sin abrir WMS ni enviar email (`[SKIP] Sin clientes pendientes`).
+Implementado en `main()` antes del login Azure Graph.
+
+## Error conocido: WMS_EMPRESA_TODAS
+WMS devuelve XLS con todas las empresas mezcladas en lugar del cliente filtrado.
+- Retriable: el script reintenta hasta 3 veces
+- Si persiste todo el día: checkpoint no avanza → el segundo disparo 14:00 o el día siguiente cubre el gap
+- Afecta intermitentemente a DERCO y DELIBEST (observado 2026-04-23)
 
 ## Historial incidentes
 - **2026-04-21**: Archivos históricos de abril en formato MM/DD (script viejo). Corregidos manualmente.
@@ -97,3 +110,4 @@ Sync local: `OneDrive - EGA KAT LOGISTICA SPA\Datos para Dashboard - Productivid
 - **2026-04-21**: 2 clientes nuevos: NATIVO DRINKS SPA + OMNITECH.
   Bug: faltaba `historical_reference` → KeyError en productividad_descarga.py. Fix: apuntar a MovBarentz.
 - **2026-04-21**: Backup remoto SharePoint eliminado de ambos scripts + carpeta _backups borrada.
+- **2026-04-23**: Segundo trigger Task Scheduler agregado (14:00). Early-exit sin pendientes. WMS_EMPRESA_TODAS afecta DERCO+DELIBEST todo el día.

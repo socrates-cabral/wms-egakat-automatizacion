@@ -929,6 +929,17 @@ def main() -> int:
         checkpoint = _load_checkpoint()
         log(f"[CHECKPOINT] {json.dumps(checkpoint, ensure_ascii=False)}", log_path)
 
+        # Si todos los clientes ya tienen checkpoint de hoy → sin trabajo pendiente, salir silencioso.
+        pendientes = [
+            k for k in _DAILY_CLIENTS
+            if _compute_window(k, checkpoint)[0] < _compute_window(k, checkpoint)[1]
+        ]
+        if not pendientes:
+            log("[SKIP] Sin clientes pendientes — todos actualizados al día de hoy. Fin silencioso.", log_path)
+            return 0
+
+        log(f"[INFO] Clientes con trabajo pendiente: {', '.join(pendientes)}", log_path)
+
         # Cargar módulo Graph una sola vez; token se refresca por cliente
         try:
             azure_graph = load_azure_graph_module()
