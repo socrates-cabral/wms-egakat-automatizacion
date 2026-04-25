@@ -3,7 +3,7 @@ title: Agente Apuestas — Orquestador run_agent.py
 type: proyecto
 sources: [agente_apuestas/run_agent.py]
 related: [proyecto-agente-apuestas, value-betting, xgboost-modelo, api-sports, decision-paper-trading]
-updated: 2026-04-15
+updated: 2026-04-22
 confidence: high
 ---
 
@@ -42,6 +42,8 @@ Script principal del agente. Ejecuta el pipeline completo diario: recopila datos
 | Apuestas hoy ≥ 5 | No registrar más |
 | Exposición por liga > 30% bankroll | Saltar esa liga |
 | Exposición total diaria > 40% bankroll | Bloquear |
+
+**Nota 2026-04-22:** Las apuestas con `lambda_sospechoso: true` en `historico_apuestas.json` son excluidas de todos los cálculos de riesgo (bankroll, pendientes, racha). Se construye `apuestas_validas` antes de cualquier filtro. Evita que entradas inválidas por bugs contaminen el Kelly factor.
 
 ## Stop reasons (para logs y Task Scheduler)
 - `end_turn` — completó normalmente
@@ -89,6 +91,23 @@ MODO_PAPER_TRADING = True        # hasta ROI ≥ 20% sostenido n ≥ 20
 - `predictor_tiempo_real.py`: captura `ImportError` → fallback a `calibrated_classifiers_[0].estimator` (XGBoost raw)
 - `entrenamiento/entrenador.py`: cambiado a `method='sigmoid'` para próximo retrain
 - Backup modelo isotonic: `modelos/xgb_model_isotonic_backup.joblib`
+
+## Fix calibración Poisson (2026-04-24)
+
+**Problema detectado:** Poisson generaba probabilidades sobreconfiadas para OVER/UNDER. Modelo decía 0.92, realidad ~50%. Bayern vs Real Madrid: Under 4.5 con 0.89 de confianza → partido terminó 4-3 (7 goles).
+
+**Fixes aplicados en `value_detector.py`:**
+- Cap prob OVER/UNDER: `min(0.95, ...)` → `min(0.75, ...)` — reduce sobreconfianza sin tocar el modelo
+- Bloqueo Under en knockout: si `ronda` contiene "quarter/semi/final/knockout" → `under_knockout=True` → `tiene_value=False`
+- Detecta rondas via `fixture.get("ronda")` (campo de `fixtures_collector.py`)
+
+**Fix en `resultado_checker.py`:**
+- `resultado_real` ahora guarda el score real (`"2-1"`) en lugar de la selección (`"Under 2.5"`)
+- Aplica tanto al path api-sports (fútbol) como al path MLB-StatsAPI
+
+**Fix API Anthropic:**
+- Key anterior revocada → `401 Unauthorized` → fallback OpenAI
+- Nueva key activa 2026-04-24 → Claude Haiku restaurado como primer modelo
 
 ## Archivos de estado
 - `backtesting/historico_apuestas.json` — fuente de verdad, append-only

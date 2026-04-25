@@ -28,6 +28,11 @@ _MESES_ES = {
     7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre",
 }
 
+_DIAS_ES = {
+    0:"Lunes", 1:"Martes", 2:"Miércoles", 3:"Jueves",
+    4:"Viernes", 5:"Sábado", 6:"Domingo",
+}
+
 
 def determinar_estado(resumen: dict) -> str:
     if resumen.get("errores"):
@@ -85,7 +90,7 @@ def _header_html(estado: str, fecha: datetime) -> str:
 <div style="background:{color};padding:24px 28px;color:#ffffff;">
   <div style="font-size:13px;opacity:0.85;letter-spacing:1px;text-transform:uppercase;">Softnet Ventas — Resumen Diario</div>
   <div style="font-size:22px;font-weight:600;margin-top:4px;">{icono} {titulo}</div>
-  <div style="font-size:13px;opacity:0.9;margin-top:6px;">{fecha.strftime('%A %d de %B de %Y — %H:%M')}</div>
+  <div style="font-size:13px;opacity:0.9;margin-top:6px;">{_DIAS_ES[fecha.weekday()]} {fecha.day} de {_MESES_ES[fecha.month]} de {fecha.year} — {fecha.strftime('%H:%M')}</div>
 </div>"""
 
 
@@ -296,7 +301,8 @@ def _cxc_resumen_html(resumen: dict) -> str:
     return f"""
 <div style="padding:0 28px 20px 28px;">
   <h3 style="margin:0 0 4px 0;font-size:15px;color:{_C['gris_h']};">Cuentas por cobrar pendientes</h3>
-  <p style="margin:0 0 10px 0;font-size:12px;color:{_C['gris_t']};">Total global: <strong style="color:{_C['gris_h']};font-size:14px;">{_formato_monto(total_global)}</strong> en {n_global} facturas</p>
+  <p style="margin:0 0 4px 0;font-size:12px;color:{_C['gris_t']};">Total global: <strong style="color:{_C['gris_h']};font-size:14px;">{_formato_monto(total_global)}</strong> en {n_global} facturas</p>
+  <p style="margin:0 0 10px 0;font-size:11px;color:{_C['gris_t']};font-style:italic;">Suma del saldo pendiente de todas las facturas sin pagar. Las alertas de alto monto y vencidas son subconjuntos filtrados de este total — una factura puede aparecer en más de una sección.</p>
   <table style="width:100%;border-collapse:collapse;font-size:13px;max-width:420px;">
     <thead>
       <tr style="background:{_C['gris_h']};color:#ffffff;">

@@ -3,6 +3,13 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-04-24] ingest | Agente Apuestas — fixes calibración + API key
+
+Poisson cap 0.95→0.75, bloqueo Under en knockout, resultado_real corregido.
+API Anthropic renovada. Crypto bot: +$30.33 USDT (+3.03%) BTC+ETH combinado.
+
+---
+
 ## [2026-04-24] ingest | Softnet Ventas — nuevo proyecto en producción
 
 Pipeline completo Softnet ERP → SharePoint. Playwright headless, Graph API, correo HTML con CxC/vencidas/alto monto/pagos. Task Scheduler L-V 16:00. MODO_TEST=false activado.
