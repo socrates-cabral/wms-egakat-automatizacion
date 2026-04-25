@@ -244,7 +244,7 @@ def verificar_pendientes(verbose: bool = True) -> dict:
                     resumen["retorno_neto"] += retorno
 
                     idx = idx_por_id[apuesta["id"]]
-                    apuestas[idx]["resultado_real"] = apuesta["seleccion"]
+                    apuestas[idx]["resultado_real"] = resultado_mlb["score"]
                     apuestas[idx]["score_final"]    = resultado_mlb["score"]
                     apuestas[idx]["ganado"]         = ganado
                     apuestas[idx]["retorno"]        = retorno
@@ -313,7 +313,7 @@ def verificar_pendientes(verbose: bool = True) -> dict:
 
         # Actualizar apuesta en la lista
         idx = idx_por_id[apuesta["id"]]
-        apuestas[idx]["resultado_real"]  = apuesta["seleccion"]
+        apuestas[idx]["resultado_real"]  = resultado["score"]
         apuestas[idx]["score_final"]     = resultado["score"]
         apuestas[idx]["ganado"]          = ganado
         apuestas[idx]["retorno"]         = retorno

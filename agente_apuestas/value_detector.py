@@ -537,9 +537,14 @@ def detectar_value_bets(
     home = fixture.get("home_nombre", "")
     away = fixture.get("away_nombre", "")
     fid  = fixture.get("fixture_id")
-    # Para deportes sin api-sports (NBA/MLB/NFL) relajamos el requisito de consenso
     deporte = fixture.get("deporte", "futbol")
     _requiere_consenso = deporte == "futbol"
+
+    # Detectar rondas eliminatorias — Poisson subestima goles en partidos de alto voltaje
+    _RONDAS_KNOCKOUT = {"quarter", "semi", "final", "knockout", "round of 16", "last 16",
+                        "octavos", "cuartos", "semifinal", "cuarto", "eliminat"}
+    ronda = str(fixture.get("ronda", "")).lower()
+    es_knockout = any(k in ronda for k in _RONDAS_KNOCKOUT)
 
     # ── Ensemble de probabilidades ────────────────────────────────────────────
     h2h_apertura = (cuotas or {}).get("h2h_apertura")   # dict {home, draw, away} si disponible
@@ -604,21 +609,18 @@ def detectar_value_bets(
                 continue
             cuota_ap       = t_ap.get(cuota_key)
             steam          = detectar_steam_move(cuota_ap, cuota)
-            prob_modelo    = min(0.95, prob_fn())   # cap: ningún modelo debería ser 100% seguro
+            prob_modelo    = min(0.75, prob_fn())   # cap calibración: Poisson sobreestima confianza
             prob_implicita = 1 / cuota
             value = prob_modelo - prob_implicita
 
-            # Señal de calidad: lambda vs línea de mercado
-            # Fútbol: lambda < 1.5 → API sin datos reales
-            # No-fútbol: si la línea difiere >30% del lambda → modelo no confiable
-            # (ej: lambda MLB=8.5 vs línea 11.5 → ratio=1.35 → Under artificialmente inflado)
             ratio_linea = punto / lam if lam > 0 else 1.0
             lambda_sospechoso = (
                 (deporte == "futbol" and lam < 1.5) or
                 (deporte != "futbol" and abs(ratio_linea - 1.0) > 0.30)
             )
-            # Under con línea >> lambda = value falso: Poisson subestima goles reales
             under_irreal = (tipo == "Under" and ratio_linea > 1.25 and deporte != "futbol")
+            # Under en ronda eliminatoria — alto voltaje, Poisson no captura motivación
+            under_knockout = (tipo == "Under" and es_knockout)
 
             bets.append({
                 "fixture_id":         fid,
@@ -630,7 +632,7 @@ def detectar_value_bets(
                 "prob_implicita":     round(prob_implicita, 4),
                 "value":              round(value, 4),
                 "cuota":              cuota,
-                "tiene_value":        value >= VALUE_THRESHOLD and not lambda_sospechoso and not under_irreal,
+                "tiene_value":        value >= VALUE_THRESHOLD and not lambda_sospechoso and not under_irreal and not under_knockout,
                 "lambda":             round(lam, 2),
                 "lambda_sospechoso":  lambda_sospechoso,
                 "ratio_linea":        round(ratio_linea, 3),
