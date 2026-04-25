@@ -53,10 +53,22 @@ Script principal del agente. Ejecuta el pipeline completo diario: recopila datos
 - `no_fixtures` — sin partidos hoy
 - `error` — excepción no manejada
 
-## Orden de prioridad de ligas (2026-04-15)
+## Orden de prioridad de ligas
 Serie A → Premier League → La Liga → Bundesliga → Ligue 1 → Copa Libertadores → ... → Champions League → NBA → MLB
 
-**Cambio 2026-04-15:** Serie A al tope (único modelo entrenado). UCL y NBA al fondo y en LIGAS_OBSERVACION.
+**Cambio 2026-04-15:** Serie A al tope. UCL y NBA al fondo y en LIGAS_OBSERVACION.
+**Cambio 2026-04-25:** Bundesliga + Ligue 1 activadas (ambas en training: 1530 y 1725 partidos). Objetivo: acelerar paper trading de ~2 bets/semana a ~6-8. n=50 estimado junio 2026.
+
+## Ligas activas (2026-04-25)
+| Liga | ID | Umbral | Estado |
+|---|---|---|---|
+| Serie A | 135 | 0.60 | ✅ Activa desde 2026-03-24 |
+| Premier League | 39 | 0.70 | ✅ Activa desde 2026-04-12 |
+| La Liga | 140 | 0.70 | ✅ Activa desde 2026-04-12 |
+| Bundesliga | 78 | 0.70 | ✅ Activa desde 2026-04-25 |
+| Ligue 1 | 61 | 0.70 | ✅ Activa desde 2026-04-25 |
+
+**Sprint 20** — features L5 (`goles_favor_5`, `goles_contra_5`, `puntos_5`, `forma_gd_5`) ya estaban implementadas en el modelo (35 features totales). No requirió implementación adicional.
 
 ## LIGAS_OBSERVACION — modo solo análisis, sin registro
 Definido en `config.py`. Detectan value bets y aparecen en reporte HTML pero **no registran ni notifican**.

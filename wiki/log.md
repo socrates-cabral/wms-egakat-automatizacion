@@ -3,6 +3,13 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-04-25] ingest | Agente Apuestas — Bundesliga + Ligue 1 activadas, Sprint 20 confirmado
+
+Bundesliga (1530 pts) y Ligue 1 (1725 pts) activadas para acelerar n=50.
+Sprint 20 features L5 ya estaban en el modelo. n=50 estimado junio 2026.
+
+---
+
 ## [2026-04-24] ingest | Agente Apuestas — fixes calibración + API key
 
 Poisson cap 0.95→0.75, bloqueo Under en knockout, resultado_real corregido.
