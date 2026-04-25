@@ -10,38 +10,42 @@
   },
   "140": {
     "nombre": "La Liga",
-    "activa": false,
+    "activa": true,
     "umbral": 0.70,
     "value_min": 0.10,
     "n_apuestas": 0,
     "roi": 0.0,
-    "activada_fecha": null
+    "activada_fecha": "2026-04-12",
+    "nota": "Activada por backtesting historico: ROI flat +28.0%, accuracy 81.8%, n=11 en test set 1926 partidos"
   },
   "78": {
     "nombre": "Bundesliga",
-    "activa": false,
+    "activa": true,
     "umbral": 0.70,
     "value_min": 0.10,
     "n_apuestas": 0,
     "roi": 0.0,
-    "activada_fecha": null
+    "activada_fecha": "2026-04-25",
+    "nota": "Activada para acelerar n=50. Datos en training: 1530 partidos (2019-2024). Umbral conservador 0.70. Monitorear primeras 10 apuestas."
   },
   "61": {
     "nombre": "Ligue 1",
-    "activa": false,
+    "activa": true,
     "umbral": 0.70,
     "value_min": 0.10,
     "n_apuestas": 0,
     "roi": 0.0,
-    "activada_fecha": null
+    "activada_fecha": "2026-04-25",
+    "nota": "Activada para acelerar n=50. Datos en training: 1725 partidos (2019-2024). Umbral conservador 0.70. Monitorear primeras 10 apuestas."
   },
   "39": {
     "nombre": "Premier League",
-    "activa": false,
+    "activa": true,
     "umbral": 0.70,
     "value_min": 0.10,
     "n_apuestas": 0,
     "roi": 0.0,
-    "activada_fecha": null
+    "activada_fecha": "2026-04-12",
+    "nota": "Activada por backtesting historico: ROI flat +17.8%, accuracy 76.9%, n=13 en test set 1926 partidos"
   }
 }
