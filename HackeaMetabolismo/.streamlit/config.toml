@@ -1,10 +1,17 @@
-[server]
-port = 8505
-headless = true
-
 [theme]
-base = "dark"
+primaryColor = "#0f9d7a"
 backgroundColor = "#0a1628"
 secondaryBackgroundColor = "#0d1f3c"
-primaryColor = "#0f9d7a"
-textColor = "#e8eaf0"
+textColor = "#ffffff"
+font = "sans serif"
+
+[client]
+showErrorDetails = false
+showSidebarNavigation = true
+
+[logger]
+level = "info"
+
+[server]
+headless = true
+runOnSave = true

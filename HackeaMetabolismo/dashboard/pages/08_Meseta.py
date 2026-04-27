@@ -5,15 +5,17 @@ Sprint S10 · i18n S13
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-sys.stdout.reconfigure(encoding="utf-8")
+import sys as _sys
+if _sys.platform == "win32" and hasattr(_sys.stdout, "reconfigure"):
+    _sys.stdout.reconfigure(encoding="utf-8")
 
 import streamlit as st
-from src.db.queries import get_mediciones, get_historial_kcal, get_objetivo, get_o_crear_usuario_activo
+from src.db.queries import get_mediciones, get_historial_kcal, get_objetivo
 from src.db.schema import inicializar_db
 from src.core.plateau import detectar_plateau, calcular_dias_para_meta
 from src.utils.i18n import t, lang, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge
+from src.utils.auth_guard import auth_badge, get_uid_activo
 
 st.set_page_config(page_title="Meseta · Hackea", page_icon="⚠️", layout="wide")
 inject_styles()
@@ -22,7 +24,7 @@ selector_idioma_sidebar()
 auth_badge()
 
 inicializar_db()
-uid      = get_o_crear_usuario_activo()
+uid      = get_uid_activo()
 objetivo = get_objetivo(uid)
 
 st.title(t("mes.title"))

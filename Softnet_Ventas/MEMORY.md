@@ -150,6 +150,23 @@ requests>=2.31
 - Retry con backoff (3 intentos, 60s/120s/180s)
 - `pandas.to_*` con `errors="coerce"` (no `"ignore"`)
 
+## Regla operacional — Webhooks Telegram
+
+Después de cualquier cambio en workflows con Telegram Trigger en n8n:
+1. Publicar el workflow en n8n
+2. Inmediatamente registrar webhook manual en el navegador:
+   - Bot interno: `https://api.telegram.org/bot{TOKEN_INTERNO}/setWebhook?url=https://n8n.socrates-labs.com/webhook/egakat-intel-langchain/webhook`
+   - Bot clientes: `https://api.telegram.org/bot{TOKEN_CLIENTE}/setWebhook?url=https://n8n.socrates-labs.com/webhook/egakat-clientes-bot/webhook`
+3. Verificar con `getWebhookInfo` que cada bot apunta a su webhook correcto
+4. NUNCA desactivar/activar workflows sin registrar el webhook después
+
+**Credenciales n8n correctas (post 26-04-2026):**
+- Bot interno: credencial `"Telegram EgakatIntelBot"`
+- Bot clientes: credencial `"Telegram EgakatClientesBot"` (crear si no existe)
+- Todos los nodos Telegram de cada workflow deben usar su credencial específica
+
+---
+
 ## Pendientes post-producción (no bloquean v1)
 
 - [ ] Mover `sp_graph.py` a `C:\ClaudeWork\lib\` si se reusa en otros proyectos

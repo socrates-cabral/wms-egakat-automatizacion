@@ -627,9 +627,10 @@ def process_client(page: Page, client: Dict[str, Any], usuario: str, clave: str,
     }
 
 
-def build_email_subject(reference_dt: Optional[datetime] = None) -> str:
+def build_email_subject(reference_dt: Optional[datetime] = None, has_failures: bool = False) -> str:
     reference_dt = reference_dt or datetime.now()
-    return f"[WMS Egakat] NNSS - Descarga {reference_dt.strftime('%d/%m/%Y')}"
+    prefix = "[FALLO PARCIAL] " if has_failures else ""
+    return f"{prefix}[WMS Egakat] NNSS - Descarga {reference_dt.strftime('%d/%m/%Y')}"
 
 
 def main() -> int:
@@ -825,8 +826,9 @@ def _run(args: argparse.Namespace, log_path: Path, started_at: datetime) -> int:
 
     if not args.skip_email:
         html_body = build_summary_html(results, all_warning_items)
+        has_errors = any(r.estado == "Error" for r in results)
         try:
-            if send_summary_email(build_email_subject(started_at), html_body, log_path=log_path):
+            if send_summary_email(build_email_subject(started_at, has_failures=has_errors), html_body, log_path=log_path):
                 log("Correo resumen enviado via Graph API.", log_path)
         except Exception as exc:
             log(f"[WARN] No se pudo enviar correo resumen: {exc}", log_path)

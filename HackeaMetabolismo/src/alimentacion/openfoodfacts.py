@@ -5,7 +5,7 @@ Open Food Facts API v2 (gratuita, sin key)
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-sys.stdout.reconfigure(encoding="utf-8")
+import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8") if hasattr(_sys.stdout, "reconfigure") and _sys.platform == "win32" else None
 
 import requests
 from src.utils.helpers import setup_logging
@@ -18,6 +18,7 @@ BASE_URL    = "https://world.openfoodfacts.org"
 SEARCH_URL  = f"{BASE_URL}/cgi/search.pl"
 PRODUCT_URL = f"{BASE_URL}/api/v2/product"
 TIMEOUT     = 8
+HEADERS     = {"User-Agent": "HackeaMetabolismo/1.0 (https://github.com/socrates-cabral/hackea-metabolismo)"}
 
 
 def _parsear_porcion_g(serving_size_str: str) -> float | None:
@@ -59,7 +60,7 @@ def _extraer_nutrientes(producto: dict) -> dict:
 def buscar_por_texto(query: str, max_resultados: int = 8) -> list[dict]:
     """Busca alimentos por nombre. Retorna lista de dicts con nutrientes por 100g."""
     try:
-        resp = requests.get(SEARCH_URL, params={
+        resp = requests.get(SEARCH_URL, headers=HEADERS, params={
             "search_terms": query,
             "search_simple": 1,
             "action": "process",
@@ -85,21 +86,24 @@ def buscar_por_texto(query: str, max_resultados: int = 8) -> list[dict]:
 
 
 def buscar_por_barcode(barcode: str) -> dict | None:
-    """Busca un producto por código de barras."""
-    try:
-        resp = requests.get(
-            f"{PRODUCT_URL}/{barcode}.json",
-            params={"fields": "product_name,brands,nutriments,serving_size,code"},
-            timeout=TIMEOUT,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        if data.get("status") == 1 and data.get("product"):
-            return _extraer_nutrientes(data["product"])
-        return None
-    except Exception as e:
-        logger.error(f"Error barcode {barcode}: {e}")
-        return None
+    """Busca un producto por código de barras.
+    Intenta primero en Chile (cl), luego en la base mundial."""
+    campos = "product_name,brands,nutriments,serving_size,code"
+    endpoints = [
+        f"https://cl.openfoodfacts.org/api/v2/product/{barcode}.json",
+        f"{PRODUCT_URL}/{barcode}.json",
+    ]
+    for url in endpoints:
+        try:
+            resp = requests.get(url, headers=HEADERS, params={"fields": campos}, timeout=TIMEOUT)
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("status") == 1 and data.get("product"):
+                logger.info(f"Barcode {barcode} encontrado en {url}")
+                return _extraer_nutrientes(data["product"])
+        except Exception as e:
+            logger.warning(f"Barcode {barcode} no encontrado en {url}: {e}")
+    return None
 
 
 def ajustar_por_porcion(nutrientes_100g: dict, gramos: float) -> dict:

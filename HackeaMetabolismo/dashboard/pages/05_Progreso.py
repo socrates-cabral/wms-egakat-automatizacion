@@ -5,19 +5,21 @@ Sprint S7 · i18n S13
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-sys.stdout.reconfigure(encoding="utf-8")
+import sys as _sys
+if _sys.platform == "win32" and hasattr(_sys.stdout, "reconfigure"):
+    _sys.stdout.reconfigure(encoding="utf-8")
 
 import streamlit as st
 import plotly.graph_objects as go
 from src.db.queries import (insertar_medicion, get_mediciones, get_historial_kcal,
-                             get_ejercicio_semana, get_objetivo, get_o_crear_usuario_activo)
+                             get_ejercicio_semana, get_objetivo)
 from src.db.schema import inicializar_db
 from src.core.progreso import media_movil, tendencia_semanal, proyectar_peso, calcular_adherencia, resumen_semana
 from src.core.plateau import detectar_plateau, calcular_dias_para_meta
 from src.utils.helpers import hoy
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge
+from src.utils.auth_guard import auth_badge, get_uid_activo
 
 BG="#0a1628"; BG_CARD="#0d1f3c"; TEAL="#0f9d7a"; GRID="#1e3a5f"
 
@@ -28,7 +30,7 @@ selector_idioma_sidebar()
 auth_badge()
 
 inicializar_db()
-uid      = get_o_crear_usuario_activo()
+uid      = get_uid_activo()
 objetivo = get_objetivo(uid)
 
 st.title(t("prog.title"))

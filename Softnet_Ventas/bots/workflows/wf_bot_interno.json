@@ -1,0 +1,68 @@
+{
+  "name": "Egakat Intel Bot — Consulta Interactiva",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "parameters": {
+        "updates": ["message"]
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram EgakatIntelBot"
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Es mencion o chat privado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.message.text.includes('@EgakatIntelBot') || $json.message.chat.type === 'private' }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "or"
+        }
+      }
+    },
+    {
+      "id": "n3",
+      "name": "Ejecutar Agente",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [700, 200],
+      "parameters": {
+        "command": "py \"C:\\ClaudeWork\\Softnet_Ventas\\bots\\webhook_handler.py\" \"{{ $json.message.chat.id }}\" \"{{ $json.message.text.replace('\"', '\\\"') }}\" interno"
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [{ "node": "Es mencion o chat privado?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Es mencion o chat privado?": {
+      "main": [
+        [{ "node": "Ejecutar Agente", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "notes": "Sprint 2 Bots Egakat. Requiere credencial 'Telegram EgakatIntelBot' con TELEGRAM_TOKEN_INTERNO. La respuesta se envía directamente desde webhook_handler.py — no hay nodo Send en n8n."
+  }
+}

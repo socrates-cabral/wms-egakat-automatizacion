@@ -1,0 +1,88 @@
+{
+  "mlb|detroit tigers|st. louis cardinals|2026-04-04": {
+    "home": {
+      "runs_pg": 5.5,
+      "runs_against_pg": 4.4,
+      "win_pct_l10": 0.5,
+      "streak": 2,
+      "rest_days": 0
+    },
+    "away": {
+      "runs_pg": 4.1,
+      "runs_against_pg": 4.7,
+      "win_pct_l10": 0.6,
+      "streak": -2,
+      "rest_days": 0
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "_timestamp": "2026-04-21T16:01:13.334045",
+  "mlb|new york mets|arizona diamondbacks|2026-04-07": {
+    "home": {
+      "runs_pg": 4.2,
+      "runs_against_pg": 2.8,
+      "win_pct_l10": 0.6,
+      "streak": 4,
+      "rest_days": 0
+    },
+    "away": {
+      "runs_pg": 3.6,
+      "runs_against_pg": 4.8,
+      "win_pct_l10": 0.5,
+      "streak": -1,
+      "rest_days": 0
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|tampa bay rays|chicago cubs|2026-04-07": {
+    "home": {
+      "runs_pg": 5.1,
+      "runs_against_pg": 5.4,
+      "win_pct_l10": 0.5,
+      "streak": 3,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.1,
+      "runs_against_pg": 4.0,
+      "win_pct_l10": 0.4,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|minnesota twins|detroit tigers|2026-04-07": {
+    "home": {
+      "runs_pg": 4.5,
+      "runs_against_pg": 4.6,
+      "win_pct_l10": 0.4,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.5,
+      "runs_against_pg": 4.2,
+      "win_pct_l10": 0.4,
+      "streak": -2,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|cleveland guardians|houston astros|2026-04-21": {
+    "home": {
+      "runs_pg": 4.6,
+      "runs_against_pg": 5.0,
+      "win_pct_l10": 0.5,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.5,
+      "runs_against_pg": 5.5,
+      "win_pct_l10": 0.3,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  }
+}

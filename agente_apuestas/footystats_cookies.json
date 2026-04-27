@@ -1,0 +1,93 @@
+[
+  {
+    "domain": "footystats.org",
+    "expirationDate": 1777942640.554443,
+    "hostOnly": true,
+    "httpOnly": false,
+    "name": "country",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": false,
+    "session": false,
+    "storeId": "0",
+    "value": "CL"
+  },
+  {
+    "domain": "footystats.org",
+    "expirationDate": 1806890245,
+    "hostOnly": true,
+    "httpOnly": false,
+    "name": "tz",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": false,
+    "session": false,
+    "storeId": "0",
+    "value": "America/Santiago"
+  },
+  {
+    "domain": "footystats.org",
+    "expirationDate": 1775830443.516251,
+    "hostOnly": true,
+    "httpOnly": false,
+    "name": "PHPSESSID",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": false,
+    "session": false,
+    "storeId": "0",
+    "value": "e9e4stva9k817398ivi9kjam3i"
+  },
+  {
+    "domain": "footystats.org",
+    "expirationDate": 1775783643.517236,
+    "hostOnly": true,
+    "httpOnly": true,
+    "name": "__cflb",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "storeId": "0",
+    "value": "02DiuH2TTY8vZpoegooTT8gj2yk8De6AX7iUkZ8qfz812"
+  },
+  {
+    "domain": "footystats.org",
+    "expirationDate": 1778297191.386484,
+    "hostOnly": true,
+    "httpOnly": false,
+    "name": "darkmode",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": false,
+    "session": false,
+    "storeId": "0",
+    "value": "off"
+  },
+  {
+    "domain": "footystats.org",
+    "expirationDate": 1810265191.38684,
+    "hostOnly": true,
+    "httpOnly": false,
+    "name": "cartalyst_sentinel",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": false,
+    "session": false,
+    "storeId": "0",
+    "value": "%22ACdOwScYXOa4PcT0KVtSixQjKvOYXKp8%22"
+  },
+  {
+    "domain": "footystats.org",
+    "expirationDate": 1775791653,
+    "hostOnly": true,
+    "httpOnly": false,
+    "name": "fECFShown",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": false,
+    "session": false,
+    "storeId": "0",
+    "value": "yes"
+  }
+]

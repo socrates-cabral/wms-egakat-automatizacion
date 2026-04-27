@@ -5,16 +5,18 @@ Sprint S11 · i18n S13
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-sys.stdout.reconfigure(encoding="utf-8")
+import sys as _sys
+if _sys.platform == "win32" and hasattr(_sys.stdout, "reconfigure"):
+    _sys.stdout.reconfigure(encoding="utf-8")
 
 import streamlit as st
 import plotly.graph_objects as go
-from src.db.queries import insertar_sueno, get_sueno_semanas, get_o_crear_usuario_activo
+from src.db.queries import insertar_sueno, get_sueno_semanas
 from src.db.schema import inicializar_db
 from src.utils.helpers import hoy
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge
+from src.utils.auth_guard import auth_badge, get_uid_activo
 
 BG="#0a1628"; BG_CARD="#0d1f3c"; GRID="#1e3a5f"
 
@@ -25,7 +27,7 @@ selector_idioma_sidebar()
 auth_badge()
 
 inicializar_db()
-uid = get_o_crear_usuario_activo()
+uid = get_uid_activo()
 
 st.title(t("sue.title"))
 st.markdown(t("sue.subtitle"))

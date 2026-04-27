@@ -5,18 +5,20 @@ Sprint S3 · i18n S13
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-sys.stdout.reconfigure(encoding="utf-8")
+import sys as _sys
+if _sys.platform == "win32" and hasattr(_sys.stdout, "reconfigure"):
+    _sys.stdout.reconfigure(encoding="utf-8")
 
 import streamlit as st
+import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 from src.db.queries import (get_totales_dia, get_objetivo, get_alimentos_dia,
-                             get_historial_kcal, get_o_crear_usuario_activo,
-                             eliminar_alimento)
+                             get_historial_kcal, eliminar_alimento)
 from src.db.schema import inicializar_db
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge
+from src.utils.auth_guard import auth_badge, get_uid_activo
 
 BG="#0a1628"; BG_CARD="#0d1f3c"; TEAL="#0f9d7a"; GRID="#1e3a5f"
 
@@ -27,7 +29,7 @@ selector_idioma_sidebar()
 auth_badge()
 
 inicializar_db()
-uid      = get_o_crear_usuario_activo()
+uid      = get_uid_activo()
 objetivo = get_objetivo(uid)
 totales  = get_totales_dia(uid)
 
@@ -58,6 +60,8 @@ with col_anillo:
     rest_pct = 100 - pct
     color_anillo = TEAL if pct <= 100 else "#ef4444"
 
+    st.markdown(f"<div style='text-align:center;color:#e2e8f0;font-size:0.9rem;font-weight:600;margin-bottom:4px;'>{t('dash.kcal_dia')}</div>", unsafe_allow_html=True)
+
     fig_anillo = go.Figure(go.Pie(
         values=[pct, rest_pct],
         hole=0.70,
@@ -73,7 +77,6 @@ with col_anillo:
     fig_anillo.update_layout(
         paper_bgcolor=BG, plot_bgcolor=BG,
         margin=dict(l=10,r=10,t=10,b=10), height=260,
-        title=dict(text=t("dash.kcal_dia"), font=dict(color="#e2e8f0", size=14), x=0.5),
     )
     st.plotly_chart(fig_anillo, use_container_width=True)
     st.metric(t("kpi.restante"), f"{rest:.0f} kcal")
@@ -167,6 +170,7 @@ st.markdown(t("dash.historial"))
 df_hist = get_historial_kcal(uid, dias=14)
 
 if not df_hist.empty:
+    df_hist["fecha"] = df_hist["fecha"].astype(str).str[:10]
     colores = ["#22c55e" if abs(k - kcal_obj) <= kcal_obj * 0.10 else
                "#f59e0b" if abs(k - kcal_obj) <= kcal_obj * 0.20 else "#ef4444"
                for k in df_hist["kcal"]]
@@ -183,7 +187,7 @@ if not df_hist.empty:
         paper_bgcolor=BG, plot_bgcolor=BG_CARD,
         font=dict(color="#e2e8f0", size=11),
         margin=dict(l=20,r=20,t=20,b=40),
-        xaxis=dict(gridcolor=GRID),
+        xaxis=dict(gridcolor=GRID, type="category"),
         yaxis=dict(gridcolor=GRID, title="kcal"),
         height=280,
     )

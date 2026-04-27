@@ -5,7 +5,7 @@ Sarcopenia, WHtR, crononutrición, resistencia insulínica.
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-sys.stdout.reconfigure(encoding="utf-8")
+import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8") if hasattr(_sys.stdout, "reconfigure") and _sys.platform == "win32" else None
 
 from dataclasses import dataclass, field
 

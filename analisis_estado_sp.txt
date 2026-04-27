@@ -1,0 +1,17 @@
+Cliente                 Filas  Desde        Hasta         Dias_unicos  Arch_bytes
+ABInbev/CERVECERIA ABI      0  —            —                       0       14206
+BHA                         0  —            —                       0       13953
+DAIKIN                     38  2026-01-04   2026-10-04              4       25304
+DERCO                   41515  2026-01-04   2026-11-04              9    14938558
+MASCOTAS LATINAS          427  2026-01-04   2026-10-04              7      135557
+POCHTECA                   52  2026-02-04   2026-10-04              5       27204
+BARENTZ                    51  2026-01-04   2026-10-04              6       33979
+BURASCHI                    0  —            —                       0       14436
+CEPAS CHILE                 0  —            —                       0       14439
+COLLICO                     0  —            —                       0       14705
+DELIBEST                    0  —            —                       0       14438
+INTIME                     78  2026-02-04   2026-10-04              3       58700
+MASCOTAS LATINA PUD         0  —            —                       0       29580
+RUNO SPA                    9  2026-06-04   2026-10-04              3       23166
+TRES MONTES                 0  —            —                       0       14442
+UNILEVER                  333  2026-01-04   2026-10-04              7      129666

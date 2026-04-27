@@ -1,0 +1,195 @@
+{
+  "name": "Egakat Intel Bot — LangChain Nativo v2",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [-1800, 300],
+      "webhookId": "egakat-intel-langchain",
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram EgakatIntelBot"
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Es mencion o privado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-1580, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.message.text.includes('@EgakatIntelBot') || $json.message.chat.type === 'private' }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "or"
+        }
+      }
+    },
+    {
+      "id": "n3",
+      "name": "Limpiar mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-1360, 200],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "chat_id",
+              "value": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "mensaje",
+              "value": "={{ $('Telegram Trigger').item.json.message.text.replace('@EgakatIntelBot', '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "chat_tipo",
+              "value": "={{ $('Telegram Trigger').item.json.message.chat.type }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n4",
+      "name": "Agente Cobranza Egakat",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [-1140, 200],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.mensaje }}",
+        "options": {
+          "systemMessage": "Eres el analista de cobranza de Egakat SPA, empresa 3PL chilena.\n\nTienes acceso a datos en tiempo real del Libro de Ventas mediante la herramienta 'Consultar Datos SP'.\nÚsala SIEMPRE que te pregunten sobre cartera, facturas, clientes, saldos, vencimientos o pagos.\n\nREGLAS:\n- Responde en español, directo, sin adornos\n- Montos en formato chileno: $1.234.567\n- Máximo 350 palabras\n- Nunca inventes datos — si no tienes el dato, dilo\n- Formato Telegram HTML: usa <b>texto</b> para énfasis, listas con guion (-), NO tablas Markdown\n- Emojis solo para estados: ✅ pagado, 🔴 crítico, ⚠️ alerta\n- Para análisis por cliente: filtra los datos de 'facturas_vencidas' y 'top_pendiente_por_cliente'\n- Si el usuario saluda o pregunta algo fuera de scope financiero, responde brevemente qué puedes hacer"
+        }
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Consultar Datos SP",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 1.1,
+      "position": [-1140, 420],
+      "parameters": {
+        "name": "Consultar_Datos_SP",
+        "description": "Obtiene datos en tiempo real del Libro de Ventas desde SharePoint: cartera pendiente, facturas vencidas, DSO, próximos vencimientos y top clientes por saldo. Llama esta herramienta cuando te pregunten sobre facturas, saldos, cobranza o clientes.",
+        "method": "GET",
+        "url": "https://api-cobranza.socrates-labs.com/cobranza/resumen",
+        "options": {}
+      }
+    },
+    {
+      "id": "n6",
+      "name": "Modelo OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [-1340, 420],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "n7",
+      "name": "Memoria por Chat",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [-1140, 560],
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      }
+    },
+    {
+      "id": "n8",
+      "name": "Enviar Respuesta",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-920, 200],
+      "parameters": {
+        "chatId": "={{ $('Limpiar mensaje').item.json.chat_id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram EgakatIntelBot"
+        }
+      }
+    },
+    {
+      "id": "n9",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-1900, 100],
+      "parameters": {
+        "content": "## Egakat Intel Bot — LangChain Nativo\n\n**Requisitos:**\n1. Credencial 'Telegram EgakatIntelBot' con TELEGRAM_TOKEN_INTERNO\n2. Credencial 'OpenAi account' con OPENAI_API_KEY\n3. API Cobranza corriendo: `py bots/api_cobranza.py` (localhost:8080)\n\n**API pública:** https://api-cobranza.socrates-labs.com/cobranza/resumen\n\n**Backup:** si la API no está disponible, el agente responde sin datos reales",
+        "height": 200,
+        "width": 400,
+        "color": 4
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{ "node": "Es mencion o privado?", "type": "main", "index": 0 }]]
+    },
+    "Es mencion o privado?": {
+      "main": [
+        [{ "node": "Limpiar mensaje", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Limpiar mensaje": {
+      "main": [[{ "node": "Agente Cobranza Egakat", "type": "main", "index": 0 }]]
+    },
+    "Agente Cobranza Egakat": {
+      "main": [[{ "node": "Enviar Respuesta", "type": "main", "index": 0 }]]
+    },
+    "Modelo OpenAI": {
+      "ai_languageModel": [[{ "node": "Agente Cobranza Egakat", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Memoria por Chat": {
+      "ai_memory": [[{ "node": "Agente Cobranza Egakat", "type": "ai_memory", "index": 0 }]]
+    },
+    "Consultar Datos SP": {
+      "ai_tool": [[{ "node": "Agente Cobranza Egakat", "type": "ai_tool", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

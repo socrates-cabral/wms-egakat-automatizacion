@@ -1,0 +1,56 @@
+{
+  "name": "Egakat Intel — Reporte Semanal Cobranza",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Cada Lunes 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Generar y Enviar Reporte",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "parameters": {
+        "command": "py \"C:\\ClaudeWork\\Softnet_Ventas\\bots\\run_reporte_semanal.py\""
+      }
+    },
+    {
+      "id": "n3",
+      "name": "Log resultado",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Cada Lunes 08:00": {
+      "main": [
+        [{ "node": "Generar y Enviar Reporte", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generar y Enviar Reporte": {
+      "main": [
+        [{ "node": "Log resultado", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "notes": "Sprint 2 Bots Egakat. Cron lunes 08:00. El script run_reporte_semanal.py genera el briefing con Claude y lo envía al grupo Egakat Intel directamente."
+  }
+}

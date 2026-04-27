@@ -4,3 +4,4 @@ snapshots_cierre/
 .env
 __pycache__/
 *.pyc
+bots/db/

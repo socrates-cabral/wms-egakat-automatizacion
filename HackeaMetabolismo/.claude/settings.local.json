@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py:*)",
+      "Bash(findstr \"5432\")",
+      "Bash(ping -n 2 rqaawisuwsvwpywlwnia.supabase.co)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":8505\")",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(findstr \":5432\")"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}

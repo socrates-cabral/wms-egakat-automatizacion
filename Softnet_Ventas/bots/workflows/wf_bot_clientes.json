@@ -1,0 +1,202 @@
+{
+  "name": "Egakat Clientes Bot — Autoservicio Financiero",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Telegram Trigger Clientes",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [-1800, 300],
+      "webhookId": "egakat-clientes-bot",
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram EgakatClientesBot"
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Verificar Registro",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1580, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api-cobranza.socrates-labs.com/clientes/info",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "chat_id", "value": "={{ $json.message.chat.id }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n3",
+      "name": "Cliente Autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-1360, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n4",
+      "name": "Obtener Datos Cliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1140, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api-cobranza.socrates-labs.com/cobranza/resumen_cliente",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "rut", "value": "={{ $('Verificar Registro').item.json.rut_cliente }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Agente Cliente",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [-920, 200],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Telegram Trigger Clientes').item.json.message.text }}",
+        "options": {
+          "systemMessage": "={{ 'Eres el asistente financiero de ' + $('Verificar Registro').item.json.empresa + ' en Egakat SPA.\\n\\nREGLA ABSOLUTA: Solo tienes acceso a información de ' + $('Verificar Registro').item.json.empresa + ' (RUT: ' + $('Verificar Registro').item.json.rut_cliente + ').\\nNunca menciones otros clientes ni otras empresas.\\nNunca inventes datos. Si no tienes el dato, dilo claramente.\\n\\nPuedes responder sobre:\\n- Facturas pendientes de pago\\n- Saldos vencidos y fechas de vencimiento\\n- Próximos vencimientos (horizonte 30 días)\\n- DSO (días promedio de cobro)\\n\\nFORMATO:\\n- Español, tono profesional pero cercano\\n- Montos en formato chileno: $1.234.567\\n- Fechas en DD/MM/AAAA\\n- Telegram HTML: <b>texto</b> para énfasis, listas con guion (-)\\n- Máximo 250 palabras\\n- No menciones JSON, API ni estructura técnica\\n\\nDATOS ACTUALES (solo de ' + $('Verificar Registro').item.json.empresa + '):\\n' + JSON.stringify($json) }}"
+        }
+      }
+    },
+    {
+      "id": "n6",
+      "name": "Modelo OpenAI Cliente",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [-920, 420],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "n7",
+      "name": "Memoria por Cliente",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [-920, 560],
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ 'cliente_' + $('Telegram Trigger Clientes').item.json.message.chat.id }}",
+        "contextWindowLength": 6
+      }
+    },
+    {
+      "id": "n8",
+      "name": "Enviar Respuesta Cliente",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-700, 200],
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger Clientes').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram EgakatClientesBot"
+        }
+      }
+    },
+    {
+      "id": "n9",
+      "name": "No Autorizado",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-1140, 420],
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger Clientes').item.json.message.chat.id }}",
+        "text": "Este servicio es exclusivo para clientes registrados de Egakat SPA.\n\nPara solicitar acceso contacta a tu ejecutivo de cuenta.",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram EgakatClientesBot"
+        }
+      }
+    },
+    {
+      "id": "n10",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-1900, 100],
+      "parameters": {
+        "content": "## Egakat Clientes Bot — Sprint 3\n\n**Requisitos:**\n1. Credencial 'Telegram EgakatClientesBot' con TELEGRAM_TOKEN_CLIENTE\n2. Credencial 'OpenAi account'\n3. API corriendo: api-cobranza.socrates-labs.com\n\n**Registrar cliente piloto:**\n```\npy bots/admin_clientes.py registrar \\\n  --chat_id CHAT_ID \\\n  --nombre \"Nombre\" \\\n  --empresa \"GRUPO PLANET SPA\" \\\n  --rut \"94340000-8\"\n```\n\n**Webhook:**\nhttps://n8n.socrates-labs.com/webhook/egakat-clientes-bot",
+        "height": 280,
+        "width": 450,
+        "color": 5
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger Clientes": {
+      "main": [[{ "node": "Verificar Registro", "type": "main", "index": 0 }]]
+    },
+    "Verificar Registro": {
+      "main": [[{ "node": "Cliente Autorizado?", "type": "main", "index": 0 }]]
+    },
+    "Cliente Autorizado?": {
+      "main": [
+        [{ "node": "Obtener Datos Cliente", "type": "main", "index": 0 }],
+        [{ "node": "No Autorizado", "type": "main", "index": 0 }]
+      ]
+    },
+    "Obtener Datos Cliente": {
+      "main": [[{ "node": "Agente Cliente", "type": "main", "index": 0 }]]
+    },
+    "Agente Cliente": {
+      "main": [[{ "node": "Enviar Respuesta Cliente", "type": "main", "index": 0 }]]
+    },
+    "Modelo OpenAI Cliente": {
+      "ai_languageModel": [[{ "node": "Agente Cliente", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Memoria por Cliente": {
+      "ai_memory": [[{ "node": "Agente Cliente", "type": "ai_memory", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

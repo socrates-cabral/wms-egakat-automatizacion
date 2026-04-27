@@ -5,18 +5,20 @@ Sprint S2 · i18n S13
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-sys.stdout.reconfigure(encoding="utf-8")
+import sys as _sys
+if _sys.platform == "win32" and hasattr(_sys.stdout, "reconfigure"):
+    _sys.stdout.reconfigure(encoding="utf-8")
 
 import streamlit as st
 from datetime import datetime, date
-from src.db.queries import get_usuario, upsert_usuario, upsert_objetivo, get_o_crear_usuario_activo, insertar_medicion
+from src.db.queries import get_usuario, upsert_usuario, upsert_objetivo, insertar_medicion
 from src.db.schema import inicializar_db
 from src.core.calculos import calcular_plan
 from src.core.calculos_40plus import evaluar_40plus, screening_resistencia_insulinica
 from src.utils.helpers import calcular_edad, hoy
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge
+from src.utils.auth_guard import auth_badge, get_uid_activo
 
 st.set_page_config(page_title="Onboarding · Hackea", page_icon="🧬", layout="wide")
 inject_styles()
@@ -25,7 +27,7 @@ selector_idioma_sidebar()
 auth_badge()
 
 inicializar_db()
-uid     = get_o_crear_usuario_activo()
+uid     = get_uid_activo()
 usuario = get_usuario(uid) or {}
 
 st.title(t("onb.title"))
@@ -72,6 +74,7 @@ if guardar and nombre:
         "sexo": sexo, "altura_cm": altura,
         "objetivo": objetivo, "nivel_actividad": nivel_act,
     })
+    st.session_state["auth_nombre"] = nombre
 
     insertar_medicion(uid, {"fecha": hoy(), "peso_kg": peso,
                              "cintura_cm": cintura if cintura > 0 else None})

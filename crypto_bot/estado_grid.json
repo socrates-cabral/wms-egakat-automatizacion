@@ -1,14 +1,104 @@
 {
   "par": "BTC_USDT",
   "capital_usdt": 1000.0,
-  "grid_lower": 80000,
-  "grid_upper": 100000,
+  "grid_lower": 65000,
+  "grid_upper": 85000,
   "grid_levels": 20,
   "nivel_step": 1000.0,
   "capital_por_nivel": 50.0,
-  "precio_ultimo": 77226.77,
-  "pnl_realizado_usdt": 0.0,
+  "precio_ultimo": 76668.29,
+  "pnl_realizado_usdt": 31.599,
   "niveles": [
+    {
+      "precio": 65000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 66000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 67000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 68000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 69000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 70000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 71000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 72000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 73000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 74000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 75000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 76000.0,
+      "estado": "idle",
+      "btc_qty": 0.0,
+      "order_id": null
+    },
+    {
+      "precio": 77000.0,
+      "estado": "buy_open",
+      "btc_qty": 0.00064935,
+      "order_id": "PAPER_1777305079949"
+    },
+    {
+      "precio": 78000.0,
+      "estado": "buy_open",
+      "btc_qty": 0.00064103,
+      "order_id": "PAPER_1777302470142"
+    },
+    {
+      "precio": 79000.0,
+      "estado": "buy_open",
+      "btc_qty": 0.00063291,
+      "order_id": "PAPER_1777289677067"
+    },
     {
       "precio": 80000.0,
       "estado": "idle",
@@ -44,97 +134,7 @@
       "estado": "idle",
       "btc_qty": 0.0,
       "order_id": null
-    },
-    {
-      "precio": 86000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 87000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 88000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 89000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 90000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 91000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 92000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 93000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 94000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 95000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 96000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 97000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 98000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 99000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
-    },
-    {
-      "precio": 100000.0,
-      "estado": "idle",
-      "btc_qty": 0.0,
-      "order_id": null
     }
   ],
-  "ultima_actualizacion": "2026-04-18T02:12:56.217325+00:00"
+  "ultima_actualizacion": "2026-04-27T16:56:23.690624+00:00"
 }

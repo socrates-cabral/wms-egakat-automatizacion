@@ -327,23 +327,36 @@ def get_odds_partido(
     """
     Función central: obtiene y estructura las cuotas para un partido específico.
 
-    Puede recibir sport_key directamente o inferirlo desde liga_nombre (config.py).
-    Si ninguno se especifica, busca en SPORT_KEYS_FALLBACK (ligas más comunes).
+    Estrategia de fuentes (en orden):
+      1. odds-api.io (primario) — sin créditos mensuales, mercados extra (BTTS, Corners)
+      2. The Odds API (fallback) — 500 créditos/mes, si odds-io no tiene el partido
 
     Args:
         home_nombre: Nombre equipo local (viene de fixtures_collector)
         away_nombre: Nombre equipo visitante
-        sport_key:   ej "soccer_epl" — opcional, se infiere si no se da
-        liga_nombre: ej "Premier League" — opcional, para inferir sport_key
-        markets:     default ["h2h", "totals"]
+        sport_key:   ej "soccer_epl" — opcional, para fallback The Odds API
+        liga_nombre: ej "Premier League" — usado por odds-io como fuente primaria
+        markets:     default ["h2h", "totals"] — solo aplica para The Odds API fallback
 
     Returns:
-        Dict con cuotas estructuradas + campo "sport_key", o {} si no se encuentra.
+        Dict con cuotas estructuradas, o {} si no se encuentra en ninguna fuente.
     """
+    # ── Fuente 1: odds-api.io ─────────────────────────────────────────────────
+    if liga_nombre:
+        try:
+            from odds_io_collector import get_odds_partido as _odds_io
+            cuotas_io = _odds_io(home_nombre, away_nombre, liga_nombre=liga_nombre)
+            if cuotas_io and cuotas_io.get("h2h"):
+                cuotas_io["source"] = "odds-api.io"
+                return cuotas_io
+            print(f"[INFO] odds-io sin resultado para {home_nombre} vs {away_nombre} — probando The Odds API")
+        except Exception as e:
+            print(f"[INFO] odds-io no disponible: {e} — usando The Odds API")
+
+    # ── Fuente 2: The Odds API (fallback) ─────────────────────────────────────
     if markets is None:
         markets = ["h2h", "totals"]
 
-    # Resolver sport_key desde liga_nombre
     if sport_key is None and liga_nombre:
         for deporte, ligas in SPORT_KEYS.items():
             if liga_nombre in ligas:
@@ -360,6 +373,7 @@ def get_odds_partido(
         if partido:
             cuotas = parsear_cuotas(partido)
             cuotas["sport_key"] = sk
+            cuotas["source"] = "the-odds-api"
             return cuotas
 
     print(f"[INFO] No se encontraron cuotas para {home_nombre} vs {away_nombre}")
@@ -375,7 +389,8 @@ def formatear_odds_texto(cuotas: dict) -> str:
     if not cuotas:
         return "CUOTAS (The Odds API): No disponible para este partido\n"
 
-    lineas = ["CUOTAS DE MERCADO (The Odds API)", ""]
+    fuente = cuotas.get("source", "The Odds API")
+    lineas = [f"CUOTAS DE MERCADO ({fuente})", ""]
 
     home = cuotas.get("fixture_home", "?")
     away = cuotas.get("fixture_away", "?")

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Performance Modelo Apuestas</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0c1422;
+      color: #cbd5e1;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 24px;
+    }
+    h1 { color: #14b8a6; font-size: 1.6rem; margin-bottom: 4px; }
+    .subtitle { color: #64748b; font-size: 0.85rem; margin-bottom: 24px; }
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #0f1c2e;
+      border-radius: 10px;
+      padding: 20px;
+      border: 1px solid #1e2d3d;
+    }
+    .card-label { color: #64748b; font-size: 0.75rem; text-transform: uppercase;
+                   letter-spacing: 0.05em; margin-bottom: 8px; }
+    .card-value { font-size: 1.8rem; font-weight: 700; }
+    .card-sub   { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th {
+      color: #64748b;
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 1px solid #1e2d3d;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+    td { padding: 10px 12px; border-bottom: 1px solid #1a2535; }
+    tr:hover td { background: #12202f; }
+    .chart-container { margin-bottom: 24px; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<h1>⚽ Performance del Modelo de Apuestas</h1>
+<div class="subtitle">Última actualización: 12/04/2026 22:00 · 3 apuestas resueltas</div>
+
+<!-- KPIs principales -->
+<div class="grid-4">
+  <div class="card">
+    <div class="card-label">Precisión global</div>
+    <div class="card-value" style="color:#14b8a6">33.3%</div>
+    <div class="card-sub">1G / 2P</div>
+  </div>
+  <div class="card">
+    <div class="card-label">ROI global</div>
+    <div class="card-value" style="color:#ef4444">-36.6%</div>
+    <div class="card-sub">Yield: -36.6%</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Bankroll actual</div>
+    <div class="card-value" style="color:#ef4444">$94,510</div>
+    <div class="card-sub" style="color:#ef4444">-5.5% vs inicial</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Racha actual</div>
+    <div class="card-value" style="color:#10b981;font-size:1.2rem">+1 ganadas seguidas</div>
+    <div class="card-sub">Mejor: +1 · Peor: -2</div>
+  </div>
+</div>
+
+<!-- Value bets + CLV -->
+<div class="grid-4" style="margin-bottom:24px">
+  <div class="card">
+    <div class="card-label">Value bets (>5%)</div>
+    <div class="card-value" style="color:#14b8a6">33.3%</div>
+    <div class="card-sub">3 apuestas con value</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Total apostado</div>
+    <div class="card-value">$15,000</div>
+    <div class="card-sub">CLP simulados</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Retorno neto</div>
+    <div class="card-value" style="color:#ef4444">$-5,490</div>
+    <div class="card-sub">CLP</div>
+  </div>
+  <div class="card" title="Closing Line Value: si es positivo, tomas mejores precios que el mercado al cierre — señal de edge real">
+    <div class="card-label">CLV promedio ℹ️</div>
+    <div class="card-value" style="color:#f59e0b">—</div>
+    <div class="card-sub">Sin cuotas cierre</div>
+    <div class="card-sub" style="margin-top:4px;font-size:0.7rem">Sin datos · n=0</div>
+  </div>
+</div>
+
+<!-- Evolución bankroll -->
+<div class="card chart-container">
+  <div class="card-label" style="margin-bottom:12px">Evolución del Bankroll</div>
+  <div id="chart-bankroll"></div>
+</div>
+
+<!-- Por tipo + Calibración -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-label" style="margin-bottom:12px">Performance por tipo de apuesta</div>
+    <table>
+      <tr><th>Tipo</th><th>PJ</th><th>G</th><th>Precisión</th><th>ROI</th></tr>
+      
+        <tr>
+          <td style="color:#14b8a6">OVER_UNDER</td>
+          <td>3</td>
+          <td>1</td>
+          <td>33.3%</td>
+          <td style="color:#ef4444">-36.6% ❌</td>
+        </tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-label" style="margin-bottom:12px">Calibración del modelo</div>
+    <div id="chart-calibracion"></div>
+    <div class="card-sub" style="margin-top:8px">
+      Ideal: la línea real sigue la línea diagonal (predicho = real)
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Gráfico evolución bankroll ────────────────────────────────────────────
+var evo_fechas   = ["2026-04-07", "2026-04-12", "2026-04-12"];
+var evo_bankroll = [95000, 90000, 94510.0];
+var evo_colores  = ["#ef4444", "#ef4444", "#10b981"];
+var evo_textos   = ["Minnesota Twins vs Detroit Tigers", "Crystal Palace vs Newcastle", "Nottingham Forest vs Aston Villa"];
+
+Plotly.newPlot('chart-bankroll', [
+  {
+    x: evo_fechas,
+    y: evo_bankroll,
+    type: 'scatter',
+    mode: 'lines+markers',
+    line:   { color: '#14b8a6', width: 2 },
+    marker: { color: evo_colores, size: 8 },
+    text:   evo_textos,
+    hovertemplate: '%{text}<br>Bankroll: $%{y:,.0f}<extra></extra>',
+    name: 'Bankroll',
+  }
+], {
+  paper_bgcolor: '#0f1c2e',
+  plot_bgcolor:  '#0f1c2e',
+  font:          { color: '#cbd5e1', size: 12 },
+  xaxis:         { gridcolor: '#1e2d3d', showgrid: true },
+  yaxis:         { gridcolor: '#1e2d3d', showgrid: true, tickformat: '$,.0f' },
+  margin:        { t: 10, r: 10, b: 40, l: 70 },
+  height:        280,
+  showlegend:    false,
+}, { responsive: true, displayModeBar: false });
+
+// ── Gráfico calibración ───────────────────────────────────────────────────
+var cal_x    = [80, 90];
+var cal_real = [0.0, 50.0];
+var cal_n    = [1, 2];
+
+Plotly.newPlot('chart-calibracion', [
+  {
+    x: cal_x,
+    y: cal_real,
+    type: 'bar',
+    marker: { color: '#14b8a6', opacity: 0.8 },
+    text:  cal_n.map(n => 'n=' + n),
+    textposition: 'outside',
+    hovertemplate: 'Predicho: %{x}%<br>Real: %{y:.1f}%<br>%{text}<extra></extra>',
+    name: 'Real',
+  },
+  {
+    x: [40, 50, 60, 70, 80, 90, 100],
+    y: [40, 50, 60, 70, 80, 90, 100],
+    type: 'scatter',
+    mode: 'lines',
+    line: { color: '#f59e0b', width: 1, dash: 'dash' },
+    name: 'Ideal',
+    hoverinfo: 'skip',
+  }
+], {
+  paper_bgcolor: '#0f1c2e',
+  plot_bgcolor:  '#0f1c2e',
+  font:  { color: '#cbd5e1', size: 11 },
+  xaxis: { gridcolor: '#1e2d3d', title: 'Prob. predicha (%)', range: [35, 105] },
+  yaxis: { gridcolor: '#1e2d3d', title: 'Prob. real (%)',     range: [0, 110] },
+  margin: { t: 10, r: 10, b: 50, l: 55 },
+  height: 240,
+  legend: { orientation: 'h', y: -0.25 },
+}, { responsive: true, displayModeBar: false });
+</script>
+
+</body>
+</html>

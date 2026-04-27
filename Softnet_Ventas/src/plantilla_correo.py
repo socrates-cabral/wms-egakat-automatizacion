@@ -127,6 +127,15 @@ def _chips_resumen_html(resumen: dict) -> str:
     n_skip   = sum(1 for (_, _, s) in meses if s == "SKIP")
     n_eventos = resumen.get("total_eventos", 0)
 
+    tipos = resumen.get("eventos_por_tipo", {})
+    n_nuevas = tipos.get("NUEVA_FACTURA", 0)
+    n_pagos  = tipos.get("PAGO_APLICADO", 0)
+    monto_cobrado = sum(
+        float(ev.get("monto_total", 0) or 0)
+        for ev in resumen.get("eventos_detalle", [])
+        if ev.get("tipo_cambio") == "PAGO_APLICADO"
+    )
+
     chips = [
         _chip(f"Meses: {n_meses}", "info"),
         _chip(f"OK: {n_ok}", "ok"),
@@ -134,6 +143,8 @@ def _chips_resumen_html(resumen: dict) -> str:
         _chip(f"Fallos: {n_fail}", "fail") if n_fail else "",
         _chip(f"Saltados: {n_skip}", "warn") if n_skip else "",
         _chip(f"Cambios: {n_eventos}", "ok" if n_eventos else "info"),
+        _chip(f"Facturas nuevas: {n_nuevas}", "info") if n_nuevas else "",
+        _chip(f"Pagos hoy: {n_pagos} — {_formato_monto(monto_cobrado)}", "ok") if n_pagos else "",
     ]
     return f"""
 <div style="padding:12px 28px 20px 28px;">

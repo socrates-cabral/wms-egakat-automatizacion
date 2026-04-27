@@ -1,0 +1,24 @@
+Hojas: ['T_Feriados']
+
+=== T_Feriados === shape=(59, 2)
+          Día                                                               Festividad
+0  2024-01-01                                                                Año Nuevo
+1  2024-03-29                                                            Viernes Santo
+2  2024-03-30                                                             Sábado Santo
+3  2024-05-01                                                 Día Nacional del Trabajo
+4  2024-05-21                                               Día de las Glorias Navales
+5  2024-06-09                             Elecciones Primarias Alcaldes y Gobernadores
+6  2024-06-20                                    Día Nacional de los Pueblos Indígenas
+7  2024-06-29                                                    San Pedro y San Pablo
+8  2024-07-16                                              Día de la Virgen del Carmen
+9  2024-08-15                                                    Asunción de la Virgen
+10 2024-09-18                                                   Independencia Nacional
+11 2024-09-19                                          Día de las Glorias del Ejército
+12 2024-09-20                                        Feriado Adicional Fiestas Patrias
+13 2024-10-12                                                  Encuentro de Dos Mundos
+14 2024-10-27  Elecciones Municipales, Consejeros Regionales y Gobernadores Regionales
+15 2024-10-31                                        Día de las Iglesias Evangélicas y
+16 2024-11-01                                                  Día de Todos los Santos
+17 2024-11-24                          Segunda Vuelta Elección Gobernadores Regionales
+18 2024-12-02                                                       Inventario General
+19 2024-12-03                                                       Inventario General

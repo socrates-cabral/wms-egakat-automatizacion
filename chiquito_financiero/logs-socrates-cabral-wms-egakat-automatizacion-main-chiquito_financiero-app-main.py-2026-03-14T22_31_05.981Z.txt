@@ -1,0 +1,160 @@
+
+[     UTC     ] Logs for chiquito-finanzas.streamlit.app/
+────────────────────────────────────────────────────────────────────────────────────────
+[22:28:16] 🚀 Starting up repository: 'wms-egakat-automatizacion', branch: 'main', main module: 'chiquito_financiero/app/main.py'
+[22:28:16] 🐙 Cloning repository...
+[22:28:17] 🐙 Cloning into '/mount/src/wms-egakat-automatizacion'...
+
+[22:28:17] 🐙 Cloned repository!
+[22:28:17] 🐙 Pulling code changes from Github...
+[22:28:17] 📦 Processing dependencies...
+
+──────────────────────────────────────── uv ───────────────────────────────────────────
+
+Using uv pip install.
+Using Python 3.11.15 environment at /home/adminuser/venv
+Resolved 51 packages in 446ms
+Prepared 51 packages in 1.91s
+Installed 51 packages in 310ms
+ + altair==5.5.0
+ + attrs==25.4.0
+ + blinker==1.9.0
+ + cachetools==5.5.2
+ + certifi==2026.2.25
+ + charset-normalizer==3.4.5
+ + click==8.3.1
+ + defusedxml==0.7.1
+ + et-xmlfile==2.0.0
+ + fonttools==4.62.1
+ + fpdf2==2.8.7
+ + gitdb==4.0.12
+ + gitpython==3.1.46
+ + idna==3.11
+ + jinja2==3.1.6
+ + jsonschema==4.26.0
+ + jsonschema-specifications==2025.9.1
+ + lxml==6.0.2[2026-03-14 22:28:20.723971] 
+ + markdown-it-py==4.0.0
+ + markupsafe==3.0.3
+ + mdurl==0.1.2
+ + narwhals==2.18.0
+ + numpy==2.4.3
+ + openpyxl==3.1.5[2026-03-14 22:28:20.724102] 
+ + packaging==24.2
+ + pandas==2.3.3
+ + pillow==10.4.0
+ + plotly==6.6.0
+ + protobuf==5.29.6[2026-03-14 22:28:20.724286] 
+ + pyarrow==23.0.1
+ + pydeck==0.9.1
+ + pygments==2.19.2
+ + python-dateutil==2.9.0.post0
+ + python-dotenv==1.2.2
+ + python-pptx==1.0.2
+ [2026-03-14 22:28:20.724399] + pytz==2026.1.post1
+ + referencing==0.37.0
+ + requests==2.32.5
+ + rich[2026-03-14 22:28:20.724505] ==13.9.4
+ + rpds-py==0.30.0
+ + six==1.17.0
+ + smmap[2026-03-14 22:28:20.724607] ==5.0.3
+ + streamlit==1.38.0
+ + tenacity==8.5.0
+ + toml==0.10.2
+ [2026-03-14 22:28:20.725059] + tornado==6.5.5
+ + typing-extensions==4.15.0
+ + tzdata==2025.3
+ + urllib3[2026-03-14 22:28:20.725197] ==2.6.3
+ + watchdog==4.0.2
+ + xlsxwriter==3.2.9
+Checking if Streamlit is installed
+Found Streamlit version 1.38.0 in the environment
+Installing rich for an improved exception logging
+Using uv pip install.
+Using Python 3.11.15 environment at /home/adminuser/venv
+Audited 1 package in 2ms
+
+────────────────────────────────────────────────────────────────────────────────────────
+
+[22:28:22] 🐍 Python dependencies were installed from /mount/src/wms-egakat-automatizacion/chiquito_financiero/app/requirements.txt using uv.
+Check if streamlit is installed
+Streamlit is already installed
+[22:28:23] 📦 Processed dependencies!
+
+
+
+[22:28:26] ❗️ The service has encountered an error while checking the health of the Streamlit app: Get "http://localhost:8501/healthz": dial tcp 127.0.0.1:8501: connect: connection refused
+[22:29:13] 🐙 Pulling code changes from Github...
+[22:29:14] 📦 Processing dependencies...
+
+──────────────────────────────────────── uv ───────────────────────────────────────────
+
+Using uv pip install.
+Using Python 3.11.15 environment at /home/adminuser/venv
+Resolved 47 packages in 200ms
+Prepared 9 packages in 3.53s
+Uninstalled 9 packages in 132ms
+Installed [2026-03-14 22:29:19.020289] 9 packages[2026-03-14 22:29:19.020442]  [2026-03-14 22:29:19.020655] in 657ms[2026-03-14 22:29:19.021840] 
+ - altair==5.5.0
+ +[2026-03-14 22:29:19.022095]  altair==6.0.0
+ - cachetools==5.5.2
+ + cachetools==7.0.5
+ -[2026-03-14 22:29:19.022331]  packaging==24.2
+ + packaging==26.0
+ - pillow==10.4.0
+ + pillow==12.1.1
+ - plotly==6.6.0
+ + plotly==5.24.1
+ - protobuf==5.29.6
+ + protobuf==6.33.5
+ - streamlit==1.38.0
+ + streamlit==1.55.0
+ - tenacity==8.5.0
+ + tenacity==9.1.4
+ - watchdog==4.0.2
+ + watchdog==6.0.0
+Checking if Streamlit is installed
+Found Streamlit version 1.55.0 in the environment
+Installing rich for an improved exception logging
+Using uv pip install.
+Using Python 3.11.15 environment at /home/adminuser/venv
+Audited 1 package in 2ms
+
+────────────────────────────────────────────────────────────────────────────────────────
+
+[22:29:21] 🐍 Python dependencies were installed from /mount/src/wms-egakat-automatizacion/chiquito_financiero/app/requirements.txt using uv.
+[22:29:21] 📦 Processed dependencies!
+  Stopping...
+
+
+
+[22:29:24] 🔄 Updated app!
+[DEBUG] Python 3.11.15 (main, Mar  3 2026, 20:22:58) [GCC 14.2.0] arrancando main.py
+[DEBUG] imports base OK
+[DEBUG] calculators OK
+[DEBUG] data_loader OK
+[DEBUG] charts OK
+[DEBUG] todos los imports OK
+2026-03-14 22:30:46,070 INFO Cargando datos desde Excel...
+2026-03-14 22:30:46,077 INFO Datos cargados — caja: 10 filas, deuda: 8 filas
+2026-03-14 22:30:46,130 INFO KPIs — ing: $2.147.366, gas: $2.031.992, PE: 51%
+2026-03-14 22:30:46.202 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-03-14 22:30:46.234 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-03-14 22:30:46.259 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-03-14 22:30:46.262 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.

@@ -938,6 +938,13 @@ def main():
                 log("  [ADVERTENCIA] El correo no se envió correctamente — revisar credenciales")
 
             guardar_estado_json(inicio_total, resultados, dur_total, hay_errores)
+
+            try:
+                from generar_resumen_ops import generar_resumen_ops
+                generar_resumen_ops(resultados, inicio_total, dur_total, LOGDIR)
+            except Exception as e_ops:
+                log(f"  [OPS] No se pudo generar resumen_ops: {e_ops}")
+
         except Exception as e:
             log(f"  [NOTIF] Error en construccion de email final: {e}")
             import traceback

@@ -1,0 +1,317 @@
+{
+  "Liverpool": {
+    "equipo": "Liverpool",
+    "valor_total_mill_eur": 1024.5,
+    "n_jugadores": 28,
+    "valor_por_jugador": 36.59,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Monaco": {
+    "equipo": "Monaco",
+    "valor_total_mill_eur": 359.05,
+    "n_jugadores": 28,
+    "valor_por_jugador": 12.82,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Nice": {
+    "equipo": "Nice",
+    "valor_total_mill_eur": 169.1,
+    "n_jugadores": 28,
+    "valor_por_jugador": 6.04,
+    "fecha_consulta": "2026-04-26",
+    "valido_hasta": "2026-05-26",
+    "fuente": "transfermarkt"
+  },
+  "West Ham": {
+    "equipo": "West Ham",
+    "valor_total_mill_eur": 362.65,
+    "n_jugadores": 23,
+    "valor_por_jugador": 15.77,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Tottenham": {
+    "equipo": "Tottenham",
+    "valor_total_mill_eur": 802.5,
+    "n_jugadores": 28,
+    "valor_por_jugador": 28.66,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Aston Villa": {
+    "equipo": "Aston Villa",
+    "valor_total_mill_eur": 547.5,
+    "n_jugadores": 25,
+    "valor_por_jugador": 21.9,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Brighton": {
+    "equipo": "Brighton",
+    "valor_total_mill_eur": 494.0,
+    "n_jugadores": 26,
+    "valor_por_jugador": 19.0,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Newcastle": {
+    "equipo": "Newcastle",
+    "valor_total_mill_eur": 708.25,
+    "n_jugadores": 26,
+    "valor_por_jugador": 27.24,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Arsenal": {
+    "equipo": "Arsenal",
+    "valor_total_mill_eur": 1229.0,
+    "n_jugadores": 24,
+    "valor_por_jugador": 51.21,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Lille": {
+    "equipo": "Lille",
+    "valor_total_mill_eur": 271.5,
+    "n_jugadores": 28,
+    "valor_por_jugador": 9.7,
+    "fecha_consulta": "2026-04-26",
+    "valido_hasta": "2026-05-26",
+    "fuente": "transfermarkt"
+  },
+  "Chelsea": {
+    "equipo": "Chelsea",
+    "valor_total_mill_eur": 1164.05,
+    "n_jugadores": 29,
+    "valor_por_jugador": 40.14,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Bayern Munich": {
+    "equipo": "Bayern Munich",
+    "valor_total_mill_eur": 965.95,
+    "n_jugadores": 24,
+    "valor_por_jugador": 40.25,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Barcelona": {
+    "equipo": "Barcelona",
+    "valor_total_mill_eur": 1167.4,
+    "n_jugadores": 24,
+    "valor_por_jugador": 48.64,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Real Madrid": {
+    "equipo": "Real Madrid",
+    "valor_total_mill_eur": 1338.0,
+    "n_jugadores": 28,
+    "valor_por_jugador": 47.79,
+    "fecha_consulta": "2026-04-24",
+    "valido_hasta": "2026-05-24",
+    "fuente": "transfermarkt"
+  },
+  "Villarreal": {
+    "equipo": "Villarreal",
+    "valor_total_mill_eur": 286.3,
+    "n_jugadores": 28,
+    "valor_por_jugador": 10.22,
+    "fecha_consulta": "2026-04-23",
+    "valido_hasta": "2026-05-23",
+    "fuente": "transfermarkt"
+  },
+  "RB Leipzig": {
+    "equipo": "RB Leipzig",
+    "valor_total_mill_eur": 471.55,
+    "n_jugadores": 30,
+    "valor_por_jugador": 15.72,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Sevilla": {
+    "equipo": "Sevilla",
+    "valor_total_mill_eur": 140.4,
+    "n_jugadores": 28,
+    "valor_por_jugador": 5.01,
+    "fecha_consulta": "2026-04-23",
+    "valido_hasta": "2026-05-23",
+    "fuente": "transfermarkt"
+  },
+  "Betis": {
+    "equipo": "Betis",
+    "valor_total_mill_eur": 248.8,
+    "n_jugadores": 27,
+    "valor_por_jugador": 9.21,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Juventus": {
+    "equipo": "Juventus",
+    "valor_total_mill_eur": 544.2,
+    "n_jugadores": 25,
+    "valor_por_jugador": 21.77,
+    "fecha_consulta": "2026-04-26",
+    "valido_hasta": "2026-05-26",
+    "fuente": "transfermarkt"
+  },
+  "Fiorentina": {
+    "equipo": "Fiorentina",
+    "valor_total_mill_eur": 247.45,
+    "n_jugadores": 27,
+    "valor_por_jugador": 9.16,
+    "fecha_consulta": "2026-03-23",
+    "valido_hasta": "2026-04-22",
+    "fuente": "transfermarkt"
+  },
+  "Napoli": {
+    "equipo": "Napoli",
+    "valor_total_mill_eur": 417.3,
+    "n_jugadores": 26,
+    "valor_por_jugador": 16.05,
+    "fecha_consulta": "2026-04-24",
+    "valido_hasta": "2026-05-24",
+    "fuente": "transfermarkt"
+  },
+  "Lazio": {
+    "equipo": "Lazio",
+    "valor_total_mill_eur": 217.55,
+    "n_jugadores": 28,
+    "valor_por_jugador": 7.77,
+    "fecha_consulta": "2026-04-27",
+    "valido_hasta": "2026-05-27",
+    "fuente": "transfermarkt"
+  },
+  "Atalanta": {
+    "equipo": "Atalanta",
+    "valor_total_mill_eur": 403.1,
+    "n_jugadores": 24,
+    "valor_por_jugador": 16.8,
+    "fecha_consulta": "2026-04-27",
+    "valido_hasta": "2026-05-27",
+    "fuente": "transfermarkt"
+  },
+  "Inter": {
+    "equipo": "Inter",
+    "valor_total_mill_eur": 636.3,
+    "n_jugadores": 24,
+    "valor_por_jugador": 26.51,
+    "fecha_consulta": "2026-04-05",
+    "valido_hasta": "2026-05-05",
+    "fuente": "transfermarkt"
+  },
+  "AS Roma": {
+    "equipo": "AS Roma",
+    "valor_total_mill_eur": 454.5,
+    "n_jugadores": 27,
+    "valor_por_jugador": 16.83,
+    "fecha_consulta": "2026-04-05",
+    "valido_hasta": "2026-05-05",
+    "fuente": "transfermarkt"
+  },
+  "AC Milan": {
+    "equipo": "AC Milan",
+    "valor_total_mill_eur": 483.5,
+    "n_jugadores": 23,
+    "valor_por_jugador": 21.02,
+    "fecha_consulta": "2026-04-06",
+    "valido_hasta": "2026-05-06",
+    "fuente": "transfermarkt"
+  },
+  "Manchester United": {
+    "equipo": "Manchester United",
+    "valor_total_mill_eur": 747.15,
+    "n_jugadores": 24,
+    "valor_por_jugador": 31.13,
+    "fecha_consulta": "2026-04-13",
+    "valido_hasta": "2026-05-13",
+    "fuente": "transfermarkt"
+  },
+  "Crystal Palace": {
+    "equipo": "Crystal Palace",
+    "valor_total_mill_eur": 541.3,
+    "n_jugadores": 28,
+    "valor_por_jugador": 19.33,
+    "fecha_consulta": "2026-04-20",
+    "valido_hasta": "2026-05-20",
+    "fuente": "transfermarkt"
+  },
+  "Atletico Madrid": {
+    "equipo": "Atletico Madrid",
+    "valor_total_mill_eur": 587.0,
+    "n_jugadores": 23,
+    "valor_por_jugador": 25.52,
+    "fecha_consulta": "2026-04-22",
+    "valido_hasta": "2026-05-22",
+    "fuente": "transfermarkt"
+  },
+  "Real Sociedad": {
+    "equipo": "Real Sociedad",
+    "valor_total_mill_eur": 272.7,
+    "n_jugadores": 25,
+    "valor_por_jugador": 10.91,
+    "fecha_consulta": "2026-04-22",
+    "valido_hasta": "2026-05-22",
+    "fuente": "transfermarkt"
+  },
+  "Bournemouth": {
+    "equipo": "Bournemouth",
+    "valor_total_mill_eur": 507.1,
+    "n_jugadores": 26,
+    "valor_por_jugador": 19.5,
+    "fecha_consulta": "2026-04-22",
+    "valido_hasta": "2026-05-22",
+    "fuente": "transfermarkt"
+  },
+  "Manchester City": {
+    "equipo": "Manchester City",
+    "valor_total_mill_eur": 1314.5,
+    "n_jugadores": 27,
+    "valor_por_jugador": 48.69,
+    "fecha_consulta": "2026-04-22",
+    "valido_hasta": "2026-05-22",
+    "fuente": "transfermarkt"
+  },
+  "Borussia Dortmund": {
+    "equipo": "Borussia Dortmund",
+    "valor_total_mill_eur": 498.4,
+    "n_jugadores": 26,
+    "valor_por_jugador": 19.17,
+    "fecha_consulta": "2026-04-26",
+    "valido_hasta": "2026-05-26",
+    "fuente": "transfermarkt"
+  },
+  "Marseille": {
+    "equipo": "Marseille",
+    "valor_total_mill_eur": 386.0,
+    "n_jugadores": 22,
+    "valor_por_jugador": 17.55,
+    "fecha_consulta": "2026-04-26",
+    "valido_hasta": "2026-05-26",
+    "fuente": "transfermarkt"
+  },
+  "Brentford": {
+    "equipo": "Brentford",
+    "valor_total_mill_eur": 470.4,
+    "n_jugadores": 25,
+    "valor_por_jugador": 18.82,
+    "fecha_consulta": "2026-04-27",
+    "valido_hasta": "2026-05-27",
+    "fuente": "transfermarkt"
+  }
+}

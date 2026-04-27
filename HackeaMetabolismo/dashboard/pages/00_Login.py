@@ -5,10 +5,13 @@ Sprint S12
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-sys.stdout.reconfigure(encoding="utf-8")
+import sys as _sys
+if _sys.platform == "win32" and hasattr(_sys.stdout, "reconfigure"):
+    _sys.stdout.reconfigure(encoding="utf-8")
 
 import streamlit as st
 from src.db.supabase_client import iniciar_sesion, registrar_usuario, recuperar_password
+from src.db.queries import get_o_crear_usuario_por_email, get_usuario
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
 
@@ -54,9 +57,14 @@ with tab_login:
                     resultado = iniciar_sesion(email, password)
                     user = resultado["user"]
                     if user:
-                        st.session_state["auth_user"]  = {"id": user.id, "email": user.email}
-                        st.session_state["auth_email"] = user.email
-                        st.success(f"✅ Bienvenido, **{user.email}**")
+                        uid = get_o_crear_usuario_por_email(user.email)
+                        perfil = get_usuario(uid)
+                        nombre = perfil["nombre"] if perfil else user.email.split("@")[0]
+                        st.session_state["auth_user"]   = {"id": user.id, "email": user.email}
+                        st.session_state["auth_email"]  = user.email
+                        st.session_state["auth_uid"]    = uid
+                        st.session_state["auth_nombre"] = nombre
+                        st.success(f"✅ Bienvenido, **{nombre}**")
                         st.rerun()
                     else:
                         st.error("Credenciales incorrectas.")
