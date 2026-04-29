@@ -1202,7 +1202,22 @@ def build_summary_html(results: Sequence[ClientExecutionResult], warnings: Seque
         pend_rows_html = []
         for item in pendientes_rows:
             p = item.pendientes
-            mas_antiguo = p["mas_antiguo"].strftime("%d/%m/%Y") if p.get("mas_antiguo") else "—"
+            # mas_antiguo puede ser datetime.date o str (desde checkpoint JSON)
+            ma = p.get("mas_antiguo")
+            if ma:
+                if isinstance(ma, str):
+                    # Ya es string formato YYYY-MM-DD, convertir a DD/MM/YYYY
+                    try:
+                        # datetime ya está importado a nivel de módulo
+                        parsed = datetime.strptime(ma, "%Y-%m-%d")
+                        mas_antiguo = parsed.strftime("%d/%m/%Y")
+                    except ValueError:
+                        mas_antiguo = ma  # Usar tal cual si no se puede parsear
+                else:
+                    # Es datetime.date
+                    mas_antiguo = ma.strftime("%d/%m/%Y")
+            else:
+                mas_antiguo = "—"
             total = p.get("total", 0)
             row_bg = "#fff7ed" if total > 0 else "#ffffff"
             pend_rows_html.append(f"""
