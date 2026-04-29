@@ -3,6 +3,18 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-04-29] ingest | Agente Apuestas — re-entrenamiento post-fixes + ajuste parámetros
+
+Re-entrenamiento XGBoost tras fixes lambda floor bug. Dataset 9,629 partidos, accuracy 52.02%. Grid ROI validó umbral 0.60 = +9.82% ROI (n=11). Ajustes: MIN_CONFIDENCE 65→60, umbrales liga 0.75→0.65. Modelo listo para paper trading fin de semana. Wiki: [[proyectos/agente-apuestas-fixes-2026-04-29]]. Commit 124a572.
+
+---
+
+## [2026-04-29] ingest | FillRate — bug latente checkpoint datetime→string resuelto
+
+Bug introducido cdfff18 (15 abril), manifestado hoy tras VS Code reinicio. Checkpoint JSON serializa `datetime.date` como string via `default=str`, pero `build_summary_html` esperaba objeto date. Fix bac0c76: detección tipo runtime antes de `.strftime()`. Sistema ahora robusto ante interrupciones + reintentos mismo día. Página wiki: [[decisiones/fillrate-checkpoint-serialization]].
+
+---
+
 ## [2026-04-25] ingest | Agente Apuestas — Bundesliga + Ligue 1 activadas, Sprint 20 confirmado
 
 Bundesliga (1530 pts) y Ligue 1 (1725 pts) activadas para acelerar n=50.
