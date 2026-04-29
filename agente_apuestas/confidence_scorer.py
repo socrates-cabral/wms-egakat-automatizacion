@@ -40,16 +40,18 @@ def _cargar_historico_reciente(n: int = 10) -> list:
 def _score_diversidad(tipo_apuesta: str) -> int:
     """Penaliza si el histórico reciente está sobrerepresentado por el mismo tipo.
     Evita que el modelo recomiende todo OVER_UNDER por bias de lambda.
+    Fix 2026-04-29: endurecer penalizaciones (60%→50%, 80%→70%, -20→-30)
     """
     historico = _cargar_historico_reciente(10)
     if len(historico) < 3:
         return 0
     mismo_tipo = sum(1 for r in historico if r.get("tipo_apuesta") == tipo_apuesta)
     pct = mismo_tipo / len(historico)
-    if pct >= 0.80:
-        return -20
-    if pct >= 0.60:
-        return -10
+    # Penalizaciones más agresivas para forzar diversidad
+    if pct >= 0.70:   # antes 0.80
+        return -30    # antes -20
+    if pct >= 0.50:   # antes 0.60
+        return -15    # antes -10
     return 0
 
 

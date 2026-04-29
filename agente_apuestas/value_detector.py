@@ -498,10 +498,13 @@ def _lambda_esperado(prediccion: dict, stats: dict, deporte: str = "futbol",
     lam_calculado = sum(f[0] * f[1] / peso_total for f in fuentes)
 
     # Si el lambda calculado es irreal (datos vacíos/cero de API), usar prior neutro
-    # — NO usar lam_min (1.0) porque eso daría P(Under 2.5) ≈ 92% sin fundamento real
+    # — NUNCA usar lam_min (1.0) porque eso daría P(Under 2.5) ≈ 92% sin fundamento real
+    # Fix 2026-04-29: siempre devolver DEFAULT (prior neutro) si lambda < mínimo
     lam_min = LAMBDA_MINIMO.get(deporte, 0.0)
     if lam_calculado < lam_min:
-        return LAMBDA_DEFAULT.get(deporte, lam_min)
+        # Devolver siempre el prior neutro (2.5 fútbol, 8.5 baseball, etc)
+        default = LAMBDA_DEFAULT.get(deporte, 2.5)
+        return default  # NUNCA devolver lam_min=1.0
 
     return lam_calculado
 
@@ -609,13 +612,18 @@ def detectar_value_bets(
                 continue
             cuota_ap       = t_ap.get(cuota_key)
             steam          = detectar_steam_move(cuota_ap, cuota)
-            prob_modelo    = min(0.75, prob_fn())   # cap calibración: Poisson sobreestima confianza
+            prob_raw       = prob_fn()
+            # CRÍTICO: Cap 75% SIEMPRE — Poisson sobreestima confianza en rangos extremos
+            # Fix 2026-04-29: forzar cap incluso si prob_fn ya debería estar limitada
+            prob_modelo    = min(0.75, prob_raw)
             prob_implicita = 1 / cuota
             value = prob_modelo - prob_implicita
 
             ratio_linea = punto / lam if lam > 0 else 1.0
+            # Fix 2026-04-29: endurecer umbral lambda_sospechoso (1.5 → 2.0 fútbol)
+            # Reduce apuestas con lambda artificialmente bajo que inflan P(Under)
             lambda_sospechoso = (
-                (deporte == "futbol" and lam < 1.5) or
+                (deporte == "futbol" and lam < 2.0) or  # antes 1.5
                 (deporte != "futbol" and abs(ratio_linea - 1.0) > 0.30)
             )
             under_irreal = (tipo == "Under" and ratio_linea > 1.25 and deporte != "futbol")

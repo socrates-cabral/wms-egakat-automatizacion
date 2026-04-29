@@ -2,50 +2,51 @@
   "135": {
     "nombre": "Serie A",
     "activa": true,
-    "umbral": 0.60,
+    "umbral": 0.75,
     "value_min": 0.10,
     "n_apuestas": 0,
     "roi": 0.0,
-    "activada_fecha": "2026-03-24"
+    "activada_fecha": "2026-03-24",
+    "nota": "Umbral subido 0.60→0.75 post-diagnóstico 2026-04-29 (ROI -68%, sobreconfianza modelo)"
   },
   "140": {
     "nombre": "La Liga",
     "activa": true,
-    "umbral": 0.70,
+    "umbral": 0.75,
     "value_min": 0.10,
     "n_apuestas": 0,
     "roi": 0.0,
     "activada_fecha": "2026-04-12",
-    "nota": "Activada por backtesting historico: ROI flat +28.0%, accuracy 81.8%, n=11 en test set 1926 partidos"
+    "nota": "Umbral subido 0.70→0.75 post-diagnóstico 2026-04-29. Backtesting original: ROI +28%, accuracy 81.8%"
   },
   "78": {
     "nombre": "Bundesliga",
     "activa": true,
-    "umbral": 0.70,
+    "umbral": 0.75,
     "value_min": 0.10,
     "n_apuestas": 0,
     "roi": 0.0,
     "activada_fecha": "2026-04-25",
-    "nota": "Activada para acelerar n=50. Datos en training: 1530 partidos (2019-2024). Umbral conservador 0.70. Monitorear primeras 10 apuestas."
+    "nota": "Umbral subido 0.70→0.75 post-diagnóstico 2026-04-29. 1530 partidos training. Monitorear primeras 10."
   },
   "61": {
     "nombre": "Ligue 1",
     "activa": true,
-    "umbral": 0.70,
+    "umbral": 0.75,
     "value_min": 0.10,
     "n_apuestas": 0,
     "roi": 0.0,
     "activada_fecha": "2026-04-25",
-    "nota": "Activada para acelerar n=50. Datos en training: 1725 partidos (2019-2024). Umbral conservador 0.70. Monitorear primeras 10 apuestas."
+    "nota": "Umbral subido 0.70→0.75 post-diagnóstico 2026-04-29. 1725 partidos training. Monitorear primeras 10."
   },
   "39": {
     "nombre": "Premier League",
     "activa": true,
-    "umbral": 0.70,
+    "umbral": 0.75,
     "value_min": 0.10,
     "n_apuestas": 0,
     "roi": 0.0,
     "activada_fecha": "2026-04-12",
-    "nota": "Activada por backtesting historico: ROI flat +17.8%, accuracy 76.9%, n=13 en test set 1926 partidos"
+    "nota": "Umbral subido 0.70→0.75 post-diagnóstico 2026-04-29. Backtesting original: ROI +17.8%, accuracy 76.9%"
   }
 }
