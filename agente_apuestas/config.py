@@ -84,7 +84,7 @@ BET_TYPES_BASKETBALL = [
 
 # ── Thresholds del modelo ─────────────────────────────────────────────────────
 VALUE_THRESHOLD    = 0.05   # Minimo value positivo para recomendar (+5%)
-MIN_CONFIDENCE     = 65     # Score minimo de confianza para mostrar apuesta (0-100) — subido 55→65 post-diagnóstico 2026-04-29
+MIN_CONFIDENCE     = 60     # Score minimo de confianza para mostrar apuesta (0-100) — ajustado 65→60 post-reentrenamiento (grid ROI validó umbral 0.60 = +9.82%)
 MAX_REQUESTS_DAILY = 90     # Dejar buffer de 10 de los 100 diarios gratuitos
 
 # ── Transfermarkt IDs (verein/{id}) ──────────────────────────────────────────

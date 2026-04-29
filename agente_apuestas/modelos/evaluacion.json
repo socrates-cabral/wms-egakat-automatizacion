@@ -1,86 +1,74 @@
 {
-  "fecha_evaluacion": "2026-03-25 00:04:37.218289",
+  "fecha_evaluacion": "2026-04-29 15:40:30.345165",
   "n_partidos_test": 1926,
-  "accuracy": 0.5244,
-  "log_loss": 0.9946,
-  "brier_home": 0.2191,
-  "brier_draw": 0.1871,
-  "brier_away": 0.1854,
+  "accuracy": 0.5202,
+  "log_loss": 0.9873,
+  "brier_home": 0.2188,
+  "brier_draw": 0.1843,
+  "brier_away": 0.1851,
   "confusion_matrix": [
     [
-      635,
-      43,
-      177
+      668,
+      6,
+      181
     ],
     [
-      289,
-      32,
-      157
+      313,
+      5,
+      160
     ],
     [
-      214,
-      36,
-      343
+      261,
+      3,
+      329
     ]
   ],
   "analisis_umbral": [
     {
       "umbral": 0.4,
-      "n_partidos": 1720,
-      "cobertura": 89.3,
-      "accuracy": 0.5424
+      "n_partidos": 1652,
+      "cobertura": 85.8,
+      "accuracy": 0.5466
     },
     {
       "umbral": 0.45,
-      "n_partidos": 1372,
-      "cobertura": 71.2,
-      "accuracy": 0.5722
+      "n_partidos": 1258,
+      "cobertura": 65.3,
+      "accuracy": 0.597
     },
     {
       "umbral": 0.5,
-      "n_partidos": 1070,
-      "cobertura": 55.6,
-      "accuracy": 0.6121
+      "n_partidos": 898,
+      "cobertura": 46.6,
+      "accuracy": 0.6392
     },
     {
       "umbral": 0.55,
-      "n_partidos": 832,
-      "cobertura": 43.2,
-      "accuracy": 0.649
+      "n_partidos": 572,
+      "cobertura": 29.7,
+      "accuracy": 0.6923
     },
     {
       "umbral": 0.6,
-      "n_partidos": 606,
-      "cobertura": 31.5,
-      "accuracy": 0.6799
+      "n_partidos": 304,
+      "cobertura": 15.8,
+      "accuracy": 0.75
     },
     {
       "umbral": 0.65,
-      "n_partidos": 439,
-      "cobertura": 22.8,
-      "accuracy": 0.7198
-    },
-    {
-      "umbral": 0.7,
-      "n_partidos": 290,
-      "cobertura": 15.1,
-      "accuracy": 0.7517
-    },
-    {
-      "umbral": 0.75,
-      "n_partidos": 191,
-      "cobertura": 9.9,
-      "accuracy": 0.7592
+      "n_partidos": 100,
+      "cobertura": 5.2,
+      "accuracy": 0.75
     }
   ],
   "mejor_combinacion": {
-    "umbral": 0.7,
-    "value_min": 0.1,
-    "n_apuestas": 76,
-    "pct_dataset": 3.9,
-    "accuracy": 69.74,
-    "roi_flat": 8.99,
-    "roi_kelly": 26.16
+    "umbral": 0.6,
+    "value_min": 0.03,
+    "n_apuestas": 11,
+    "pct_dataset": 0.6,
+    "accuracy": 54.55,
+    "roi_flat": 9.82,
+    "roi_kelly": 5.7
   },
   "roi_por_liga": {
     "Liga 2": {
@@ -92,58 +80,54 @@
       "activa": false
     },
     "Premier League": {
-      "liga_id": 39,
       "n_partidos_test": 331,
-      "n_apuestas": 13,
-      "accuracy": 76.92,
-      "roi_flat": 17.77,
-      "roi_kelly": 12.78,
+      "n_apuestas": 0,
+      "accuracy": null,
+      "roi_flat": null,
+      "roi_kelly": null,
       "activa": false
     },
     "Ligue 1": {
       "liga_id": 61,
       "n_partidos_test": 261,
-      "n_apuestas": 9,
-      "accuracy": 55.56,
-      "roi_flat": -12.67,
-      "roi_kelly": -10.91,
+      "n_apuestas": 3,
+      "accuracy": 33.33,
+      "roi_flat": -40.0,
+      "roi_kelly": -1.52,
       "activa": false
     },
     "Bundesliga": {
       "liga_id": 78,
       "n_partidos_test": 270,
-      "n_apuestas": 18,
-      "accuracy": 61.11,
-      "roi_flat": -2.33,
-      "roi_kelly": 1.28,
+      "n_apuestas": 3,
+      "accuracy": 66.67,
+      "roi_flat": 19.33,
+      "roi_kelly": 1.81,
       "activa": false
     },
     "Serie A": {
       "liga_id": 135,
       "n_partidos_test": 342,
-      "n_apuestas": 25,
-      "accuracy": 72.0,
-      "roi_flat": 12.0,
-      "roi_kelly": 9.53,
-      "activa": true
+      "n_apuestas": 5,
+      "accuracy": 60.0,
+      "roi_flat": 34.0,
+      "roi_kelly": 5.42,
+      "activa": false
     },
     "La Liga": {
-      "liga_id": 140,
       "n_partidos_test": 331,
-      "n_apuestas": 11,
-      "accuracy": 81.82,
-      "roi_flat": 28.0,
-      "roi_kelly": 13.19,
+      "n_apuestas": 0,
+      "accuracy": null,
+      "roi_flat": null,
+      "roi_kelly": null,
       "activa": false
     }
   },
   "activacion": {
-    "modelo_activo": true,
-    "ligas_activas": [
-      "Serie A"
-    ],
+    "modelo_activo": false,
+    "ligas_activas": [],
     "ligas_suspendidas": [],
-    "umbral_produccion": 0.7,
-    "value_min_produccion": 0.1
+    "umbral_produccion": 0.6,
+    "value_min_produccion": 0.03
   }
 }

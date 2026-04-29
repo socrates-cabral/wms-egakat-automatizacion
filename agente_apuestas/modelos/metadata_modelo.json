@@ -1,12 +1,10 @@
 {
-  "fecha": "2026-03-25 00:04:37.220083",
-  "accuracy_test": 0.5244,
-  "modelo_activo": true,
-  "ligas_activas": [
-    "Serie A"
-  ],
+  "fecha": "2026-04-29 15:40:30.347670",
+  "accuracy_test": 0.5202,
+  "modelo_activo": false,
+  "ligas_activas": [],
   "ligas_suspendidas": [],
-  "umbral_prod": 0.7,
-  "value_min_prod": 0.1,
-  "roi_flat_mejor": 8.99
+  "umbral_prod": 0.6,
+  "value_min_prod": 0.03,
+  "roi_flat_mejor": 9.82
 }
