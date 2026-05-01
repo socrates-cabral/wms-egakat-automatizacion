@@ -449,19 +449,37 @@ def send_summary_email(asunto: str, html_body: str, log_path: Optional[Path] = N
 
 
 def get_reporting_window(reference_date: Optional[date] = None) -> Tuple[date, date]:
+    """
+    Calcula ventana de fechas para descarga WMS.
+
+    Reglas:
+    - Backfill (--mes): Mes completo especificado hasta último día
+    - Días 1-10 del mes: Ventana desde INICIO DEL MES ANTERIOR hasta HOY
+      -> Captura pedidos del mes anterior que se completan en primeros 10 días
+      -> Permite actualizar OTIF con pedidos que se finalizan tarde
+    - Día 11+: Ventana desde INICIO DEL MES ACTUAL hasta HOY
+      -> Operación normal (mes actual acumulado)
+    """
     import calendar as _cal
     today = reference_date or date.today()
     real_today = date.today()
-    start = date(today.year, today.month, 1)
-    # Mes pasado: usar el ultimo dia del mes como fecha_hasta (mes completo)
-    if (today.year, today.month) < (real_today.year, real_today.month):
+
+    # BACKFILL (--mes): Mes completo hasta último día
+    if reference_date and (today.year, today.month) < (real_today.year, real_today.month):
+        start = date(today.year, today.month, 1)
         last_day = _cal.monthrange(today.year, today.month)[1]
         return start, date(today.year, today.month, last_day)
-    # Mes actual: hasta ayer (acumulado parcial)
-    yesterday = real_today - timedelta(days=1)
-    if yesterday.month != real_today.month:
-        yesterday = real_today
-    return start, yesterday
+
+    # DÍAS 1-10: Ventana desde inicio de mes ANTERIOR hasta HOY
+    # Captura pedidos del mes anterior que se completan en la primera semana
+    if 1 <= real_today.day <= 10 and reference_date is None:
+        last_month_end = date(real_today.year, real_today.month, 1) - timedelta(days=1)
+        last_month_start = date(last_month_end.year, last_month_end.month, 1)
+        return last_month_start, real_today
+
+    # DÍA 11+: Ventana normal (solo mes actual hasta HOY)
+    start = date(today.year, today.month, 1)
+    return start, real_today
 
 
 def format_wms_date(value: date) -> str:
