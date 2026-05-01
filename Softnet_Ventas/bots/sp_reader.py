@@ -53,6 +53,10 @@ def leer_libro_ventas(año: int, mes: int) -> pd.DataFrame:
     Headers en fila 10 (índice 9), datos desde fila 11.
     Retorna DataFrame vacío si el archivo no existe.
     """
+    # Validación año para prevenir path traversal
+    if not (2020 <= año <= 2030):
+        raise ValueError(f"Año inválido: {año} (rango permitido: 2020-2030)")
+
     drive_id, cfg = _get_drive_id_cached()
     nombre = f"{mes}.0 Ventas {MESES_ES[mes]} {año}.xlsx"
     ruta = f"{cfg['sharepoint']['ruta_base']}/{año}/{nombre}"
@@ -72,7 +76,8 @@ def leer_libro_ventas(año: int, mes: int) -> pd.DataFrame:
 
     df["Estado"] = df["Estado"].fillna("").astype(str).str.strip()
     df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
-    df["Fecha Ultimo pago"] = pd.to_datetime(df.get("Fecha Ultimo pago", pd.NaT), errors="coerce", format="mixed")
+    # Removido format="mixed" (deprecado pandas 3.0) - inferencia automática
+    df["Fecha Ultimo pago"] = pd.to_datetime(df.get("Fecha Ultimo pago", pd.NaT), errors="coerce")
     df["Total"] = pd.to_numeric(df["Total"], errors="coerce").fillna(0)
     df["Saldo"] = pd.to_numeric(df.get("Saldo", 0), errors="coerce").fillna(0)
 

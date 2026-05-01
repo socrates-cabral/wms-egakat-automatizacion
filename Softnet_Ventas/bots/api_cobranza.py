@@ -1091,10 +1091,52 @@ def proyeccion_caja():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok", "servicio": "api_cobranza Egakat",
-                    "endpoints": ["/cobranza/resumen", "/cobranza/resumen_bot",
-                                  "/cobranza/proyeccion_caja",
-                                  "/cobranza/resumen_cliente", "/clientes/info"]})
+    """Healthcheck comprehensivo: DB, SharePoint, LLMs."""
+    checks = {
+        "servicio": "api_cobranza Egakat",
+        "status": "ok",
+        "db_conectada": False,
+        "sharepoint_accesible": False,
+        "llm_disponible": False,
+    }
+
+    # 1. DB SQLite
+    try:
+        from bots.db_manager import _get_connection
+        con = _get_connection()
+        con.execute("SELECT 1").fetchone()
+        checks["db_conectada"] = True
+    except Exception as e:
+        checks["status"] = "degraded"
+        checks["db_error"] = str(e)[:100]
+
+    # 2. SharePoint (test drive_id cache)
+    try:
+        from bots.sp_reader import _get_drive_id_cached
+        drive_id, _ = _get_drive_id_cached()
+        checks["sharepoint_accesible"] = bool(drive_id)
+    except Exception as e:
+        checks["status"] = "degraded"
+        checks["sharepoint_error"] = str(e)[:100]
+
+    # 3. LLM (test lazy init sin llamada real)
+    try:
+        from bots.claude_agent import _get_claude, _get_openai
+        _get_claude()  # Solo inicializa, no llama API
+        _get_openai()
+        checks["llm_disponible"] = True
+    except Exception as e:
+        checks["status"] = "degraded"
+        checks["llm_error"] = str(e)[:100]
+
+    # Endpoints disponibles
+    checks["endpoints"] = [
+        "/cobranza/resumen", "/cobranza/resumen_bot",
+        "/cobranza/proyeccion_caja", "/cobranza/resumen_cliente",
+        "/clientes/info", "/health"
+    ]
+
+    return jsonify(checks), 200 if checks["status"] == "ok" else 503
 
 
 if __name__ == "__main__":

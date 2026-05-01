@@ -20,6 +20,9 @@ from agents.agente_general import responder as general_responder
 from telegram_utils import enviar_grupo_interno, enviar_cliente
 
 
+VALID_BOT_TYPES = {"interno", "cliente"}
+
+
 def procesar_mensaje(chat_id: int, mensaje: str,
                      bot_type: str = "interno",
                      es_grupo: bool = True) -> str:
@@ -27,6 +30,10 @@ def procesar_mensaje(chat_id: int, mensaje: str,
     Punto de entrada principal.
     bot_type: 'interno' | 'cliente'
     """
+    # Validación bot_type
+    if bot_type not in VALID_BOT_TYPES:
+        raise ValueError(f"bot_type inválido: '{bot_type}' (permitidos: {VALID_BOT_TYPES})")
+
     bot_username = "EgakatIntelBot"
     mensaje_limpio = mensaje.replace(f"@{bot_username}", "").strip()
     if not mensaje_limpio:

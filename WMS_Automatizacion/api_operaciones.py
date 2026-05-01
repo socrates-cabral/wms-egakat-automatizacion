@@ -726,21 +726,40 @@ def productividad_resumen():
 
 @app.route("/health")
 def health():
+    """Healthcheck comprehensivo: datos, archivos JSON, LLMs."""
     hoy = _hoy()
     tiene_datos_hoy = (LOGDIR / f"resumen_ops_{hoy}.json").exists()
     tiene_kpi_ops = _ruta_resumen_kpi_ops_reciente() is not None
-    return jsonify({
-        "status": "ok",
+
+    checks = {
         "servicio": "api_operaciones WMS Egakat",
+        "status": "ok",
         "datos_hoy": tiene_datos_hoy,
         "datos_kpi_ops": tiene_kpi_ops,
-        "endpoints": [
-            "/ops/pipeline/hoy",
-            "/ops/contexto/resumen",
-            "/ops/fillrate/resumen",
-            "/ops/productividad/resumen",
-        ],
-    })
+        "llm_disponible": False,
+    }
+
+    # LLM disponibilidad (Claude para análisis)
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        checks["llm_disponible"] = bool(client)
+    except Exception as e:
+        checks["status"] = "degraded"
+        checks["llm_error"] = str(e)[:100]
+
+    # Si no hay datos del día, estado degraded
+    if not tiene_datos_hoy:
+        checks["status"] = "degraded"
+        checks["mensaje"] = "Sin datos pipeline hoy — ejecutar run_todos.py"
+
+    checks["endpoints"] = [
+        "/ops/pipeline/hoy", "/ops/contexto/resumen",
+        "/ops/fillrate/resumen", "/ops/productividad/resumen",
+        "/health"
+    ]
+
+    return jsonify(checks), 200 if checks["status"] == "ok" else 503
 
 
 if __name__ == "__main__":

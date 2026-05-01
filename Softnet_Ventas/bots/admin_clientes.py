@@ -48,7 +48,7 @@ def cmd_desactivar(chat_id: int):
 def cmd_test_api(rut: str):
     """Prueba el endpoint resumen_cliente para un RUT."""
     import urllib.request, json
-    port = int(os.getenv("API_COBRANZA_PORT", 8080))
+    port = int(os.getenv("API_COBRANZA_PORT", 8080))  # Default coincide con api_cobranza.py
     url = f"http://localhost:{port}/cobranza/resumen_cliente?rut={rut}"
     try:
         d = json.loads(urllib.request.urlopen(url, timeout=60).read())

@@ -55,10 +55,16 @@ def get_drive_id(site_id: str, drive_name: str = "Documentos") -> str:
     raise ValueError(f"Drive '{drive_name}' no encontrado en site")
 
 
-def descargar_archivo(drive_id: str, ruta_archivo: str) -> bytes | None:
-    """Retorna bytes del archivo o None si no existe (404)."""
+def descargar_archivo(drive_id: str, ruta_archivo: str, timeout: int = 60) -> bytes | None:
+    """Retorna bytes del archivo o None si no existe (404).
+
+    Args:
+        drive_id: ID del drive SharePoint
+        ruta_archivo: Ruta relativa del archivo
+        timeout: Timeout en segundos (default 60s, configurable para archivos grandes)
+    """
     url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{ruta_archivo}:/content"
-    r = requests.get(url, headers=_headers(), timeout=60)
+    r = requests.get(url, headers=_headers(), timeout=timeout)
     if r.status_code == 404:
         return None
     r.raise_for_status()
