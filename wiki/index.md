@@ -14,6 +14,7 @@
 - [[decisiones/checkpoint_idempotencia]] — Patrón checkpoint JSON diario en Productividad y FillRate: skip clientes ya OK, row count guardado, --force override.
 - [[decisiones/fillrate-checkpoint-serialization]] — Manejo robusto tipos datetime en checkpoint JSON. Bug latente 14 días (cdfff18→bac0c76). Round-trip JSON convierte date→string, fix detecta tipo antes de .strftime().
 - [[decisiones/decision-context-on-request-playwright]] — context.on vs page.on en Playwright: WMS abre Excel en nueva pestaña, page.on no la captura. Siempre usar context.on para descargas WMS.
+- [[decisiones/code-review-bots-telegram]] — Code review Codex 2026-05-01: 18 archivos, 4500 LOC. Multi-LLM fallback, SQLite historial, aislamiento RUT. 2 críticos, 5 altos. Seguro prod con optimizaciones.
 - [[proyecto-agente-apuestas]] — Agente ML XGBoost para value bets deportivos. Sprint 17 completo (Tavily enricher activo, umbrales adaptativos). Serie A activa.
 - [[proyectos/agente-apuestas-fixes-2026-04-29]] — Fixes críticos sesgo Under (83%→target <60%), lambda floor bug, re-entrenamiento XGBoost. Grid ROI: umbral 0.60 = +9.82%. Parámetros: MIN_CONFIDENCE=60, umbrales=0.65.
 - [[proyectos/fillrate-automatizacion]] — Módulo independiente Fill Rate: 13 clientes, Graph API SharePoint, lock file, 3 reintentos Graph API. Corrió OK 10/04 en 47 min.

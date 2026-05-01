@@ -3,6 +3,58 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-05-01] ingest | Code Review Bots Telegram Codex
+
+**Tipo:** Revisión código (calidad, seguridad, optimización)  
+**Fuente:** REVISION_CODIGO_CODEX_2026-05-01.md (37 KB)  
+**Páginas creadas:**
+- wiki/decisiones/code-review-bots-telegram.md
+
+**Páginas actualizadas:**
+- wiki/index.md (+1 entrada decisiones técnicas)
+
+**Archivos revisados (18):**
+- Softnet_Ventas/bots: db_manager, alertas_engine, claude_agent, telegram_utils, sp_reader, run_alertas, run_reporte_semanal, webhook_handler, admin_clientes, diagnostico_telegram, api_cobranza
+- Softnet_Ventas/bots/agents: orquestador, agente_general, agente_cliente, agente_cobranza
+- WMS_Automatizacion/bots: _write_wf_ops
+- Productividad_Automatizacion: productividad_diario
+- WMS_Automatizacion: run_todos
+
+**Veredicto:** ✅ Seguro en producción con optimizaciones recomendadas
+
+**Hallazgos críticos (2):**
+1. Validación checkpoint obsoleto productividad_diario — si >30 días sin ejecutar → descarga ventana gigante → timeout WMS
+2. Rate limiting incompleto telegram_utils — solo reactivo 429, no preventivo (límite 20 msg/min/chat)
+
+**Hallazgos altos (5):**
+3. Connection pool SQLite — 150+ conexiones innecesarias por ejecución → +750ms overhead
+4. Sin cache SharePoint — 2-5s latencia evitables, respuesta bot 6s → objetivo <2s
+5. Claude agent lazy init no thread-safe — race condition con n8n webhooks paralelos
+6. Historial sin límite agente_cobranza — prompts 8K+ tokens → 4x costo LLM
+7. Playwright headless hardcoded — debugging difícil en servidor
+
+**Positivos:**
+- ✅ XSS prevention (html.escape en plantilla_correo)
+- ✅ SQL injection safe (queries parametrizadas)
+- ✅ Secrets en .env, no hardcodeados
+- ✅ Separación bot interno/cliente clara
+- ✅ Error handling exhaustivo
+- ✅ OneDrive portable (ONEDRIVE_ROOT)
+
+**Decisiones arquitectónicas documentadas:**
+- Multi-LLM fallback (Claude → OpenAI → Gemini): redundancia ante rate limits
+- SQLite historial: <10K msg/mes, simplicidad operacional vs Redis/PostgreSQL
+- SharePoint como fuente verdad: evita source of truth conflict vs DB intermedia
+- Aislamiento cliente por RUT: filtro DF aceptable <100 clientes, revisar si >500
+
+**Memory actualizada:**
+- feedback_code_review_codex.md (nuevo)
+- MEMORY.md (índice actualizado)
+
+**Git commit:** eb75296
+
+---
+
 ## [2026-04-30] proyecto | Sistema Limpieza Automatizada + Fixes WMS/Softnet
 
 **Tipo:** Nuevo sistema mantenimiento + fixes producción  
