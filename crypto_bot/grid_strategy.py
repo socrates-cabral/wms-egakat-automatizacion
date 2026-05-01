@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from crypto_bot.exchange_client.base import BaseExchange
+from crypto_bot import persistence
 
 
 def _load_estado(path: Path) -> dict:
@@ -36,6 +37,9 @@ def init_grid(exchange: BaseExchange) -> dict:
     """Inicializa estado_grid.json si no existe o si el rango cambio."""
     from crypto_bot import config
 
+    # Inicializar DB SQLite si no existe
+    persistence.init_db()
+
     step = (config.GRID_UPPER - config.GRID_LOWER) / config.GRID_LEVELS
     capital_por_nivel = config.CAPITAL_USDT / config.GRID_LEVELS
 
@@ -52,6 +56,9 @@ def init_grid(exchange: BaseExchange) -> dict:
             "order_id": None,
         })
 
+    # Recuperar PnL acumulado desde SQLite (evita pérdida en reinicios)
+    pnl_acumulado = persistence.recuperar_pnl_acumulado(config.PAR)
+
     estado = {
         "par": config.PAR,
         "capital_usdt": config.CAPITAL_USDT,
@@ -61,7 +68,7 @@ def init_grid(exchange: BaseExchange) -> dict:
         "nivel_step": round(step, 2),
         "capital_por_nivel": round(capital_por_nivel, 2),
         "precio_ultimo": precio_actual,
-        "pnl_realizado_usdt": 0.0,
+        "pnl_realizado_usdt": pnl_acumulado,
         "niveles": niveles,
         "ultima_actualizacion": datetime.now(timezone.utc).isoformat(),
     }
@@ -104,19 +111,23 @@ def run_cycle(exchange: BaseExchange, grid_activo: bool = True) -> dict:
                 continue  # Solo sells cuando precio < EMA200
             if open_count >= config.MAX_OPEN_LEVELS:
                 continue
-            qty = round(nivel["precio"] and estado["capital_por_nivel"] / p, 8)
+            qty = round(estado["capital_por_nivel"] / p, 8)
             result = exchange.place_order(config.PAR, "BUY", qty, p)
             nivel["estado"] = "buy_open"
             nivel["btc_qty"] = qty
             nivel["order_id"] = result["order_id"]
             open_count += 1
+            timestamp = datetime.now(timezone.utc).isoformat()
             ordenes_ejecutadas.append({
                 "tipo": "BUY",
                 "precio": p,
                 "qty": qty,
                 "order_id": result["order_id"],
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": timestamp,
             })
+            # Guardar en SQLite
+            persistence.guardar_trade(config.PAR, "BUY", p, qty, result["order_id"], pnl=0, timestamp=timestamp)
+            # Guardar en JSON (legacy backup)
             _save_historico(config.HISTORICO_PATH, ordenes_ejecutadas[-1])
 
         # Cruce hacia arriba -> SELL
@@ -130,20 +141,33 @@ def run_cycle(exchange: BaseExchange, grid_activo: bool = True) -> dict:
             nivel["btc_qty"] = 0.0
             nivel["order_id"] = None
             open_count -= 1
+            timestamp = datetime.now(timezone.utc).isoformat()
             ordenes_ejecutadas.append({
                 "tipo": "SELL",
                 "precio": p,
                 "qty": qty,
                 "order_id": result["order_id"],
                 "pnl": pnl_nivel,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": timestamp,
             })
+            # Guardar en SQLite
+            persistence.guardar_trade(config.PAR, "SELL", p, qty, result["order_id"], pnl=pnl_nivel, timestamp=timestamp)
+            # Guardar en JSON (legacy backup)
             _save_historico(config.HISTORICO_PATH, ordenes_ejecutadas[-1])
 
     estado["pnl_realizado_usdt"] = round(estado["pnl_realizado_usdt"] + pnl_delta, 4)
     estado["precio_ultimo"] = precio_actual
     estado["ultima_actualizacion"] = datetime.now(timezone.utc).isoformat()
     _save_estado(config.ESTADO_GRID_PATH, estado)
+
+    # Guardar snapshot del grid en SQLite (cada ciclo)
+    persistence.guardar_estado_grid(
+        par=config.PAR,
+        pnl_realizado=estado["pnl_realizado_usdt"],
+        precio_ultimo=precio_actual,
+        niveles=estado["niveles"],
+        timestamp=estado["ultima_actualizacion"]
+    )
 
     # Sync a Supabase (falla silenciosamente)
     try:

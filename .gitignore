@@ -52,6 +52,9 @@ _*_backup_*.py
 VDR_Comparador/vdr_ultimo_procesado.txt
 crypto_bot/data/
 crypto_bot/estado_grid*.json
+*.db
+*.sqlite
+*.sqlite3
 
 # ── Python ───────────────────────────────────────────────────────
 __pycache__/
