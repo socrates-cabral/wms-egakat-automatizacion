@@ -17,6 +17,7 @@ por Fecha.month y se suben a los archivos del mes correspondiente.
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
+import argparse
 import io
 import json
 import os
@@ -999,6 +1000,10 @@ def _send_final_email(results: Dict[str, dict], log_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Descarga incremental diaria de productividad WMS")
+    parser.add_argument("--force", action="store_true", help="Forzar ejecución ignorando validación de feriados")
+    args = parser.parse_args()
+
     log_path = build_log_path("productividad_diario")
 
     if not _acquire_lock(log_path):
@@ -1009,9 +1014,11 @@ def main() -> int:
         today = datetime.now().date()
 
         nombre_feriado = _is_feriado(today, feriados)
-        if nombre_feriado:
+        if nombre_feriado and not args.force:
             log(f"[SKIP] Feriado: {nombre_feriado} ({today}). No se ejecuta la descarga.", log_path)
             return 0
+        elif nombre_feriado and args.force:
+            log(f"[FORCE] Feriado: {nombre_feriado} ({today}) — ejecución forzada con --force.", log_path)
 
         log(f"[INICIO] productividad_diario.py | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", log_path)
         log(f"[INFO] {len(feriados)} feriados cargados desde OneDrive.", log_path)
