@@ -3,7 +3,7 @@ title: Agente Apuestas — Orquestador run_agent.py
 type: proyecto
 sources: [agente_apuestas/run_agent.py]
 related: [proyecto-agente-apuestas, value-betting, xgboost-modelo, api-sports, decision-paper-trading]
-updated: 2026-04-22
+updated: 2026-05-01
 confidence: high
 ---
 
@@ -121,6 +121,12 @@ MODO_PAPER_TRADING = True        # hasta ROI ≥ 20% sostenido n ≥ 20
 - Key anterior revocada → `401 Unauthorized` → fallback OpenAI
 - Nueva key activa 2026-04-24 → Claude Haiku restaurado como primer modelo
 
+## Remediación de seguridad (2026-05-01)
+- `GOOGLE_API_KEY` se valida desde `C:\ClaudeWork\.env` y es consumida por `multi_llm_analyst.py` y `claude_agent.py`.
+- `agente_apuestas/.footystats_profile/` se eliminó del working tree, del tracking y del historial Git antes de publicar.
+- `.gitignore` ahora bloquea perfiles Playwright, cache, cookies, `Local Storage`, `Session Storage`, `IndexedDB`, `Network`, `GPUCache`, `Code Cache`, `Service Worker/`, `playwright-report/` y `test-results/`.
+- Auditoría final: sin rutas históricas del perfil, sin matches `AIza`, repo limpio publicado en `idx/main`.
+- Referencia: [[decisiones/security-remediation-agente-apuestas-2026-05-01]].
 ## Archivos de estado
 - `backtesting/historico_apuestas.json` — fuente de verdad, append-only
 - `backtesting/estado_riesgo.json` — bloqueos activos (stop-loss semanal)

@@ -352,3 +352,13 @@ Contradicciones: [N]
 Páginas huérfanas: [N]
 Páginas faltantes sugeridas: [lista]
 -->
+---
+
+## [2026-05-01] ingest | Remediación seguridad agente_apuestas
+Fuente: SECURITY_REMEDIATION_STEPS.md + `.gitignore` + `agente_apuestas/*.py`
+Páginas creadas:
+- wiki/decisiones/security-remediation-agente-apuestas-2026-05-01.md
+Páginas actualizadas:
+- wiki/proyectos/agente-apuestas-orquestador.md
+- wiki/index.md (+1 entrada decisiones)
+Notas: La key antigua de Google Cloud quedó revocada fuera de Git. Se validó `GOOGLE_API_KEY` desde `C:\ClaudeWork\.env`, se eliminó `agente_apuestas/.footystats_profile/` del tracking y de todo el historial, y la historia limpia quedó publicada en `idx/main` con `PATH_COUNT=0` y `MATCH_COUNT=0`.
