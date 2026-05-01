@@ -6,6 +6,10 @@ Alcance de Fase 2B.1:
 - Solo lectura de Excel y archivos locales.
 - No ejecuta descargas ni automatizaciones productivas.
 - No modifica la API ni los scripts existentes.
+
+MIGRACIÓN SERVIDOR 24/7:
+- Configurar ONEDRIVE_ROOT en .env para cambiar usuario
+- Fallback a path actual si no está configurado (deprecado)
 """
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
@@ -14,6 +18,7 @@ import argparse
 import calendar
 import json
 import math
+import os
 import re
 import unicodedata
 import warnings
@@ -25,41 +30,42 @@ from typing import Any
 
 try:
     import pandas as pd
-except Exception:  # pragma: no cover - fallback controlado
+except ImportError:  # Específico, no Exception genérico
     pd = None
 
 from openpyxl import load_workbook
+from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent
 CLAUDEWORK_DIR = BASE_DIR.parent
 LOGDIR = CLAUDEWORK_DIR / "logs"
-NNSS_DIR = Path(
-    r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\Datos para Dashboard - NNSS Operacional"
-)
-PRODUCTIVIDAD_ROOT_OFICIAL = Path(
-    r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\Datos para Dashboard - Productividad"
-)
-DIMENSIONES_ROOT = Path(
-    r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\datos para Dashboard EK\Productividad"
-)
+
+# Cargar .env para ONEDRIVE_ROOT
+load_dotenv(CLAUDEWORK_DIR / ".env")
+
+# ── Paths OneDrive - Migración servidor 24/7 ──────────────────────────────
+# Prioridad: ONEDRIVE_ROOT desde .env (para servidor)
+# Fallback: Path actual hardcodeado (DEPRECADO - solo laptop)
+_ONEDRIVE_ROOT_ENV = os.getenv("ONEDRIVE_ROOT")
+if _ONEDRIVE_ROOT_ENV:
+    _ONEDRIVE_ROOT = Path(_ONEDRIVE_ROOT_ENV)
+    print(f"[INFO] Usando ONEDRIVE_ROOT desde .env: {_ONEDRIVE_ROOT}")
+else:
+    _ONEDRIVE_ROOT = Path(r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA")
+    print(f"[WARN] ONEDRIVE_ROOT no configurado en .env - usando path hardcodeado (DEPRECADO)")
+    print(f"       Agregar a .env: ONEDRIVE_ROOT={_ONEDRIVE_ROOT}")
+
+NNSS_DIR = _ONEDRIVE_ROOT / "Datos para Dashboard - NNSS Operacional"
+PRODUCTIVIDAD_ROOT_OFICIAL = _ONEDRIVE_ROOT / "Datos para Dashboard - Productividad"
+DIMENSIONES_ROOT = _ONEDRIVE_ROOT / "datos para Dashboard EK" / "Productividad"
 DIMENSIONES_FILENAME = "Tablas dimensiones.xlsx"
-STOCK_WMS_ROOT = Path(
-    r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\Datos para Dashboard - Stock WMS Semanal"
-)
-STAGING_ROOT = Path(
-    r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\Datos para Dashboard - Stagin IN- OUT"
-)
-POSICIONES_ROOT = Path(
-    r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\Datos para Dashboard - Consulta de Posiciones"
-)
-INVENTARIO_DIM_ROOT = Path(
-    r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\datos para Dashboard EK\Inventario"
-)
+STOCK_WMS_ROOT = _ONEDRIVE_ROOT / "Datos para Dashboard - Stock WMS Semanal"
+STAGING_ROOT = _ONEDRIVE_ROOT / "Datos para Dashboard - Stagin IN- OUT"
+POSICIONES_ROOT = _ONEDRIVE_ROOT / "Datos para Dashboard - Consulta de Posiciones"
+INVENTARIO_DIM_ROOT = _ONEDRIVE_ROOT / "datos para Dashboard EK" / "Inventario"
 INVENTARIO_DIM_FILENAME = "Tabla Ubicaciones CDs.xlsx"
-CONTEOS_OFICIAL_ROOT = Path(
-    r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA\Datos para Dashboard - Registros de conteos"
-)
+CONTEOS_OFICIAL_ROOT = _ONEDRIVE_ROOT / "Datos para Dashboard - Registros de conteos"
 CONTEOS_INVENTARIO_FILENAME = "Registros de conteo ciclico.xlsx"
 CONTEOS_INVENTARIO_VARIANTES = {
     "REGISTROS DE CONTEO CICLICO.XLSX",
