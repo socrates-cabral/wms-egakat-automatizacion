@@ -986,6 +986,23 @@ def update_sharepoint_workbook(
     log(f"[SP] Archivo descargado OK ({local_copy.stat().st_size // 1024} KB).", log_path)
 
     try:
+        # FASE 1: Lectura rápida con read_only para identificar filas a eliminar
+        # Optimización para archivos grandes (Derco: 18 MB, 50K+ filas)
+        log("[SP] Escaneando filas con read_only mode...", log_path)
+        wb_readonly = load_workbook(local_copy, read_only=True, data_only=True)
+        ws_readonly, _ = get_target_sheet(wb_readonly, log_path)
+
+        rows_to_delete: List[int] = []
+        for row_idx, row in enumerate(ws_readonly.iter_rows(min_row=DATA_START_ROW, values_only=True), start=DATA_START_ROW):
+            if len(row) >= DATE_COLUMN_INDEX:
+                row_date = coerce_datetime(row[DATE_COLUMN_INDEX - 1])
+                if should_remove_row_by_month(row_date, month, year):
+                    rows_to_delete.append(row_idx)
+
+        wb_readonly.close()
+        log(f"[SP] Escaneo completado. Filas a reemplazar: {len(rows_to_delete)}.", log_path)
+
+        # FASE 2: Carga editable para modificaciones
         log("[SP] Cargando workbook para modificacion...", log_path)
         workbook = load_workbook(local_copy)
         log("[SP] Workbook cargado OK.", log_path)
@@ -993,12 +1010,6 @@ def update_sharepoint_workbook(
         corte_col_idx = ensure_corte_column(target_sheet, meses_corte, log_path=log_path)
         formula_end_col = min(target_sheet.max_column, MAX_SUPPORTED_FORMULA_COL)
         formula_templates = copy_formula_templates(target_sheet, formula_end_col)
-
-        rows_to_delete: List[int] = []
-        for row_idx in range(DATA_START_ROW, target_sheet.max_row + 1):
-            row_date = coerce_datetime(target_sheet.cell(row=row_idx, column=DATE_COLUMN_INDEX).value)
-            if should_remove_row_by_month(row_date, month, year):
-                rows_to_delete.append(row_idx)
 
         manual_overrides = collect_manual_overrides_for_month(target_sheet, rows_to_delete)
 
