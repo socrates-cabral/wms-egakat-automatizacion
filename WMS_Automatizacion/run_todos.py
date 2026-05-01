@@ -91,6 +91,7 @@ DESTINOS = [
     "analista.pudahuel@egakat.cl",
     "analista.inv.quilicura@egakat.cl",
     "jaed.escobar@egakat.cl",
+    "mariana.varela@egakat.cl",
 ]
 # JSON de estado se guarda en logs/ — no en OneDrive, para evitar que PA dispare un segundo correo.
 # PA flow "WMS Egakat - Notificacion Descarga Diaria" ya no es necesario (Graph API envía el correo directo).

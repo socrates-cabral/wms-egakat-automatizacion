@@ -1,5 +1,5 @@
 {
-  "name": "Egakat Ops Bot — WMS Intelligence v1",
+  "name": "Egakat Ops Bot - WMS Intelligence v1",
   "nodes": [
     {
       "id": "n1",
@@ -92,7 +92,7 @@
       ],
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "⛔ Acceso restringido. Este bot es de uso interno del equipo de Operaciones.",
+        "text": "Acceso restringido. Este bot es de uso interno del equipo de Operaciones.",
         "additionalFields": {}
       },
       "credentials": {
@@ -132,7 +132,7 @@
     },
     {
       "id": "n4",
-      "name": "Obtener Estado WMS",
+      "name": "Obtener Contexto Operacional",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -141,7 +141,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "https://api-ops.socrates-labs.com/ops/pipeline/hoy",
+        "url": "https://api-ops.socrates-labs.com/ops/contexto/resumen",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -152,6 +152,97 @@
           ]
         },
         "options": {}
+      }
+    },
+    {
+      "id": "n4b",
+      "name": "Preparar Contexto AI",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -810,
+        200
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ctx1",
+              "name": "contexto_operacional_actual",
+              "value": "={{ (() => { const src = $('Obtener Contexto Operacional').item.json || {}; const kpiOps = src.kpi_ops || {}; const productividad = kpiOps.productividad || {}; const derco = productividad.derco || {}; const contexto = { fecha_consulta: src.fecha_consulta, datos_de_ayer: src.datos_de_ayer, pipeline: src.pipeline, validacion: src.validacion, alertas: src.alertas, kpi_ops: { nnss: kpiOps.nnss, inventario: kpiOps.inventario, productividad: { global: productividad.global, diario: productividad.diario, por_fecha_cliente: productividad.por_fecha_cliente, derco: { por_fecha: derco.por_fecha, ap_por_fecha: derco.ap_por_fecha, canal_por_fecha: derco.canal_por_fecha }, metas: productividad.metas } } }; const maxContextLength = 60000; const tryAdd = (key, value) => { if (!value) return; const candidate = JSON.parse(JSON.stringify(contexto)); candidate.kpi_ops.productividad[key] = value; if (JSON.stringify(candidate).length <= maxContextLength) { contexto.kpi_ops.productividad[key] = value; } }; if (productividad.por_fecha_cliente) { contexto.kpi_ops.productividad.por_fecha_cliente = productividad.por_fecha_cliente; } tryAdd('por_fecha_cliente_canal', productividad.por_fecha_cliente_canal); tryAdd('por_fecha_cliente_turno', productividad.por_fecha_cliente_turno); return JSON.stringify(contexto); })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n4c",
+      "name": "Preparar Export CSV NNSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -780,
+        20
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const rawMsg = $('Limpiar mensaje').item.json.mensaje || $('Telegram Trigger').item.json.message?.text || ''; const normText = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toUpperCase().trim(); const t = normText(rawMsg); const clienteFromMsg = (text) => { if (text.includes('GRUPO PLANET') || text.includes('PLANET') || text.includes('DERCO')) return 'DERCO'; if (text.includes('DAIKIN')) return 'DAIKIN'; if (text.includes('POCHTECA')) return 'POCHTECA'; return null; }; const cliente = clienteFromMsg(t); const tieneTerminoOtif = ['NO EVALUABLE', 'NO EVALUABLES', 'FUERA DEL OTIF', 'SIN ENTREGA EVALUABLE', 'PEDIDOS NO EVALUABLES'].some((term) => t.includes(term)); const pideArchivo = ['TODOS LOS PEDIDOS NO EVALUABLES', 'DAME TODOS LOS PEDIDOS NO EVALUABLES', 'LISTA COMPLETA', 'ARCHIVO', 'CSV', 'TXT', 'EXPORTAR PEDIDOS', 'DESCARGAR PEDIDOS'].some((term) => t.includes(term)); const pideListadoCompleto = t.includes('TODOS') || t.includes('COMPLETA') || t.includes('COMPLETO') || t.includes('ARCHIVO') || t.includes('CSV') || t.includes('TXT') || t.includes('EXPORTAR') || t.includes('DESCARGAR'); const shouldExport = Boolean(cliente && tieneTerminoOtif && pideArchivo && pideListadoCompleto); const ctx = $json || {}; const otif = ctx.kpi_ops?.nnss?.otif || {}; const detallePorCliente = Array.isArray(otif.pedidos_no_evaluables_detalle_por_cliente) ? otif.pedidos_no_evaluables_detalle_por_cliente : []; const detalleGlobal = Array.isArray(otif.pedidos_no_evaluables_detalle) ? otif.pedidos_no_evaluables_detalle : []; let fuente = 'kpi_ops.nnss.otif.pedidos_no_evaluables_detalle_por_cliente'; const bloqueCliente = detallePorCliente.find((x) => normText(x.cliente) === cliente) || null; let detalle = []; if (bloqueCliente && Array.isArray(bloqueCliente.detalle)) { detalle = bloqueCliente.detalle.map((x) => ({ cliente: bloqueCliente.cliente, nro_pedido: x.nro_pedido ?? '', estado: x.estado ?? '', dias_abierto: x.dias_abierto ?? '', lineas: x.lineas ?? '', unidades: x.unidades ?? '', motivo: x.motivo ?? '', fecha_inicio_preparacion: x.fecha_inicio_preparacion ?? '' })); } else { fuente = 'kpi_ops.nnss.otif.pedidos_no_evaluables_detalle'; detalle = detalleGlobal.filter((x) => normText(x.cliente) === cliente).map((x) => ({ cliente: x.cliente ?? cliente, nro_pedido: x.nro_pedido ?? '', estado: x.estado ?? '', dias_abierto: x.dias_abierto ?? '', lineas: x.lineas ?? '', unidades: x.unidades ?? '', motivo: x.motivo ?? '', fecha_inicio_preparacion: x.fecha_inicio_preparacion ?? '' })); } const sortFecha = (v) => v ? String(v) : '9999-12-31 23:59:59'; detalle = detalle.slice().sort((a, b) => { const dias = Number(b.dias_abierto ?? -1) - Number(a.dias_abierto ?? -1); if (dias !== 0) return dias; const fecha = sortFecha(a.fecha_inicio_preparacion).localeCompare(sortFecha(b.fecha_inicio_preparacion)); if (fecha !== 0) return fecha; return String(a.nro_pedido ?? '').localeCompare(String(b.nro_pedido ?? '')); }); if (!shouldExport || detalle.length === 0) { return [{ json: { exportar_csv_no_evaluables: false, cliente_solicitado: cliente, total_encontrado: detalle.length } }]; } const fechaBase = String(ctx.fecha_consulta || new Date().toISOString().slice(0, 10)).slice(0, 10).replace(/-/g, ''); const fileName = 'pedidos_no_evaluables_' + cliente + '_' + fechaBase + '.csv'; const fmtNumero = (value) => { const n = Number(value ?? 0); return new Intl.NumberFormat('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n); }; const csvValue = (value) => { const text = value === null || value === undefined ? '' : String(value); return /[;\"\\n\\r]/.test(text) ? '\"' + text.replace(/\"/g, '\"\"') + '\"' : text; }; const rows = [['cliente', 'nro_pedido', 'estado', 'dias_abierto', 'lineas', 'unidades', 'motivo', 'fecha_inicio_preparacion'], ...detalle.map((x) => [x.cliente, x.nro_pedido, x.estado, x.dias_abierto, x.lineas, x.unidades, x.motivo, x.fecha_inicio_preparacion])]; const csv = rows.map((row) => row.map(csvValue).join(';')).join('\\n'); const totalPedidos = bloqueCliente?.total_pedidos ?? detalle.length; const totalLineas = bloqueCliente?.lineas ?? detalle.reduce((sum, x) => sum + Number(x.lineas || 0), 0); const totalUnidades = bloqueCliente?.unidades ?? detalle.reduce((sum, x) => sum + Number(x.unidades || 0), 0); const caption = ['Archivo generado: ' + fileName, '', 'Cliente: ' + cliente, 'Total pedidos no evaluables: ' + fmtNumero(totalPedidos), 'Lineas: ' + fmtNumero(totalLineas), 'Unidades: ' + fmtNumero(totalUnidades), 'Fuente: ' + fuente, 'Criterio: pedidos pendientes o sin datos suficientes para evaluar entrega.'].join('\\n'); return [{ json: { exportar_csv_no_evaluables: true, cliente, fuente, total_pedidos: totalPedidos, total_lineas: totalLineas, total_unidades: totalUnidades, file_name: fileName, caption_csv: caption }, binary: { data: { data: Buffer.from(csv, 'utf8').toString('base64'), mimeType: 'text/csv', fileExtension: 'csv', fileName } } }];"
+      }
+    },
+    {
+      "id": "n4d",
+      "name": "Solicita CSV NNSS?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        80
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "csv1",
+              "leftValue": "={{ $json.exportar_csv_no_evaluables === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n4e",
+      "name": "Enviar CSV NNSS",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -380,
+        20
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendDocument",
+        "chatId": "={{ $('Limpiar mensaje').item.json.chat_id }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {
+          "caption": "={{ $json.caption_csv }}"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram EgakatOpsBot"
+        }
       }
     },
     {
@@ -167,7 +258,7 @@
         "promptType": "define",
         "text": "={{ $('Limpiar mensaje').item.json.mensaje }}",
         "options": {
-          "systemMessage": "Eres el analista de operaciones WMS de Egakat SPA, empresa chilena de logística 3PL.\n\nTu función es responder consultas internas sobre el estado del pipeline WMS, módulos de descarga, alertas operacionales, staging, posiciones y recepciones.\n\nTienes datos del pipeline WMS inyectados al final de este mensaje.\nÚsalos cuando pregunten sobre:\n- estado del WMS\n- módulos ejecutados\n- fallos o advertencias\n- duración de la descarga\n- validación de archivos\n- staging\n- alertas operacionales\n\nDEFINICIONES OPERACIONALES:\n- OK: módulo ejecutado sin errores ni fallos internos.\n- PARCIAL: módulo ejecutó pero tuvo fallos en algunos clientes/centros.\n- FALLO: módulo no ejecutó correctamente.\n- OK_REINTENTO: módulo falló pero se recuperó en el reintento automático.\n- SKIP: módulo saltado por checkpoint (ya ejecutado previamente hoy).\n- ADVERTENCIA: validación detectó observaciones no bloqueantes.\n\nREGLAS CRÍTICAS:\n- Nunca inventes datos — si no está en el JSON, dilo claramente.\n- Distingue entre fallos operativos (M1-M8) y advertencias de validación (M9).\n- Un PARCIAL no es lo mismo que un FALLO total.\n- Si datos_de_ayer=true, indica que los datos son del día anterior.\n\nFORMATO OBLIGATORIO (Telegram HTML):\n- Títulos: <b>• Sección</b>\n- Listas con guion (-)\n- Emojis de estado: ✅ OK, ⚠️ advertencia, 🔴 fallo\n- NO tablas Markdown, NO ## encabezados, NO asteriscos\n- Máximo 350 palabras\n- No menciones JSON, API, endpoint ni estructura técnica\n\nESTRUCTURA PARA ESTADO GENERAL:\n\n<b>• Estado WMS — DD/MM/AAAA</b>\n- <b>Estado global:</b> ✅ Todo OK | ⚠️ Con advertencias | 🔴 Con fallos\n- <b>Inicio:</b> HH:MM | <b>Duración:</b> XXm XXs\n- <b>Módulos ejecutados:</b> N\n\n<b>• Módulos operativos</b>\n- ✅ Modulo 1 - Stock WMS Semanal (Xm Xs)\n- ⚠️ Modulo 2 - Staging IN/OUT (Xm Xs) — detalle si hubo fallo\n\n<b>• Validación de archivos</b>\n- OK: X | Warning: X | Error: X | Total: X\n- Observación relevante si la hay\n\n<b>• Conclusión</b>\nTexto breve orientado a acción si hay algo que revisar.\n\nSI EL USUARIO SALUDA:\nHola, soy el analista de operaciones WMS de Egakat. Puedo ayudarte con el estado del pipeline, módulos ejecutados, alertas y validación de archivos.\n\nSI LOS DATOS LLEGAN VACÍOS:\nNo pude obtener el estado del pipeline WMS. Verifica que la API de Operaciones esté activa.\n\nDATOS PIPELINE WMS:\n={{ JSON.stringify($('Obtener Estado WMS').item.json) }}"
+          "systemMessage": "Eres el analista de operaciones WMS de Egakat SPA, empresa chilena de logistica 3PL.\n\nTu funcion es responder consultas internas sobre el estado del pipeline WMS, modulos de descarga, alertas operacionales, staging, posiciones, recepciones y productividad diaria.\n\nTienes el contexto operacional actual inyectado al final de este mensaje.\nUsalo cuando pregunten sobre:\n- estado del WMS\n- modulos ejecutados\n- fallos o advertencias\n- duracion de la descarga\n- validacion de archivos\n- staging\n- alertas operacionales\n- productividad diaria y productividad por cliente\n\nDEFINICIONES OPERACIONALES:\n- OK: modulo ejecutado sin errores ni fallos internos.\n- PARCIAL: modulo ejecuto pero tuvo fallos en algunos clientes o centros.\n- FALLO: modulo no ejecuto correctamente.\n- OK_REINTENTO: modulo fallo pero se recupero en el reintento automatico.\n- SKIP: modulo saltado por checkpoint.\n- ADVERTENCIA: validacion detecto observaciones no bloqueantes.\n\nREGLAS CRITICAS:\n- Nunca inventes datos; si no esta en el contexto, dilo claramente.\n- Distingue entre fallos operativos y advertencias de validacion.\n- Un PARCIAL no es lo mismo que un FALLO total.\n- Si datos_de_ayer=true, indica que los datos son del dia anterior.\n- Para una fecha general, usa kpi_ops.productividad.diario o kpi_ops.productividad.por_fecha_cliente.\n- Para cliente + fecha, usa kpi_ops.productividad.por_fecha_cliente filtrado por cliente y fecha.\n- Para fecha + todos los clientes, usa kpi_ops.productividad.por_fecha_cliente filtrado por la fecha solicitada.\n- Para cliente sin fecha, usa kpi_ops.productividad.por_fecha_cliente filtrado por cliente y resume el periodo.\n- Para DERCO por fecha, usa tambien kpi_ops.productividad.derco.por_fecha, ap_por_fecha y canal_por_fecha cuando aplique.\n- No respondas que no existe informacion estructurada si kpi_ops.productividad.por_fecha_cliente existe y contiene registros aplicables.\n- Si el usuario pregunta por productividad diaria, no mezcles con alertas de NNSS ni pedidos preparados salvo que exista una alerta especifica dentro de kpi_ops.productividad.\n\nFORMATO OBLIGATORIO (Telegram HTML):\n- Titulos: <b>Seccion</b>\n- Listas con guion (-)\n- Emojis de estado: OK, advertencia o fallo\n- No uses tablas Markdown, encabezados ## ni asteriscos\n- Maximo 350 palabras\n- No menciones JSON, API, endpoint ni estructura tecnica\n\nSI EL USUARIO SALUDA:\nHola, soy el analista de operaciones WMS de Egakat. Puedo ayudarte con el estado del pipeline, modulos ejecutados, alertas, validacion de archivos y productividad diaria.\n\nSI LOS DATOS LLEGAN VACIOS:\nNo pude obtener el contexto operacional actual. Verifica que la API de Operaciones este activa.\n\nCONTEXTO OPERACIONAL ACTUAL:\n={{ (() => { const src = $('Obtener Contexto Operacional').item.json || {}; const kpiOps = src.kpi_ops || {}; const productividad = kpiOps.productividad || {}; const derco = productividad.derco || {}; const contexto = { fecha_consulta: src.fecha_consulta, datos_de_ayer: src.datos_de_ayer, pipeline: src.pipeline, validacion: src.validacion, alertas: src.alertas, kpi_ops: { nnss: kpiOps.nnss, inventario: kpiOps.inventario, productividad: { global: productividad.global, diario: productividad.diario, por_fecha_cliente: productividad.por_fecha_cliente, derco: { por_fecha: derco.por_fecha, ap_por_fecha: derco.ap_por_fecha, canal_por_fecha: derco.canal_por_fecha }, metas: productividad.metas } } }; const maxContextLength = 60000; const tryAdd = (key, value) => { if (!value) return; const candidate = JSON.parse(JSON.stringify(contexto)); candidate.kpi_ops.productividad[key] = value; if (JSON.stringify(candidate).length <= maxContextLength) { contexto.kpi_ops.productividad[key] = value; } }; if (productividad.por_fecha_cliente) { contexto.kpi_ops.productividad.por_fecha_cliente = productividad.por_fecha_cliente; } tryAdd('por_fecha_cliente_canal', productividad.por_fecha_cliente_canal); tryAdd('por_fecha_cliente_turno', productividad.por_fecha_cliente_turno); return JSON.stringify(contexto); })() }}"
         }
       }
     },
@@ -242,7 +333,7 @@
         100
       ],
       "parameters": {
-        "content": "## Egakat Ops Bot — WMS Intelligence v1\n\n**Sprint 1:** Estado pipeline WMS del día\n**Sprint 2:** Fill Rate / OTIF\n**Sprint 3:** Productividad\n\n**Variables .env requeridas:**\n- TELEGRAM_ID_PERSONAL\n- TELEGRAM_GRUPO_OPS_ID (en Softnet_Ventas/.env)\n- API_OPS_SECRET\n\n**Tras activar:** Publish → registrar webhook manualmente\nGrupo Ops: -4852309647 ✅\nChat admin: 1137802732 ✅",
+        "content": "## Egakat Ops Bot - WMS Intelligence v1\n\n**Sprint 1:** Estado pipeline WMS del dia\n**Sprint 2:** Fill Rate / OTIF\n**Sprint 3:** Productividad\n\n**Variables .env requeridas:**\n- TELEGRAM_ID_PERSONAL\n- TELEGRAM_GRUPO_OPS_ID (en Softnet_Ventas/.env)\n- API_OPS_SECRET\n\n**Tras activar:** Publish y registrar webhook manualmente\nGrupo Ops: -4852309647\nChat admin: 1137802732",
         "height": 320,
         "width": 440,
         "color": 3
@@ -295,14 +386,54 @@
       "main": [
         [
           {
-            "node": "Obtener Estado WMS",
+            "node": "Obtener Contexto Operacional",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Obtener Estado WMS": {
+    "Obtener Contexto Operacional": {
+      "main": [
+        [
+          {
+            "node": "Preparar Export CSV NNSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Export CSV NNSS": {
+      "main": [
+        [
+          {
+            "node": "Solicita CSV NNSS?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Solicita CSV NNSS?": {
+      "main": [
+        [
+          {
+            "node": "Enviar CSV NNSS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Contexto AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Contexto AI": {
       "main": [
         [
           {

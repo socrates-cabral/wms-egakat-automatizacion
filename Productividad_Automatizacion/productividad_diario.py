@@ -427,9 +427,14 @@ def _download_wms_export(
 # Extraccion de DataFrame desde el .xls HTML del WMS
 # ---------------------------------------------------------------------------
 
-def _parse_wms_html_to_df(html_path: Path, log_path: Path) -> pd.DataFrame:
+def _parse_wms_html_to_df(html_path: Path, log_path: Path, from_dt: Optional[datetime] = None) -> pd.DataFrame:
     """Parsea el .xls HTML y retorna DataFrame con filas de detalle.
     Reutiliza parse_legacy_excel_html de productividad_utils (misma funcion que usa descarga.py).
+
+    Args:
+        html_path: Ruta al archivo .xls HTML del WMS
+        log_path: Ruta al archivo de log
+        from_dt: Fecha de inicio de la ventana (para rellenar fechas vacías si es necesario)
     """
     parsed = parse_legacy_excel_html(html_path)
     headers = parsed["headers"]
@@ -456,6 +461,44 @@ def _parse_wms_html_to_df(html_path: Path, log_path: Path) -> pd.DataFrame:
     n_cols = len(unique_headers)
     aligned = [row[:n_cols] + [""] * max(0, n_cols - len(row)) for row in detail]
     df = pd.DataFrame(aligned, columns=unique_headers)
+
+    # VALIDACIÓN CRÍTICA: Verificar que columnas esenciales existan y tengan datos válidos
+    if not df.empty:
+        if "Fecha" not in df.columns or "Hora" not in df.columns:
+            raise RuntimeError(
+                "El chunk WMS no contiene las columnas Fecha/Hora esperadas. "
+                "HTML corrupto o cambio de formato WMS."
+            )
+
+        # Contar filas con Fecha vacía ANTES de convertir a datetime
+        vacias_fecha = df["Fecha"].isna().sum() + (df["Fecha"] == "").sum()
+
+        if vacias_fecha > 0:
+            pct = (vacias_fecha / len(df)) * 100
+            if pct > 5.0:
+                # Si >5% de filas tienen Fecha vacía, es un error crítico del WMS
+                raise RuntimeError(
+                    f"El chunk WMS tiene {vacias_fecha}/{len(df)} filas ({pct:.1f}%) "
+                    f"con columna Fecha vacía. Descarga rechazada — revisar WMS."
+                )
+            else:
+                # Si <5%, loguear advertencia y rellenar con fecha del checkpoint
+                log(
+                    f"[WARN] Chunk WMS: {vacias_fecha}/{len(df)} filas ({pct:.1f}%) "
+                    f"con Fecha vacía. Se rellenará con fecha de checkpoint.",
+                    log_path
+                )
+                if from_dt:
+                    fecha_checkpoint = from_dt.strftime("%d/%m/%Y")
+                    df.loc[df["Fecha"].isna() | (df["Fecha"] == ""), "Fecha"] = fecha_checkpoint
+                else:
+                    # Fallback: usar fecha actual
+                    fecha_fallback = datetime.now().strftime("%d/%m/%Y")
+                    df.loc[df["Fecha"].isna() | (df["Fecha"] == ""), "Fecha"] = fecha_fallback
+                    log(
+                        f"[WARN] from_dt no disponible, usando fecha actual como fallback: {fecha_fallback}",
+                        log_path
+                    )
 
     # Fecha como datetime para poder filtrar por mes en el cruce
     if "Fecha" in df.columns:
@@ -755,9 +798,9 @@ def _process_client(
     if html_path is None:
         return {"ok": False, "filas_nuevas": 0, "filas_totales": 0, "detalle": "descarga fallida"}
 
-    # 2) Parsear chunk
+    # 2) Parsear chunk con validación de columnas críticas
     try:
-        df_new = _parse_wms_html_to_df(html_path, log_path)
+        df_new = _parse_wms_html_to_df(html_path, log_path, from_dt)
     except Exception as exc:
         log(f"[FALLO] Parseando HTML WMS: {exc}", log_path)
         return {"ok": False, "filas_nuevas": 0, "filas_totales": 0, "detalle": str(exc)}
@@ -786,6 +829,18 @@ def _process_client(
         df_new_month = new_by_month.get((year, month), pd.DataFrame(columns=df_new.columns))
         folder_path = build_sharepoint_folder_path(client, year, month)
         filename = f"{client['alias_archivo']}.xlsx"
+
+        # VALIDACIÓN PRE-MERGE: Verificar que df_new_month tenga datos válidos
+        if not df_new_month.empty and "Comprobante" in df_new_month.columns:
+            comp_numericos = pd.to_numeric(df_new_month["Comprobante"], errors="coerce").notna().sum()
+            if comp_numericos == 0:
+                log(
+                    f"[CRITICO] Chunk WMS {year}/{month:02d} no tiene comprobantes numéricos válidos. "
+                    f"Saltando merge para evitar corrupción.",
+                    log_path
+                )
+                all_ok = False
+                continue
 
         # 4) Descargar existente de SharePoint
         df_existing, existing_bytes = _download_sharepoint_df(
