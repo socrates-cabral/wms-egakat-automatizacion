@@ -340,7 +340,7 @@ def _alertas_alto_monto_html(resumen: dict) -> str:
   <td style="padding:8px 14px;border-bottom:1px solid {_C['gris_bd']};font-size:12px;white-space:nowrap;">{ev.get('tipo_doc','')}-{ev.get('n_cto','')}</td>
   <td style="padding:8px 14px;border-bottom:1px solid {_C['gris_bd']};font-size:12px;">{razon}</td>
   <td style="padding:8px 14px;border-bottom:1px solid {_C['gris_bd']};font-size:12px;text-align:center;">{ev.get('mes_label','—')}</td>
-  <td style="padding:8px 14px;border-bottom:1px solid {_C['gris_bd']};font-size:12px;text-align:right;font-weight:600;white-space:nowrap;">{_formato_monto(ev.get('monto_total',0))}</td>
+  <td style="padding:8px 14px;border-bottom:1px solid {_C['gris_bd']};font-size:12px;text-align:right;font-weight:600;white-space:nowrap;">{_formato_monto(ev.get('saldo',0))}</td>
   <td style="padding:8px 14px;border-bottom:1px solid {_C['gris_bd']};font-size:12px;text-align:right;color:{_color_dias(ev.get('dias_emision','—'))}">{ev.get('dias_emision','—')} días</td>
 </tr>""")
     return f"""
@@ -352,7 +352,7 @@ def _alertas_alto_monto_html(resumen: dict) -> str:
         <th style="padding:8px 14px;text-align:left;font-weight:600;">Doc</th>
         <th style="padding:8px 14px;text-align:left;font-weight:600;">Cliente</th>
         <th style="padding:8px 14px;text-align:center;font-weight:600;">Mes</th>
-        <th style="padding:8px 14px;text-align:right;font-weight:600;">Monto</th>
+        <th style="padding:8px 14px;text-align:right;font-weight:600;">Saldo</th>
         <th style="padding:8px 14px;text-align:right;font-weight:600;">Días</th>
       </tr>
     </thead>

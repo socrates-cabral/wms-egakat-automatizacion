@@ -69,6 +69,15 @@ _instaladores/
 *.tmp
 *.bak
 ~$*
+# Archivos chunk de procesamiento
+*_chunk_*.xlsx
+*_chunk_*.xls
+# Archivos con path corrupto (Windows)
+C:ClaudeWork*
+# Downloads temporales
+Productividad_Automatizacion/logs/downloads/
+# Logs de limpieza
+logs/cleanup/
 
 # ── Administración — scripts de permisos (no subir a GitHub) ──────
 _admin/

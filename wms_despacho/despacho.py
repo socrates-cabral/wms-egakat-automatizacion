@@ -2,7 +2,7 @@
 """
 WMS Egakat — Despacho Automático por Contenedor
 ================================================
-Procesa TODOS los viajes pendientes de una empresa (por defecto DERCO),
+Procesa TODOS los viajes pendientes disponibles en la ventana WMS,
 despachando cada PLT hasta vaciar la lista diaria.
 
 Selectores HTML confirmados con DevTools (2026-04-22):
@@ -14,11 +14,15 @@ Selectores HTML confirmados con DevTools (2026-04-22):
   Lista  : span[id^="span_vEVENTOS_EVPLTASO_"]
 
 Uso:
-    py despacho.py                            # DERCO + QUILICURA (defaults)
-    py despacho.py --empresa "CERVECERIA ABI"
+    py despacho.py                            # DERCO + QUILICURA (defaults, procesa TODOS los viajes)
+    py despacho.py --empresa "CERVECERIA ABI" # Selecciona empresa en menú RF
     py despacho.py --deposito PUDAHUEL
     py despacho.py --headless                 # sin ventana (modo producción)
     py despacho.py --debug                    # pausa entre pasos
+
+    NOTA: A partir del 2026-04-30, el módulo procesa TODOS los viajes disponibles
+          en la ventana WMS sin filtrar por empresa. El parámetro --empresa solo
+          se usa para la navegación inicial en el menú RF.
 """
 
 import sys
@@ -265,13 +269,10 @@ def procesar_viaje(page, viaje, empresa, deposito, debug) -> int:
     pausar(debug, f"Viaje {viaje} seleccionado")
 
     empresa_viaje = obtener_empresa_viaje(page)
-    if empresa_viaje and empresa_viaje != empresa:
-        log.warning(f"  ⏭️  Viaje {viaje} — empresa '{empresa_viaje}' ≠ '{empresa}', skip")
-        log_csv(empresa, deposito, viaje, "", "EMPRESA_INCORRECTA", empresa_viaje)
-        return 0, empresa_viaje
-
+    # MODIFICACIÓN 2026-04-30: Procesamos TODOS los viajes sin filtrar por empresa
+    # El Módulo 11 RF no tiene filtro nativo de empresa, muestra viajes de todas las empresas
     if empresa_viaje:
-        log.info(f"  ✅  Empresa confirmada: {empresa_viaje}")
+        log.info(f"  📋  Empresa detectada: {empresa_viaje}")
 
     procesados = 0
     for _ in range(500):   # guardia de seguridad — máx 500 PLTs por viaje
