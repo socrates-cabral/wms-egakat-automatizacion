@@ -127,6 +127,10 @@ def _clasificar_vencimiento_doc(row, fecha_corte: date) -> tuple[str, date | Non
     return "no_vencido", fecha_vencimiento, dias_mora
 
 
+# Constante para sorting - docs sin mora van al final
+_DIAS_MORA_SORT_DEFAULT = -999999
+
+
 
 def _col_rut(df: pd.DataFrame) -> str | None:
     """Detecta una columna de RUT de forma tolerante, si existe."""
@@ -947,7 +951,7 @@ def resumen_cliente():
                     documentos_detalle,
                     key=lambda x: (
                         0 if x["estado_vencimiento"] == "vencido" else 1 if x["estado_vencimiento"] == "no_vencido" else 2,
-                        -(x["dias_mora"] or -10**9),
+                        -(x["dias_mora"] or _DIAS_MORA_SORT_DEFAULT),
                         -(x["saldo_pendiente"] or 0),
                     ),
                 ),
@@ -1094,6 +1098,12 @@ def health():
 
 
 if __name__ == "__main__":
+    # Validar configuración crítica al inicio
+    if not os.getenv("API_COBRANZA_SECRET"):
+        print("[FALLO] API_COBRANZA_SECRET no configurado en .env")
+        print("        Generar secret: python -c 'import secrets; print(secrets.token_hex(16))'")
+        sys.exit(1)
+
     port = int(os.getenv("API_COBRANZA_PORT", 8080))
     print(f"[INFO] API Cobranza Egakat corriendo en http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)

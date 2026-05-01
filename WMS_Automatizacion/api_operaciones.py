@@ -744,6 +744,12 @@ def health():
 
 
 if __name__ == "__main__":
+    # Validar configuración crítica al inicio
+    if not os.getenv("API_OPS_SECRET"):
+        print("[FALLO] API_OPS_SECRET no configurado en .env")
+        print("        Generar secret: python -c 'import secrets; print(secrets.token_hex(16))'")
+        sys.exit(1)
+
     port = int(os.getenv("API_OPS_PORT", 8086))
     print(f"[INFO] API Operaciones Egakat corriendo en http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)

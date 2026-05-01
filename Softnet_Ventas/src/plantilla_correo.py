@@ -2,6 +2,7 @@ from __future__ import annotations
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
+import html
 from datetime import datetime
 from typing import Any
 
@@ -256,7 +257,7 @@ def _tabla_pagos_del_dia_html(resumen: dict) -> str:
         bg = _C["gris_b"] if i % 2 else "#ffffff"
         monto = float(ev.get("monto_total", 0) or 0)
         dias = ev.get("dias_cobro", "—")
-        razon = _truncar(ev.get("razon_social", ""), 40)
+        razon = _escapar_html(_truncar(ev.get("razon_social", ""), 40))
         filas.append(f"""
 <tr style="background:{bg};">
   <td style="padding:8px 14px;border-bottom:1px solid {_C['gris_bd']};font-size:12px;white-space:nowrap;">{ev.get('tipo_doc','')}-{ev.get('n_cto','')}</td>
@@ -334,7 +335,7 @@ def _alertas_alto_monto_html(resumen: dict) -> str:
     filas = []
     for i, ev in enumerate(alertas):
         bg = _C["gris_b"] if i % 2 else "#ffffff"
-        razon = _truncar(ev.get("razon_social", ""), 38)
+        razon = _escapar_html(_truncar(ev.get("razon_social", ""), 38))
         filas.append(f"""
 <tr style="background:{bg};">
   <td style="padding:8px 14px;border-bottom:1px solid {_C['gris_bd']};font-size:12px;white-space:nowrap;">{ev.get('tipo_doc','')}-{ev.get('n_cto','')}</td>
@@ -368,7 +369,7 @@ def _facturas_vencidas_html(resumen: dict) -> str:
     filas = []
     for i, ev in enumerate(vencidas):
         bg = _C["gris_b"] if i % 2 else "#ffffff"
-        razon = _truncar(ev.get("razon_social", ""), 38)
+        razon = _escapar_html(_truncar(ev.get("razon_social", ""), 38))
         dias  = ev.get("dias_atraso", "—")
         filas.append(f"""
 <tr style="background:{bg};">
@@ -437,6 +438,11 @@ def _formato_tipo(tipo: str) -> str:
 def _truncar(s: str, n: int) -> str:
     s = str(s or "").strip()
     return s if len(s) <= n else s[:n-1] + "…"
+
+
+def _escapar_html(texto: str) -> str:
+    """Escapa caracteres HTML para prevenir XSS en emails."""
+    return html.escape(str(texto or ""))
 
 
 def _color_dias(dias: Any) -> str:

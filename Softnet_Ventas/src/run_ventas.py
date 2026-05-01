@@ -116,8 +116,8 @@ def main() -> int:
         resumen["errores"].append(str(e))
         try:
             enviar_resumen_diario(resumen, destinatarios, cc=cc)
-        except Exception:
-            pass
+        except Exception as email_error:
+            log(f"[WARN] No se pudo enviar email de error: {email_error}")
         return 1
     finally:
         liberar_lock(LOCKFILE)
