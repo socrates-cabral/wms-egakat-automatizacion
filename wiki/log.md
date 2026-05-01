@@ -3,6 +3,157 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-04-30] proyecto | Sistema Limpieza Automatizada + Fixes WMS/Softnet
+
+**Tipo:** Nuevo sistema mantenimiento + fixes producción  
+**Archivos creados:**
+- scripts/cleanup_automatico.bat — Script principal limpieza (4.3 KB)
+- scripts/crear_tarea_cleanup.bat — Task Scheduler mensual (1.3 KB)
+- scripts/verificar_tarea_cleanup.bat — Verificación estado tarea (590 bytes)
+- scripts/eliminar_tarea_cleanup.bat — Eliminación tarea con confirmación (1.1 KB)
+- scripts/README_cleanup.md — Documentación completa (3.0 KB)
+- limpiar_cache.bat — Quick cleanup solo cache Python (raíz repo)
+
+**Archivos modificados:**
+- wms_despacho/despacho.py — Eliminado filtro DERCO-only, procesa TODOS los viajes
+- Softnet_Ventas/src/plantilla_correo.py — Fix columna "Monto" → "Saldo" en facturas alto monto
+- .gitignore — Agregados patrones cleanup (chunks, paths corruptos, logs/cleanup/)
+
+**Propósito:** Mantener repo limpio sin riesgo de borrar código/datos críticos. Fixes operacionales en producción.
+
+### 1. Sistema de limpieza automatizada
+
+**Eliminación inicial (2.7 GB):**
+- _instaladores/ (1.7 GB): Claude Setup, Codex Installer, Ollama — ya instalados
+- Productividad_Automatizacion/logs/downloads/ (1.0 GB): 262 chunks MovDerco
+- C:ClaudeWorktemp_movderco.xlsx (22 MB): Path corrupto Windows
+- __pycache__/ y *.pyc (3.3 MB): 36 carpetas, 176 archivos bytecode
+- agente_apuestas/output/: 23 reportes HTML antiguos (marzo-abril)
+
+**Qué elimina (safe):**
+- Cache Python regenerable (__pycache__, *.pyc)
+- Logs >30 días (logs/*.log)
+- Outputs temporales >15 días (agente_apuestas, crypto_bot)
+- Chunks procesamiento (*_chunk_*.xlsx)
+- Archivos corruptos (C:ClaudeWork*)
+- Temporales Office (.tmp, .bak, ~$*)
+
+**Qué NO elimina (garantizado):**
+- ✅ Código fuente (.py, .ps1, .bat, .json, .md)
+- ✅ Configuraciones (.env)
+- ✅ Checkpoints (fillrate_checkpoint.json, productividad_checkpoint.json)
+- ✅ Bases de datos SQLite
+- ✅ Scripts Task Scheduler
+- ✅ Logs recientes (<30 días)
+- ✅ Outputs recientes (<15 días)
+
+**Task Scheduler:**
+- Nombre: "ClaudeWork - Limpieza Automatica Mensual"
+- Frecuencia: 1er día del mes 02:00 AM
+- Usuario: SYSTEM, privilegios HIGHEST
+- Logs: logs/cleanup/cleanup_YYYYMMDD_HHMMSS.log
+
+**Estado:** ✅ Creada y ejecutada 2026-04-30 22:15. Próxima ejecución 2026-05-01 02:00.
+
+### 2. WMS Despacho — Procesar TODOS los viajes (no solo DERCO)
+
+**ANTES:** Filtro manual `span#span_vEMPDSC_0001` → solo procesaba viajes de DERCO  
+**AHORA:** Eliminado filtro empresa (líneas 267-271) → procesa TODOS los viajes disponibles
+
+**Razón:** Módulo 11 RF muestra viajes de todas las empresas en la misma ventana (no tiene filtro nativo). El parámetro `--empresa` solo se usa para navegación inicial en menú RF.
+
+**Impacto:** De 2-5 viajes/día (solo DERCO) → potencialmente 10-30 viajes/día (todas las empresas).
+
+**Commit:** a722a9b
+
+### 3. Softnet Ventas — Fix columna "Saldo" en email
+
+**ANTES:** Sección "Facturas de alto monto sin pagar" mostraba columna "Monto" (monto_total completo)  
+**AHORA:** Columna "Saldo" (deuda pendiente real)
+
+**Razón:** Evitar confusión — usuarios leían monto total factura y asumían deuda completa cuando ya se habían hecho pagos parciales.
+
+**Cambio:** `plantilla_correo.py` líneas 343 (valor) y 355 (header tabla).
+
+**Commit:** a722a9b
+
+---
+
+**Memory actualizada:**
+- project_cleanup_automation.md (nuevo)
+- project_wms_despacho.md (actualizado — cambio 2026-04-30)
+- project_softnet_ventas.md (actualizado — fix email template)
+- MEMORY.md (índice actualizado)
+
+**Wiki actualizada:**
+- log.md (esta entrada)
+- index.md (pendiente agregar cleanup automation)
+
+**Git commit:** a722a9b — "feat+fix: cleanup automation + WMS despacho all-trips + Softnet Ventas saldo fix"
+
+---
+
+## [2026-04-29] ingest | KPI Operativo + Bot Ops — Scripts completados con Codex
+
+**Tipo:** Nuevos scripts (Codex OpenAI)  
+**Archivos creados:**
+- WMS_Automatizacion/generar_resumen_kpi_ops.py — Resumen JSON KPIs operativos (184 KB, 4524 líneas)
+- WMS_Automatizacion/bots/_write_wf_ops.py — Generador config workflow n8n bot ops (15 KB)
+
+**Propósito:** Alimentar @EgakatOpsBot (Telegram) con contexto operacional actualizado.
+
+**Arquitectura:**
+```
+generar_resumen_kpi_ops.py
+  └─ Lee 9 carpetas OneDrive (NNSS, Productividad, Inventario, Stock WMS, Staging, Posiciones, Conteos)
+  └─ Genera tmp_resumen_kpi_ops_YYYYMMDD.json
+       └─ n8n workflow → @EgakatOpsBot (Telegram)
+```
+
+**Decisión técnica:** Mantener OneDrive Desktop para lectura carpetas compartidas externas (Grupo Planet SpA). Graph API no factible (permisos delegados, no application permissions). Solo lectura, sin problema sincronización.
+
+**Estado proyecto bot ops:** Actualizado de ❌ BLOQUEADO → ⏳ EN PROGRESO. Scripts completados, pendiente integración n8n.
+
+**Memory actualizada:**
+- project_kpi_ops.md (nuevo)
+- project_bot_ops_bloqueado.md (actualizado)
+
+**Wiki pendiente:** Crear proyectos/bot-ops-egakat.md
+
+---
+
+## [2026-04-29] proyecto | Servidor Egakat 24/7 — Plan de Migración
+
+**Tipo:** Nuevo proyecto (planificación infraestructura)  
+**Archivos creados:**
+- wiki/proyectos/servidor_egakat_24x7.md — Plan completo migración (40 KB)
+- Documentos/Guia_Migracion_Servidor_Egakat.md — Guía paso a paso lenguaje sencillo (37 KB)
+- Documentos/Checklist_Migracion_Servidor.md — Checklist imprimible migración (8 KB)
+
+**Páginas actualizadas:**
+- wiki/index.md (+1 entrada proyectos)
+
+**Decisión técnica:** Mini PC (Lenovo ThinkCentre M75q Gen 2) sobre VPS Cloud. Razones: OneDrive sync nativo, ROI 6 meses vs VPS, latencia debugging, control total hardware.
+
+**Inventario automatizaciones:**
+- ✅ Al servidor: WMS, Softnet, VDR, NPS, Productividad, FillRate, agente_apuestas, crypto_bot, n8n, APIs Flask (10+ Task Scheduler tasks)
+- ❌ En laptop: HackeaMetabolismo, Finanzas_Personales, InversionesIA, NutriMetab_BI (proyectos personales)
+
+**Presupuesto:** USD 720 (Mini PC USD 600 + UPS USD 100 + accesorios USD 20)
+
+**Timeline:** 7 fases, 6 días de trabajo (1-2h diarias), validación 48h antes de producción
+
+**Entregables:**
+1. Arquitectura servidor (requisitos HW/SW, dependencias críticas)
+2. Comparativa hardware (Mini PC vs PC Torre vs VPS, TCO 3 años)
+3. Guía instalación 7 fases (Windows, software base, migración código, OneDrive, n8n, Task Scheduler, pruebas)
+4. Checklist validación post-migración (50+ items)
+5. Troubleshooting común (8 problemas típicos)
+
+**Estado:** Planificación — pendiente compra hardware
+
+---
+
 ## [2026-04-29] ingest | Agente Apuestas — re-entrenamiento post-fixes + ajuste parámetros
 
 Re-entrenamiento XGBoost tras fixes lambda floor bug. Dataset 9,629 partidos, accuracy 52.02%. Grid ROI validó umbral 0.60 = +9.82% ROI (n=11). Ajustes: MIN_CONFIDENCE 65→60, umbrales liga 0.75→0.65. Modelo listo para paper trading fin de semana. Wiki: [[proyectos/agente-apuestas-fixes-2026-04-29]]. Commit 124a572.
