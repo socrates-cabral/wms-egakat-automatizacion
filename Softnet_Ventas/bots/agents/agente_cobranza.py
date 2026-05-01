@@ -145,10 +145,51 @@ def _preparar_proyeccion_caja(df: pd.DataFrame) -> str:
     return "\n".join(lineas)
 
 
+def _filtrar_df_por_mensaje(df: pd.DataFrame, mensaje: str) -> pd.DataFrame:
+    """Filtra DF si el mensaje menciona clientes específicos.
+    Reduce tamaño del prompt de 8K+ tokens → <2K tokens.
+    Si no detecta clientes, retorna top 20 por saldo (en lugar de todos).
+    """
+    if df.empty:
+        return df
+
+    col = _col_razon(df)
+    mensaje_upper = mensaje.upper()
+
+    # Buscar menciones de clientes en el mensaje
+    clientes_mencionados = []
+    clientes_unicos = df[col].dropna().unique()
+
+    for cliente in clientes_unicos:
+        # Match por palabras clave del nombre de empresa
+        palabras_cliente = [p for p in str(cliente).upper().split() if len(p) > 3]
+        if any(palabra in mensaje_upper for palabra in palabras_cliente):
+            clientes_mencionados.append(cliente)
+
+    # Si se mencionan clientes específicos → filtrar
+    if clientes_mencionados:
+        return df[df[col].isin(clientes_mencionados)].copy()
+
+    # Si no → retornar solo top 20 con mayor saldo pendiente
+    no_pagadas = df[df["Estado"] == "NO Pagado"]
+    if not no_pagadas.empty:
+        top_clientes = (no_pagadas.groupby(col)["Total"]
+                       .sum().sort_values(ascending=False).head(20).index)
+        return df[df[col].isin(top_clientes)].copy()
+
+    return df
+
+
 def responder(chat_id: int, mensaje: str, bot: str = "interno") -> str:
-    """Genera respuesta con contexto del historial SQLite."""
+    """Genera respuesta con contexto del historial SQLite.
+    Filtra datos por clientes mencionados para reducir tokens.
+    """
     df = leer_todos_meses_abiertos_consolidado()
-    datos_str = _preparar_resumen_datos(df) + _preparar_proyeccion_caja(df)
+
+    # Filtrado inteligente: reduce prompt 8K+ → <2K tokens
+    df_filtrado = _filtrar_df_por_mensaje(df, mensaje)
+
+    datos_str = _preparar_resumen_datos(df_filtrado) + _preparar_proyeccion_caja(df_filtrado)
     sistema = SISTEMA.format(datos=datos_str)
 
     historial = get_historial(chat_id, bot, n=8)

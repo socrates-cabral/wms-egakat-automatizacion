@@ -2,6 +2,7 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
 import os
+import threading
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -11,21 +12,26 @@ load_dotenv(_BASE.parent / ".env")
 
 _claude_client = None
 _openai_client = None
+_init_lock = threading.Lock()  # Thread-safe lazy init
 
 
 def _get_claude():
     global _claude_client
     if _claude_client is None:
-        import anthropic
-        _claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        with _init_lock:  # Double-checked locking
+            if _claude_client is None:
+                import anthropic
+                _claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     return _claude_client
 
 
 def _get_openai():
     global _openai_client
     if _openai_client is None:
-        from openai import OpenAI
-        _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        with _init_lock:  # Double-checked locking
+            if _openai_client is None:
+                from openai import OpenAI
+                _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     return _openai_client
 
 

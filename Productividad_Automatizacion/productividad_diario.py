@@ -64,9 +64,13 @@ from productividad_utils import (
 # ---------------------------------------------------------------------------
 
 # Modo prueba: True = solo envia correo a TESTING_EMAIL, no a destinatarios reales.
-# Cambiar a False cuando el script esté validado en producción.
-TESTING_MODE = True
+# Configurable via .env (PRODUCTIVIDAD_TESTING=true/false)
+TESTING_MODE = os.getenv("PRODUCTIVIDAD_TESTING", "true").lower() == "true"
 TESTING_EMAIL = "socrates.cabral@egakat.cl"
+
+# Playwright headless: configurable via .env (PLAYWRIGHT_HEADLESS=true/false)
+# Default true para producción, false para debugging
+PLAYWRIGHT_HEADLESS = os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _LOGS_DIR = _SCRIPT_DIR / "logs"
@@ -149,9 +153,34 @@ def _release_lock() -> None:
 # Checkpoint — fecha de ultimo run exitoso por cliente
 # ---------------------------------------------------------------------------
 
+def _validar_checkpoint_fecha(fecha_str: str, client_key: str, log_path: Path) -> str:
+    """Valida que checkpoint no esté obsoleto (>30 días).
+    Si lo está, resetea a 7 días atrás para evitar ventanas gigantes.
+    Retorna fecha válida como string YYYY-MM-DD.
+    """
+    try:
+        fecha_cp = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        hoy = date.today()
+        dias_diff = (hoy - fecha_cp).days
+
+        if dias_diff > 30:
+            fecha_reset = hoy - timedelta(days=7)
+            log(f"[WARN] {client_key}: checkpoint obsoleto ({dias_diff} días) "
+                f"— reseteando de {fecha_str} → {fecha_reset.isoformat()}", log_path)
+            return fecha_reset.isoformat()
+        return fecha_str
+    except Exception:
+        # Fecha inválida → resetear a 7 días atrás
+        fecha_reset = date.today() - timedelta(days=7)
+        log(f"[WARN] {client_key}: checkpoint inválido '{fecha_str}' "
+            f"— reseteando a {fecha_reset.isoformat()}", log_path)
+        return fecha_reset.isoformat()
+
+
 def _load_checkpoint() -> Dict[str, str]:
     """Retorna {client_key: "YYYY-MM-DD"}.
     Si el archivo no existe, crea uno con los valores semilla.
+    Valida que checkpoints no estén obsoletos (>30 días).
     """
     if not _CHECKPOINT_FILE.exists():
         _LOGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -161,7 +190,13 @@ def _load_checkpoint() -> Dict[str, str]:
         )
         return dict(_CHECKPOINT_SEED)
     try:
-        return json.loads(_CHECKPOINT_FILE.read_text(encoding="utf-8"))
+        data = json.loads(_CHECKPOINT_FILE.read_text(encoding="utf-8"))
+        # Validar cada checkpoint
+        log_path = build_log_path("productividad_diario")
+        data_validado = {}
+        for client_key, fecha_str in data.items():
+            data_validado[client_key] = _validar_checkpoint_fecha(fecha_str, client_key, log_path)
+        return data_validado
     except Exception:
         return dict(_CHECKPOINT_SEED)
 
@@ -332,7 +367,7 @@ def _download_wms_export(
     download_timeout_ms = int(client.get("download_timeout_ms", 180_000))
 
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True, slow_mo=0)
+        browser = pw.chromium.launch(headless=PLAYWRIGHT_HEADLESS, slow_mo=0)
         context = browser.new_context(accept_downloads=True)
         page = context.new_page()
         page.set_default_timeout(60_000)

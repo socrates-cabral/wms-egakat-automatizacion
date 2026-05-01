@@ -3,6 +3,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 import json
 import io
+import time
 from pathlib import Path
 from datetime import date, timedelta
 from calendar import monthrange
@@ -26,6 +27,10 @@ MESES_ES = {
 }
 
 _drive_cache: dict = {}
+
+# Cache SharePoint — evita descargas repetidas (TTL 15 min)
+_CACHE_TTL = 900  # 15 minutos
+_cache_meses = {"data": None, "ts": 0}
 
 
 def _get_drive_id_cached() -> tuple[str, dict]:
@@ -82,7 +87,14 @@ def leer_meses_abiertos() -> list[pd.DataFrame]:
     """
     Retorna lista de DataFrames de todos los meses en ventana activa.
     Itera hacia atrás desde el mes actual hasta que cierre la ventana (máx 6 meses).
+    Cache TTL 15 min para evitar descargas SharePoint repetidas.
     """
+    # Verificar cache
+    now = time.time()
+    if _cache_meses["data"] and (now - _cache_meses["ts"]) < _CACHE_TTL:
+        return _cache_meses["data"]
+
+    # Cache miss → descargar
     with open(_CONFIG_PATH, encoding="utf-8") as f:
         cfg = json.load(f)
     ventana = cfg["ventana_dias"]
@@ -105,6 +117,10 @@ def leer_meses_abiertos() -> list[pd.DataFrame]:
         if mes == 0:
             mes = 12
             año -= 1
+
+    # Actualizar cache
+    _cache_meses["data"] = meses
+    _cache_meses["ts"] = now
 
     return meses
 
