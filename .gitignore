@@ -45,13 +45,18 @@ NPS_Encuesta/*.pptx
 
 # ── Backups generados por generador.py ───────────────────────────
 _*_backup_*.py
+*backup*.py
+*Backup*.py
 
 # ── Estado interno ────────────────────────────────────────────────
 VDR_Comparador/vdr_ultimo_procesado.txt
+crypto_bot/data/
+crypto_bot/estado_grid*.json
 
 # ── Python ───────────────────────────────────────────────────────
 __pycache__/
 *.pyc
+*.pyc.*
 *.pyo
 *.pyd
 .venv/
@@ -69,6 +74,7 @@ _instaladores/
 *.tmp
 *.bak
 ~$*
+tmp_*.json
 # Archivos chunk de procesamiento
 *_chunk_*.xlsx
 *_chunk_*.xls
@@ -88,6 +94,10 @@ _admin/
 # IDE
 .vscode/
 .idea/
+
+# ── Claude Code ───────────────────────────────────────────────────
+.claude/settings.local.json
+.claude/worktrees/
 
 # Python build
 dist/
