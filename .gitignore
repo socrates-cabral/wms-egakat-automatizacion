@@ -109,3 +109,18 @@ build/
 .DS_Store
 Thumbs.db
 venv/
+
+# Browser profiles / Playwright artifacts
+**/.footystats_profile/
+**/Cache/
+**/Cache_Data/
+**/Local Storage/
+**/Session Storage/
+**/IndexedDB/
+**/Cookies
+**/Network/
+**/GPUCache/
+**/Code Cache/
+**/Service Worker/
+playwright-report/
+test-results/
