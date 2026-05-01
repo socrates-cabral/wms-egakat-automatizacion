@@ -1,5 +1,5 @@
 # Wiki Index — ClaudeWork
-Última compilación: 2026-04-29
+Última compilación: 2026-04-30
 
 ## Proyectos
 
@@ -26,6 +26,14 @@
 - [[proyectos/productividad-automatizacion]] — OPERATIVO 2026-04-21. productividad_diario.py: append incremental diario, 17 clientes (incl. NATIVO DRINKS + OMNITECH), checkpoint JSON, dedup, token Graph API por cliente.
 - [[proyectos/wms-despacho-automatico]] — OPERATIVO 2026-04-22. Pipeline RF+WEB: despacho PLTs + confirmación salida viajes. SCABRAL2 principal. Email combinado Graph API. Task Scheduler 08:00/13:00/17:00.
 - [[proyectos/softnet-ventas]] — OPERATIVO 2026-04-24. Libro de Ventas Softnet → SharePoint vía Graph API. Correo diario con CxC, vencidas, alto monto, pagos del día. L-V 16:00.
+- [[proyectos/kpi-ops]] — DESARROLLO 2026-04-29. generar_resumen_kpi_ops.py (4524 líneas, Codex): JSON KPIs operativos (NNSS, Productividad, Inventario). 9 carpetas OneDrive compartidas. Alimenta @EgakatOpsBot vía n8n. Pendiente integración workflow.
+- [[proyectos/servidor_egakat_24x7]] — PLANIFICACIÓN 2026-04-29. Migración todas las automatizaciones Egakat a servidor dedicado 24/7. Mini PC Lenovo M75q Gen 2 recomendado. 9 fases, 6 días estimado, USD 720 inversión + $30.50/mes (M365 + Power BI Pro + electricidad).
+
+## Mantenimiento & Infraestructura
+
+- [[proyectos/cleanup-automation]] — OPERATIVO 2026-04-30. Sistema limpieza automatizada C:\ClaudeWork. Task Scheduler mensual (1er día 02:00). Elimina cache, logs >30d, outputs >15d, chunks, temporales. 2.7GB liberados inicial. Safe: nunca toca código/config/datos críticos.
+
+## Criptomonedas
 
 - [[proyectos/crypto-bot]] — Grid Trading BTC_USDT + EMA 200 filter. Paper trading activo. Exchange abstraction (Crypto.com + Kraken). 20 niveles $80K-$100K.
 
