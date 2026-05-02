@@ -354,6 +354,22 @@ Páginas faltantes sugeridas: [lista]
 -->
 ---
 
+## [2026-05-02] fix | Bot Ops — JS historico bloqueado por periodoSolicitadoNoDisponible
+
+**Tipo:** Bug fix lógica contexto AI  
+**Archivo:** `WMS_Automatizacion/bots/_FINAL_preparar_contexto_ai.js`  
+**Páginas actualizadas:**
+- wiki/proyectos/kpi-ops.md (reemplazado "Problema conocido" → documentación fix)
+- memory/project_bot_ops_bloqueado.md (estado FUNCIONAL PARCIAL → FUNCIONAL COMPLETO)
+
+**Síntoma:** Consultas históricas como "OTIF DERCO en marzo", "Fill Rate de febrero" y "productividad DERCO AP YTD" devolvían solo `control_periodo` aunque `kpi_ops.historico` tenía los datos. El bloque hacía early return antes de que el agente recibiera historico.
+
+**Causa raíz:** `periodoSolicitadoNoDisponible = true` cuando mes solicitado ≠ mes disponible (e.g., marzo ≠ abril), sin revisar si historico tenía filas para ese mes. Para YTD, `esProductividad` sobreescribía el contexto con datos del mes actual eliminando historico.
+
+**Fix:** Función `historicoTienePeriodo()` que verifica presencia de filas en los 8 arrays del historico (otif_mensual, otif_ytd, fillrate_mensual, fillrate_ytd, mensual_cliente, ytd_cliente, derco_ap_mensual, derco_ap_ytd). Condición de bloqueo dividida: solo activa `control_periodo` si historico NO cubre; early return con historico si SÍ cubre.
+
+---
+
 ## [2026-05-01] ingest | Remediación seguridad agente_apuestas
 Fuente: SECURITY_REMEDIATION_STEPS.md + `.gitignore` + `agente_apuestas/*.py`
 Páginas creadas:

@@ -491,7 +491,52 @@
   }
   // ── Fin helpers de historico ──────────────────────────────────────────────
 
-  if (periodoSolicitadoNoDisponible || solicitudYtdSinHistorico || solicitudComparativaSinHistorico) {
+  function historicoTienePeriodo(kpiTipo, mes, anio, esYtd) {
+    if (!historico || typeof historico !== 'object') return false;
+    const hn = historico.nnss || {};
+    const hp = historico.productividad || {};
+
+    function rowMatch(r) {
+      const rMes = r?.mes ?? r?.periodo_mes ?? r?.periodo?.mes ?? null;
+      const rAnio = r?.anio ?? r?.periodo_anio ?? r?.periodo?.anio ?? null;
+      const mesOk = !mes || (rMes !== null && rMes !== undefined && Number(rMes) === Number(mes));
+      const anioOk = !anio || (rAnio !== null && rAnio !== undefined && Number(rAnio) === Number(anio));
+      return mesOk && anioOk;
+    }
+
+    function arrTiene(arr) {
+      if (!Array.isArray(arr) || arr.length === 0) return false;
+      if (esYtd) {
+        if (!anio) return true;
+        return arr.some(r => {
+          const rAnio = r?.anio ?? r?.periodo_anio ?? r?.periodo?.anio ?? null;
+          return !rAnio || Number(rAnio) === Number(anio);
+        });
+      }
+      return arr.some(rowMatch);
+    }
+
+    if (esYtd) {
+      if (kpiTipo === 'otif' || kpiTipo === 'nnss') return arrTiene(hn.otif_ytd);
+      if (kpiTipo === 'fillrate') return arrTiene(hn.fillrate_ytd);
+      if (kpiTipo === 'productividad') return arrTiene(hp.ytd_cliente) || arrTiene(hp.derco_ap_ytd);
+      return arrTiene(hn.otif_ytd) || arrTiene(hn.fillrate_ytd) || arrTiene(hp.ytd_cliente) || arrTiene(hp.derco_ap_ytd);
+    }
+
+    if (kpiTipo === 'otif' || kpiTipo === 'nnss') return arrTiene(hn.otif_mensual);
+    if (kpiTipo === 'fillrate') return arrTiene(hn.fillrate_mensual);
+    if (kpiTipo === 'productividad') return arrTiene(hp.mensual_cliente) || arrTiene(hp.derco_ap_mensual);
+    return arrTiene(hn.otif_mensual) || arrTiene(hn.fillrate_mensual) || arrTiene(hp.mensual_cliente);
+  }
+
+  const historicoResponde = historicoTienePeriodo(
+    kpiPrincipalSolicitado,
+    periodoSolicitado.mes,
+    periodoSolicitado.anio,
+    periodoSolicitado.es_ytd
+  );
+
+  if ((periodoSolicitadoNoDisponible || solicitudYtdSinHistorico || solicitudComparativaSinHistorico) && !historicoResponde) {
     const solicitadoTexto = periodoSolicitado.es_ytd
       ? 'acumulado anual / YTD'
       : periodoSolicitado.es_comparativo
@@ -527,6 +572,28 @@
     };
 
     return JSON.stringify(contexto);
+  }
+
+  if ((periodoSolicitadoNoDisponible || periodoSolicitado.es_ytd || periodoSolicitado.es_comparativo) && historicoResponde) {
+    return JSON.stringify({
+      disponible: $json.disponible,
+      fecha_consulta: $json.fecha_consulta,
+      consulta_historico: {
+        kpi: kpiPrincipalSolicitado,
+        periodo_solicitado: periodoSolicitado.es_ytd
+          ? 'ytd'
+          : `${periodoSolicitado.mes_nombre || 'mes'} ${periodoSolicitado.anio || ''}`.trim(),
+        es_ytd: periodoSolicitado.es_ytd,
+        es_comparativo: periodoSolicitado.es_comparativo,
+        mes: periodoSolicitado.mes,
+        anio: periodoSolicitado.anio,
+        cliente: clienteSolicitado,
+        regla: 'Responder usando kpi_ops.historico. Para mensual, filtrar por kpi y periodo solicitado. Para YTD, usar la sección ytd correspondiente. No usar datos del período actual para responder períodos históricos.'
+      },
+      kpi_ops: {
+        historico: contexto.kpi_ops.historico
+      }
+    });
   }
 
   if (esConsultaUbicacionesLayout && !esConsultaConteoCiclico && !esProductividad && !esOTIF) {
