@@ -1,4 +1,4 @@
-{{
+={{
 (() => {
   const rawMsg =
     $('Limpiar mensaje').item.json.mensaje_limpio ||
@@ -433,6 +433,64 @@
     kpi_ops: kpi
   };
 
+  // ── Helpers de historico ─────────────────────────────────────────────────
+  const maxContextLength = 60000;
+  const principalClients = new Set(['DERCO', 'DAIKIN', 'POCHTECA', 'UNILEVER', 'BARENTZ', 'RUNO']);
+  const normClienteHist = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+  const filtrarRows = (rows) => Array.isArray(rows)
+    ? rows.filter(r => principalClients.has(normClienteHist(r?.cliente)))
+    : rows;
+
+  const tryAddTopLevel = (key, value) => {
+    if (value === undefined) return false;
+    const candidate = JSON.parse(JSON.stringify(contexto));
+    candidate.kpi_ops[key] = value;
+    if (JSON.stringify(candidate).length <= maxContextLength) {
+      contexto.kpi_ops[key] = value;
+      return true;
+    }
+    return false;
+  };
+
+  const historico = kpi.historico || null;
+
+  const construirHistoricoCompacto = (filtrarClientes) => {
+    if (!historico || typeof historico !== 'object') return null;
+    const hn = historico.nnss || {};
+    const hp = historico.productividad || {};
+    return {
+      disponible: historico.disponible,
+      periodo_cobertura: historico.periodo_cobertura,
+      criterio_historico: historico.criterio_historico,
+      origen_historico: historico.origen_historico,
+      fecha_generacion: historico.fecha_generacion,
+      advertencia: historico.advertencia,
+      corte_operativo_disponible: historico.corte_operativo_disponible,
+      nnss: {
+        otif_mensual:      filtrarClientes ? filtrarRows(hn.otif_mensual)      : hn.otif_mensual,
+        otif_ytd:          filtrarClientes ? filtrarRows(hn.otif_ytd)          : hn.otif_ytd,
+        fillrate_mensual:  filtrarClientes ? filtrarRows(hn.fillrate_mensual)  : hn.fillrate_mensual,
+        fillrate_ytd:      filtrarClientes ? filtrarRows(hn.fillrate_ytd)      : hn.fillrate_ytd
+      },
+      productividad: {
+        mensual_cliente:  filtrarClientes ? filtrarRows(hp.mensual_cliente) : hp.mensual_cliente,
+        ytd_cliente:      filtrarClientes ? filtrarRows(hp.ytd_cliente)     : hp.ytd_cliente,
+        derco_ap_mensual: hp.derco_ap_mensual,
+        derco_ap_ytd:     hp.derco_ap_ytd
+      }
+    };
+  };
+
+  if (historico === null) {
+    contexto.kpi_ops.historico = null;
+  } else {
+    const hFull = construirHistoricoCompacto(false);
+    if (!tryAddTopLevel('historico', hFull)) {
+      tryAddTopLevel('historico', construirHistoricoCompacto(true));
+    }
+  }
+  // ── Fin helpers de historico ──────────────────────────────────────────────
+
   if (periodoSolicitadoNoDisponible || solicitudYtdSinHistorico || solicitudComparativaSinHistorico) {
     const solicitadoTexto = periodoSolicitado.es_ytd
       ? 'acumulado anual / YTD'
@@ -468,11 +526,7 @@
       }
     };
 
-    return `Consulta del usuario:
-${rawMsg}
-
-CONTEXTO OPERACIONAL ACTUAL:
-${JSON.stringify(contexto, null, 2)}`;
+    return JSON.stringify(contexto);
   }
 
   if (esConsultaUbicacionesLayout && !esConsultaConteoCiclico && !esProductividad && !esOTIF) {
@@ -935,10 +989,6 @@ ${JSON.stringify(contexto, null, 2)}`;
     };
   }
 
-  return `Consulta del usuario:
-${rawMsg}
-
-CONTEXTO OPERACIONAL ACTUAL:
-${JSON.stringify(contexto, null, 2)}`;
+  return JSON.stringify(contexto);
 })()
 }}

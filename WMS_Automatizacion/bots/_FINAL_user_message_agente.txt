@@ -1,0 +1,13 @@
+={{
+(() => {
+  const msg =
+    $('Limpiar mensaje').item.json.mensaje_limpio ||
+    $('Limpiar mensaje').item.json.mensaje ||
+    $('Telegram Trigger').item.json.message?.text ||
+    '';
+
+  const ctx = $json.contexto_operacional_actual || '{}';
+
+  return `Consulta del usuario:\n${msg}\n\nCONTEXTO OPERACIONAL ACTUAL:\n${ctx}`;
+})()
+}}

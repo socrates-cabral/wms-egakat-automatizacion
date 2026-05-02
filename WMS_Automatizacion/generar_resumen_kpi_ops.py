@@ -96,6 +96,20 @@ ESTADOS_DESPACHADOS = {"DESPACHADO", "DESPACHADOS"}
 OBJETIVOS_MENSUALES_CONTEO = {
     (2026, 4): 25288,
 }
+MESES_ES = {
+    1: "Enero",
+    2: "Febrero",
+    3: "Marzo",
+    4: "Abril",
+    5: "Mayo",
+    6: "Junio",
+    7: "Julio",
+    8: "Agosto",
+    9: "Septiembre",
+    10: "Octubre",
+    11: "Noviembre",
+    12: "Diciembre",
+}
 RANK_ESTADO = {
     "POR ACEPTAR": 1,
     "EN PREPARACION": 2,
@@ -307,6 +321,24 @@ def porcentaje_safe(numerador: float, denominador: float) -> float:
     if not denominador:
         return 0.0
     return round_safe((numerador / denominador) * 100.0, 2)
+
+
+def porcentaje_safe_nullable(numerador: float, denominador: float) -> float | None:
+    if not denominador:
+        return None
+    return porcentaje_safe(numerador, denominador)
+
+
+def serializar_numero_cantidad(valor: float) -> int | float:
+    if abs(valor - round(valor)) < 1e-9:
+        return int(round(valor))
+    return round_safe(valor, 2)
+
+
+def division_lineal_nullable(numerador: float, denominador: float) -> float | None:
+    if not denominador:
+        return None
+    return round_safe(float(numerador) / float(denominador), 2)
 
 
 def es_fecha_valida(valor: Any) -> bool:
@@ -969,6 +1001,936 @@ def calcular_nnss(df_nnss: pd.DataFrame, year: int, month: int, fecha_consulta: 
             **fillrate_cobertura,
         },
     }, alertas, recomendaciones
+
+
+def construir_fila_otif_historico(
+    year: int,
+    month: int,
+    cliente: str,
+    clientes_otif: dict[str, dict[str, Any]],
+    clientes_periodo: set[str],
+    fuentes_por_cliente: dict[str, list[str]],
+    motivo_base: str | None = None,
+) -> dict[str, Any]:
+    payload_cliente = clientes_otif.get(cliente)
+    if payload_cliente:
+        pedidos_evaluados = int(payload_cliente.get("pedidos_evaluados") or 0)
+        pedidos_on_time = int(payload_cliente.get("pedidos_on_time") or 0)
+        pedidos_in_full = int(payload_cliente.get("pedidos_in_full") or 0)
+        pedidos_otif = int(payload_cliente.get("pedidos_otif") or 0)
+        pedidos_no_evaluables = int(payload_cliente.get("pedidos_no_evaluables") or 0)
+        disponible = pedidos_evaluados > 0
+        if disponible:
+            motivo = ""
+        elif pedidos_no_evaluables > 0:
+            motivo = "sin pedidos OTIF evaluables; solo hay pedidos no evaluables en el período"
+        else:
+            motivo = "sin datos válidos para el período"
+        return {
+            "anio": year,
+            "mes": month,
+            "mes_nombre": MESES_ES.get(month, f"Mes {month}"),
+            "cliente": cliente,
+            "pedidos_evaluados": pedidos_evaluados,
+            "pedidos_on_time": pedidos_on_time,
+            "pedidos_in_full": pedidos_in_full,
+            "pedidos_otif": pedidos_otif,
+            "pedidos_no_evaluables": pedidos_no_evaluables,
+            "pct_on_time": porcentaje_safe_nullable(pedidos_on_time, pedidos_evaluados),
+            "pct_in_full": porcentaje_safe_nullable(pedidos_in_full, pedidos_evaluados),
+            "pct_otif": porcentaje_safe_nullable(pedidos_otif, pedidos_evaluados),
+            "disponible": disponible,
+            "motivo": motivo,
+            "fuentes": sorted(fuentes_por_cliente.get(cliente, [])),
+        }
+
+    if cliente in clientes_periodo:
+        motivo = "sin OTIF estructurado para el cliente en el período"
+    else:
+        motivo = motivo_base or "sin datos válidos para el período"
+    return {
+        "anio": year,
+        "mes": month,
+        "mes_nombre": MESES_ES.get(month, f"Mes {month}"),
+        "cliente": cliente,
+        "pedidos_evaluados": 0,
+        "pedidos_on_time": 0,
+        "pedidos_in_full": 0,
+        "pedidos_otif": 0,
+        "pedidos_no_evaluables": 0,
+        "pct_on_time": None,
+        "pct_in_full": None,
+        "pct_otif": None,
+        "disponible": False,
+        "motivo": motivo,
+        "fuentes": sorted(fuentes_por_cliente.get(cliente, [])),
+    }
+
+
+def construir_otif_ytd_desde_mensual(
+    otif_mensual: list[dict[str, Any]],
+    year: int,
+    hasta_mes: int,
+) -> list[dict[str, Any]]:
+    filas_por_cliente: dict[str, dict[int, dict[str, Any]]] = defaultdict(dict)
+    for fila in otif_mensual:
+        if int(fila.get("anio") or 0) != year:
+            continue
+        mes = int(fila.get("mes") or 0)
+        cliente = normalizar_texto(fila.get("cliente"))
+        if not cliente or mes < 1 or mes > hasta_mes:
+            continue
+        filas_por_cliente[cliente][mes] = fila
+
+    otif_ytd = []
+    for cliente in sorted(filas_por_cliente):
+        pedidos_evaluados_acum = 0
+        pedidos_on_time_acum = 0
+        pedidos_in_full_acum = 0
+        pedidos_otif_acum = 0
+        pedidos_no_evaluables_acum = 0
+        meses_incluidos = []
+        meses_sin_datos = []
+
+        for mes in range(1, hasta_mes + 1):
+            fila = filas_por_cliente[cliente].get(mes)
+            if not fila:
+                meses_sin_datos.append(mes)
+                continue
+
+            pedidos_evaluados_mes = int(fila.get("pedidos_evaluados") or 0)
+            pedidos_on_time_mes = int(fila.get("pedidos_on_time") or 0)
+            pedidos_in_full_mes = int(fila.get("pedidos_in_full") or 0)
+            pedidos_otif_mes = int(fila.get("pedidos_otif") or 0)
+            pedidos_no_evaluables_mes = int(fila.get("pedidos_no_evaluables") or 0)
+
+            pedidos_evaluados_acum += pedidos_evaluados_mes
+            pedidos_on_time_acum += pedidos_on_time_mes
+            pedidos_in_full_acum += pedidos_in_full_mes
+            pedidos_otif_acum += pedidos_otif_mes
+            pedidos_no_evaluables_acum += pedidos_no_evaluables_mes
+
+            if any(
+                [
+                    pedidos_evaluados_mes,
+                    pedidos_on_time_mes,
+                    pedidos_in_full_mes,
+                    pedidos_otif_mes,
+                    pedidos_no_evaluables_mes,
+                ]
+            ):
+                meses_incluidos.append(mes)
+
+            if not bool(fila.get("disponible")):
+                meses_sin_datos.append(mes)
+
+        disponible = pedidos_evaluados_acum > 0
+        if disponible:
+            motivo = None
+        elif meses_incluidos:
+            motivo = f"sin pedidos OTIF evaluables acumulados entre enero y {MESES_ES.get(hasta_mes, f'mes {hasta_mes}')} de {year}"
+        else:
+            motivo = f"sin datos validos acumulados entre enero y {MESES_ES.get(hasta_mes, f'mes {hasta_mes}')} de {year}"
+
+        otif_ytd.append(
+            {
+                "anio": year,
+                "desde_mes": 1,
+                "hasta_mes": hasta_mes,
+                "cliente": cliente,
+                "pedidos_evaluados_acum": pedidos_evaluados_acum,
+                "pedidos_on_time_acum": pedidos_on_time_acum,
+                "pedidos_in_full_acum": pedidos_in_full_acum,
+                "pedidos_otif_acum": pedidos_otif_acum,
+                "pedidos_no_evaluables_acum": pedidos_no_evaluables_acum,
+                "pct_on_time": porcentaje_safe_nullable(pedidos_on_time_acum, pedidos_evaluados_acum),
+                "pct_in_full": porcentaje_safe_nullable(pedidos_in_full_acum, pedidos_evaluados_acum),
+                "pct_otif": porcentaje_safe_nullable(pedidos_otif_acum, pedidos_evaluados_acum),
+                "disponible": disponible,
+                "motivo": motivo,
+                "meses_incluidos": meses_incluidos,
+                "meses_sin_datos": meses_sin_datos,
+                "origen_valor": "cierre_recalculado",
+                "criterio_historico": "recalculado_desde_fuente_viva",
+            }
+        )
+
+    return otif_ytd
+
+
+def calcular_componentes_fillrate_row(
+    estado: Any,
+    cantidad_original: Any,
+    cantidad_preparada: Any,
+    cantidad_despachada: Any,
+) -> tuple[float, float, bool]:
+    estado_txt = normalizar_etiqueta(estado)
+    original = parse_numero(cantidad_original)
+    if original <= 0:
+        return 0.0, 0.0, False
+    if estado_txt in ESTADOS_PREPARACION:
+        return original, original, True
+    if estado_txt in ESTADOS_PREPARADOS:
+        return parse_numero(cantidad_preparada), original, True
+    if estado_txt in ESTADOS_DESPACHADOS:
+        return parse_numero(cantidad_despachada), original, True
+    return 0.0, 0.0, False
+
+
+def resumir_fillrate_historico_por_cliente(
+    df_nnss: pd.DataFrame,
+) -> tuple[dict[str, dict[str, Any]], set[str], dict[str, list[str]]]:
+    clientes_fillrate: dict[str, dict[str, Any]] = {}
+    clientes_periodo: set[str] = set()
+    fuentes_por_cliente: dict[str, list[str]] = defaultdict(list)
+
+    if df_nnss is None or df_nnss.empty:
+        return clientes_fillrate, clientes_periodo, fuentes_por_cliente
+
+    df = df_nnss.copy()
+    componentes_fillrate = df.apply(
+        lambda row: calcular_componentes_fillrate_row(
+            row.get("Estado Pedido"),
+            row.get("Cantidad Original"),
+            row.get("Cantidad Preparada"),
+            row.get("Cantidad Despachada"),
+        ),
+        axis=1,
+        result_type="expand",
+    )
+    componentes_fillrate.columns = ["fr_numerador_base", "fr_denominador_base", "fr_evaluable_historico"]
+    df[["fr_numerador_base", "fr_denominador_base", "fr_evaluable_historico"]] = componentes_fillrate
+
+    for cliente, grupo in df.groupby("Empresa", dropna=False):
+        cliente_txt = normalizar_texto(cliente)
+        if not cliente_txt:
+            continue
+
+        clientes_periodo.add(cliente_txt)
+        fuentes_por_cliente[cliente_txt] = sorted(
+            {
+                str(path)
+                for path in grupo["__archivo_fuente"].dropna().tolist()
+                if normalizar_texto(path)
+            }
+        )
+
+        grupo_evaluable = grupo[grupo["fr_evaluable_historico"] == True]
+        fillrate_numerador = float(grupo_evaluable["fr_numerador_base"].sum()) if not grupo_evaluable.empty else 0.0
+        fillrate_denominador = float(grupo_evaluable["fr_denominador_base"].sum()) if not grupo_evaluable.empty else 0.0
+        documentos_evaluables = int(grupo_evaluable["pedido_key"].nunique()) if not grupo_evaluable.empty else 0
+        disponible = fillrate_denominador > 0
+        if disponible:
+            motivo = None
+        else:
+            motivo = "sin lineas Fill Rate evaluables en el periodo"
+
+        clientes_fillrate[cliente_txt] = {
+            "fillrate_numerador": serializar_numero_cantidad(fillrate_numerador),
+            "fillrate_denominador": serializar_numero_cantidad(fillrate_denominador),
+            "documentos_evaluables": documentos_evaluables,
+            "pct_fillrate": porcentaje_safe_nullable(fillrate_numerador, fillrate_denominador),
+            "disponible": disponible,
+            "motivo": motivo,
+            "fuentes": fuentes_por_cliente[cliente_txt],
+            "origen_valor": "cierre_recalculado",
+            "criterio_historico": "recalculado_desde_fuente_viva",
+        }
+
+    return clientes_fillrate, clientes_periodo, fuentes_por_cliente
+
+
+def construir_fila_fillrate_historico(
+    year: int,
+    month: int,
+    cliente: str,
+    clientes_fillrate: dict[str, dict[str, Any]],
+    clientes_periodo: set[str],
+    fuentes_por_cliente: dict[str, list[str]],
+    motivo_base: str | None = None,
+) -> dict[str, Any]:
+    payload_cliente = clientes_fillrate.get(cliente)
+    if payload_cliente:
+        return {
+            "anio": year,
+            "mes": month,
+            "mes_nombre": MESES_ES.get(month, f"Mes {month}"),
+            "cliente": cliente,
+            "fillrate_numerador": payload_cliente.get("fillrate_numerador", 0),
+            "fillrate_denominador": payload_cliente.get("fillrate_denominador", 0),
+            "documentos_evaluables": int(payload_cliente.get("documentos_evaluables") or 0),
+            "pct_fillrate": payload_cliente.get("pct_fillrate"),
+            "disponible": bool(payload_cliente.get("disponible")),
+            "motivo": payload_cliente.get("motivo"),
+            "fuentes": sorted(payload_cliente.get("fuentes") or fuentes_por_cliente.get(cliente, [])),
+            "origen_valor": payload_cliente.get("origen_valor", "cierre_recalculado"),
+            "criterio_historico": payload_cliente.get("criterio_historico", "recalculado_desde_fuente_viva"),
+        }
+
+    if cliente in clientes_periodo:
+        motivo = "sin Fill Rate estructurado para el cliente en el periodo"
+    else:
+        motivo = motivo_base or "sin datos validos para el periodo"
+    return {
+        "anio": year,
+        "mes": month,
+        "mes_nombre": MESES_ES.get(month, f"Mes {month}"),
+        "cliente": cliente,
+        "fillrate_numerador": 0,
+        "fillrate_denominador": 0,
+        "documentos_evaluables": 0,
+        "pct_fillrate": None,
+        "disponible": False,
+        "motivo": motivo,
+        "fuentes": sorted(fuentes_por_cliente.get(cliente, [])),
+        "origen_valor": "cierre_recalculado",
+        "criterio_historico": "recalculado_desde_fuente_viva",
+    }
+
+
+def construir_fillrate_ytd_desde_mensual(
+    fillrate_mensual: list[dict[str, Any]],
+    year: int,
+    hasta_mes: int,
+) -> list[dict[str, Any]]:
+    filas_por_cliente: dict[str, dict[int, dict[str, Any]]] = defaultdict(dict)
+    for fila in fillrate_mensual:
+        if int(fila.get("anio") or 0) != year:
+            continue
+        mes = int(fila.get("mes") or 0)
+        cliente = normalizar_texto(fila.get("cliente"))
+        if not cliente or mes < 1 or mes > hasta_mes:
+            continue
+        filas_por_cliente[cliente][mes] = fila
+
+    fillrate_ytd = []
+    for cliente in sorted(filas_por_cliente):
+        fillrate_numerador_acum = 0.0
+        fillrate_denominador_acum = 0.0
+        documentos_evaluables_acum = 0
+        meses_incluidos = []
+        meses_sin_datos = []
+
+        for mes in range(1, hasta_mes + 1):
+            fila = filas_por_cliente[cliente].get(mes)
+            if not fila:
+                meses_sin_datos.append(mes)
+                continue
+
+            fillrate_numerador_mes = parse_numero(fila.get("fillrate_numerador"))
+            fillrate_denominador_mes = parse_numero(fila.get("fillrate_denominador"))
+            documentos_evaluables_mes = int(fila.get("documentos_evaluables") or 0)
+
+            fillrate_numerador_acum += fillrate_numerador_mes
+            fillrate_denominador_acum += fillrate_denominador_mes
+            documentos_evaluables_acum += documentos_evaluables_mes
+
+            if any([fillrate_numerador_mes, fillrate_denominador_mes, documentos_evaluables_mes]):
+                meses_incluidos.append(mes)
+
+            if not bool(fila.get("disponible")):
+                meses_sin_datos.append(mes)
+
+        disponible = fillrate_denominador_acum > 0
+        if disponible:
+            motivo = None
+        elif meses_incluidos:
+            motivo = f"sin denominador Fill Rate acumulado entre enero y {MESES_ES.get(hasta_mes, f'mes {hasta_mes}')} de {year}"
+        else:
+            motivo = f"sin datos validos acumulados de Fill Rate entre enero y {MESES_ES.get(hasta_mes, f'mes {hasta_mes}')} de {year}"
+
+        fillrate_ytd.append(
+            {
+                "anio": year,
+                "desde_mes": 1,
+                "hasta_mes": hasta_mes,
+                "cliente": cliente,
+                "fillrate_numerador_acum": serializar_numero_cantidad(fillrate_numerador_acum),
+                "fillrate_denominador_acum": serializar_numero_cantidad(fillrate_denominador_acum),
+                "documentos_evaluables_acum": documentos_evaluables_acum,
+                "pct_fillrate": porcentaje_safe_nullable(fillrate_numerador_acum, fillrate_denominador_acum),
+                "disponible": disponible,
+                "motivo": motivo,
+                "meses_incluidos": meses_incluidos,
+                "meses_sin_datos": meses_sin_datos,
+                "origen_valor": "cierre_recalculado",
+                "criterio_historico": "recalculado_desde_fuente_viva",
+            }
+        )
+
+    return fillrate_ytd
+
+
+def inferir_cd_productividad_desde_fuente(path_fuente: Any) -> str:
+    texto_path = normalizar_mayusculas(path_fuente)
+    if "\\CD QUILICURA\\" in texto_path:
+        return "QUILICURA"
+    if "\\CD PUDAHUEL\\" in texto_path:
+        return "PUDAHUEL"
+    return ""
+
+
+def cargar_dataframe_productividad_historico(
+    fuentes: list[FuenteDetectada],
+    ubicaciones_map: dict[str, dict[str, str]],
+) -> tuple[pd.DataFrame | None, dict[str, Any]]:
+    if pd is None:
+        return None, {
+            "disponible": False,
+            "mensaje": "pandas no esta disponible en este entorno.",
+            "archivos": [],
+            "errores": [],
+        }
+
+    if not fuentes:
+        return None, {
+            "disponible": False,
+            "mensaje": "No se encontro una fuente local de productividad para el periodo solicitado.",
+            "archivos": [],
+            "errores": [],
+        }
+
+    frames = []
+    errores = []
+    archivos_leidos = []
+    for fuente in fuentes:
+        try:
+            df_fuente, info_fuente = limpiar_productividad_excel(fuente)
+            if not df_fuente.empty:
+                frames.append(df_fuente)
+            archivos_leidos.append(info_fuente)
+        except Exception as exc:
+            errores.append(f"{fuente.ruta.name}: {exc}")
+
+    if not frames:
+        return None, {
+            "disponible": False,
+            "mensaje": "No se encontro una fuente local de productividad para el periodo solicitado.",
+            "archivos": archivos_leidos,
+            "errores": errores[:5],
+        }
+
+    df = pd.concat(frames, ignore_index=True)
+    df["Ubicacion_Clave"] = df["Ubicacion"].map(normalizar_ubicacion_lookup)
+    df["Tipo_Ubicacion_Dim"] = df["Ubicacion_Clave"].map(
+        lambda key: ubicaciones_map.get(key, {}).get("locacion", "SIN_DIM")
+    )
+    df["Cliente_Meta"] = df.apply(lambda row: cliente_meta_productividad(row.get("Cliente"), row.get("Centro")), axis=1)
+    df["Fecha_Turno"] = df["timestamp_operacion"].map(calcular_fecha_turno)
+    df["Turno"] = df["timestamp_operacion"].map(calcular_turno)
+    df["Hora_Operativa"] = df["timestamp_operacion"].map(calcular_hora_operativa)
+    canales = df.apply(ajustar_canal_detalle_derco, axis=1, result_type="expand")
+    canales.columns = [
+        "Canal_Principal",
+        "Canal_Detalle",
+        "Tipo_Ubicacion_Meta",
+        "Tipo_Ubicacion_Corregida",
+        "Canal_Detalle_Metodo",
+    ]
+    df = pd.concat([df, canales], axis=1)
+    df["Canal_Agrupado"] = df["Canal_Principal"].map(lambda c: "CAP-MY-SG" if c in {"CAP", "MY", "SG"} else c)
+    df["Cliente_Norm"] = df["Cliente"].map(normalizar_texto_seguro)
+    df["Centro_Norm"] = df["Centro"].map(normalizar_texto_seguro)
+    df.loc[df["Centro_Norm"] == "", "Centro_Norm"] = df.loc[df["Centro_Norm"] == "", "__archivo_fuente"].map(
+        inferir_cd_productividad_desde_fuente
+    )
+    df["Fecha_Turno_Texto"] = df["Fecha_Turno"].map(serializar_fecha_productividad)
+    df["Es_Derco_Historico"] = df["Cliente"].map(normalizar_mayusculas).isin({"DERCO", "GRUPO PLANET"})
+
+    return df, {
+        "disponible": True,
+        "archivos": archivos_leidos,
+        "errores": errores[:5],
+    }
+
+
+def calcular_horas_trabajadas_subset_productividad(df_subset: pd.DataFrame | None) -> float:
+    if df_subset is None or df_subset.empty:
+        return 0.0
+    horas_grupo = (
+        df_subset.groupby(["Fecha_Turno", "Registro", "Turno"])["timestamp_operacion"]
+        .agg(["min", "max"])
+        .reset_index()
+    )
+    horas_total = 0.0
+    for _, row in horas_grupo.iterrows():
+        delta_horas = (row["max"] - row["min"]).total_seconds() / 3600.0
+        if delta_horas > 1:
+            delta_horas -= 1
+        horas_total += max(delta_horas, 0.0)
+    return horas_total
+
+
+def resumir_metricas_productividad_subset(df_subset: pd.DataFrame | None) -> dict[str, Any]:
+    if df_subset is None or df_subset.empty:
+        return {
+            "lineas": 0,
+            "unidades": 0.0,
+            "pedidos_unicos": 0,
+            "dias_trabajados": 0,
+            "horas_trabajadas_total": 0.0,
+            "lineas_dia": None,
+            "unidades_dia": None,
+            "lineas_hora": None,
+            "unidades_hora": None,
+        }
+
+    lineas = int(len(df_subset))
+    unidades = round_safe(df_subset["Salida"].sum(), 2)
+    pedidos_unicos = contar_pedidos_validos(df_subset["Nro. de Doc. Externo"])
+    dias_trabajados = int(df_subset["Fecha_Turno"].dropna().nunique())
+    horas_trabajadas_total = round_safe(calcular_horas_trabajadas_subset_productividad(df_subset), 2)
+    return {
+        "lineas": lineas,
+        "unidades": unidades,
+        "pedidos_unicos": pedidos_unicos,
+        "dias_trabajados": dias_trabajados,
+        "horas_trabajadas_total": horas_trabajadas_total,
+        "lineas_dia": division_lineal_nullable(lineas, dias_trabajados),
+        "unidades_dia": division_lineal_nullable(unidades, dias_trabajados),
+        "lineas_hora": division_lineal_nullable(lineas, horas_trabajadas_total),
+        "unidades_hora": division_lineal_nullable(unidades, horas_trabajadas_total),
+    }
+
+
+def construir_fila_productividad_historica(
+    year: int,
+    month: int,
+    cliente: str,
+    cd: str,
+    df_subset: pd.DataFrame | None,
+    fuentes: list[str] | None,
+    motivo_base: str | None = None,
+) -> dict[str, Any]:
+    metricas = resumir_metricas_productividad_subset(df_subset)
+    disponible = metricas["lineas"] > 0
+    motivo = None if disponible else (motivo_base or "sin datos validos para el periodo")
+    return {
+        "anio": year,
+        "mes": month,
+        "mes_nombre": MESES_ES.get(month, f"Mes {month}"),
+        "cliente": cliente,
+        "cd": cd,
+        "lineas": metricas["lineas"],
+        "unidades": metricas["unidades"],
+        "pedidos_unicos": metricas["pedidos_unicos"],
+        "dias_trabajados": metricas["dias_trabajados"],
+        "horas_trabajadas_total": metricas["horas_trabajadas_total"],
+        "lineas_dia": metricas["lineas_dia"],
+        "unidades_dia": metricas["unidades_dia"],
+        "lineas_hora": metricas["lineas_hora"],
+        "unidades_hora": metricas["unidades_hora"],
+        "disponible": disponible,
+        "motivo": motivo,
+        "fuentes": sorted(fuentes or []),
+        "origen_valor": "cierre_recalculado",
+        "criterio_historico": "recalculado_desde_fuente_viva",
+    }
+
+
+def construir_fila_productividad_ytd(
+    year: int,
+    hasta_mes: int,
+    cliente: str,
+    cd: str,
+    df_subset_ytd: pd.DataFrame | None,
+    meses_incluidos: list[int],
+    meses_sin_datos: list[int],
+) -> dict[str, Any]:
+    metricas = resumir_metricas_productividad_subset(df_subset_ytd)
+    disponible = metricas["lineas"] > 0
+    if disponible:
+        motivo = None
+    elif meses_incluidos:
+        motivo = f"sin productividad acumulada valida entre enero y {MESES_ES.get(hasta_mes, f'mes {hasta_mes}')} de {year}"
+    else:
+        motivo = f"sin datos validos acumulados de productividad entre enero y {MESES_ES.get(hasta_mes, f'mes {hasta_mes}')} de {year}"
+    return {
+        "anio": year,
+        "desde_mes": 1,
+        "hasta_mes": hasta_mes,
+        "cliente": cliente,
+        "cd": cd,
+        "lineas_acum": metricas["lineas"],
+        "unidades_acum": metricas["unidades"],
+        "pedidos_unicos_acum": metricas["pedidos_unicos"],
+        "dias_trabajados_acum": metricas["dias_trabajados"],
+        "horas_trabajadas_total_acum": metricas["horas_trabajadas_total"],
+        "lineas_dia": metricas["lineas_dia"],
+        "unidades_dia": metricas["unidades_dia"],
+        "lineas_hora": metricas["lineas_hora"],
+        "unidades_hora": metricas["unidades_hora"],
+        "disponible": disponible,
+        "motivo": motivo,
+        "meses_incluidos": meses_incluidos,
+        "meses_sin_datos": meses_sin_datos,
+        "origen_valor": "cierre_recalculado",
+        "criterio_historico": "recalculado_desde_fuente_viva",
+    }
+
+
+def construir_fila_derco_ap_historica(
+    year: int,
+    month: int,
+    segmento_ap: str,
+    cd: str,
+    df_subset: pd.DataFrame | None,
+    fuentes: list[str] | None,
+    motivo_base: str | None = None,
+) -> dict[str, Any]:
+    fila = construir_fila_productividad_historica(
+        year=year,
+        month=month,
+        cliente="DERCO",
+        cd=cd,
+        df_subset=df_subset,
+        fuentes=fuentes,
+        motivo_base=motivo_base,
+    )
+    fila["segmento_ap"] = segmento_ap
+    return fila
+
+
+def construir_fila_derco_ap_ytd(
+    year: int,
+    hasta_mes: int,
+    segmento_ap: str,
+    cd: str,
+    df_subset_ytd: pd.DataFrame | None,
+    meses_incluidos: list[int],
+    meses_sin_datos: list[int],
+) -> dict[str, Any]:
+    fila = construir_fila_productividad_ytd(
+        year=year,
+        hasta_mes=hasta_mes,
+        cliente="DERCO",
+        cd=cd,
+        df_subset_ytd=df_subset_ytd,
+        meses_incluidos=meses_incluidos,
+        meses_sin_datos=meses_sin_datos,
+    )
+    fila["segmento_ap"] = segmento_ap
+    return fila
+
+
+def filtrar_subset_productividad_cliente_cd(
+    df_productividad: pd.DataFrame | None,
+    cliente: str,
+    cd: str,
+) -> pd.DataFrame | None:
+    if df_productividad is None or df_productividad.empty:
+        return None
+    subset = df_productividad[
+        (df_productividad["Cliente_Norm"] == cliente)
+        & (df_productividad["Centro_Norm"] == cd)
+    ].copy()
+    return subset if not subset.empty else None
+
+
+def filtrar_subset_derco_ap_productividad(
+    df_productividad: pd.DataFrame | None,
+    segmento_ap: str,
+    cd: str,
+) -> pd.DataFrame | None:
+    if df_productividad is None or df_productividad.empty:
+        return None
+    subset = df_productividad[
+        df_productividad["Es_Derco_Historico"]
+        & (df_productividad["Centro_Norm"] == cd)
+    ].copy()
+    if subset.empty:
+        return None
+    if segmento_ap == "AP Total":
+        subset = subset[subset["Canal_Principal"] == "AP"].copy()
+    elif segmento_ap == "AP Rack":
+        subset = subset[subset["Canal_Detalle"] == "AP Rack"].copy()
+    elif segmento_ap == "AP Estanteria":
+        subset = subset[subset["Canal_Detalle"] == "AP Estanteria"].copy()
+    else:
+        subset = subset.iloc[0:0].copy()
+    return subset if not subset.empty else None
+
+
+def construir_historico_otif_mensual(
+    nnss_fuentes: list[FuenteDetectada],
+    year: int,
+    hasta_mes: int,
+    fecha_generacion: str,
+    ubicaciones_map: dict[str, dict[str, str]],
+) -> dict[str, Any]:
+    registros_por_mes: dict[int, dict[str, Any]] = {}
+    universo_clientes: set[str] = set()
+    universo_productividad: set[tuple[str, str]] = set()
+    universo_derco_ap: set[tuple[str, str]] = set()
+
+    for month in range(1, hasta_mes + 1):
+        fecha_consulta = fecha_corte_periodo(year, month)
+        df_nnss, fuente_nnss = leer_consulta_fr(nnss_fuentes, year, month, verbose=False)
+        nnss_payload, _, _ = calcular_nnss(
+            df_nnss,
+            year=year,
+            month=month,
+            fecha_consulta=fecha_consulta,
+        )
+
+        clientes_otif = {
+            normalizar_texto(item.get("cliente")): item
+            for item in (nnss_payload.get("otif", {}) or {}).get("por_cliente", [])
+            if normalizar_texto(item.get("cliente"))
+        }
+        clientes_periodo = {
+            normalizar_texto(cliente)
+            for cliente in (nnss_payload.get("cobertura", {}) or {}).get("clientes_periodo", [])
+            if normalizar_texto(cliente)
+        }
+        fuentes_por_cliente: dict[str, list[str]] = defaultdict(list)
+        if df_nnss is not None and not df_nnss.empty:
+            for cliente, grupo in df_nnss.groupby("Empresa", dropna=False):
+                cliente_txt = normalizar_texto(cliente)
+                if not cliente_txt:
+                    continue
+                fuentes = sorted(
+                    {
+                        str(path)
+                        for path in grupo["__archivo_fuente"].dropna().tolist()
+                        if normalizar_texto(path)
+                    }
+                )
+                fuentes_por_cliente[cliente_txt] = fuentes
+        clientes_fillrate, clientes_fillrate_periodo, fuentes_fillrate_por_cliente = resumir_fillrate_historico_por_cliente(df_nnss)
+        fuentes_productividad_mes = descubrir_fuentes_productividad(year, month, verbose=False)
+        df_productividad_mes, info_productividad_mes = cargar_dataframe_productividad_historico(
+            fuentes_productividad_mes,
+            ubicaciones_map=ubicaciones_map,
+        )
+        if df_productividad_mes is not None and not df_productividad_mes.empty:
+            for cliente_prod, cd_prod in (
+                df_productividad_mes[["Cliente_Norm", "Centro_Norm"]]
+                .drop_duplicates()
+                .itertuples(index=False, name=None)
+            ):
+                if cliente_prod and cd_prod:
+                    universo_productividad.add((cliente_prod, cd_prod))
+            derco_ap_cd = (
+                df_productividad_mes.loc[
+                    df_productividad_mes["Es_Derco_Historico"]
+                    & df_productividad_mes["Canal_Principal"].eq("AP"),
+                    "Centro_Norm",
+                ]
+                .dropna()
+                .tolist()
+            )
+            for cd_derco in sorted({normalizar_texto(cd) for cd in derco_ap_cd if normalizar_texto(cd)}):
+                universo_derco_ap.add(("AP Total", cd_derco))
+                universo_derco_ap.add(("AP Rack", cd_derco))
+                universo_derco_ap.add(("AP Estanteria", cd_derco))
+        universo_clientes.update(clientes_periodo)
+        universo_clientes.update(clientes_otif.keys())
+        universo_clientes.update(clientes_fillrate_periodo)
+        universo_clientes.update(clientes_fillrate.keys())
+        registros_por_mes[month] = {
+            "disponible_periodo": bool(nnss_payload.get("disponible")),
+            "motivo_periodo": nnss_payload.get("mensaje", "sin datos NNSS para el período"),
+            "clientes_otif": clientes_otif,
+            "clientes_periodo": clientes_periodo,
+            "fuentes_por_cliente": fuentes_por_cliente,
+            "clientes_fillrate": clientes_fillrate,
+            "clientes_fillrate_periodo": clientes_fillrate_periodo,
+            "fuentes_fillrate_por_cliente": fuentes_fillrate_por_cliente,
+            "fuente_info": fuente_nnss,
+            "df_productividad": df_productividad_mes,
+            "info_productividad": info_productividad_mes,
+        }
+
+    otif_mensual = []
+    fillrate_mensual = []
+    productividad_mensual_cliente = []
+    derco_ap_mensual = []
+    for month in range(1, hasta_mes + 1):
+        datos_mes = registros_por_mes[month]
+        clientes_mes = sorted(
+            universo_clientes
+            | set(datos_mes["clientes_otif"].keys())
+            | set(datos_mes["clientes_periodo"])
+            | set(datos_mes["clientes_fillrate"].keys())
+            | set(datos_mes["clientes_fillrate_periodo"])
+        )
+        for cliente in clientes_mes:
+            otif_mensual.append(
+                construir_fila_otif_historico(
+                    year=year,
+                    month=month,
+                    cliente=cliente,
+                    clientes_otif=datos_mes["clientes_otif"],
+                    clientes_periodo=datos_mes["clientes_periodo"],
+                    fuentes_por_cliente=datos_mes["fuentes_por_cliente"],
+                    motivo_base=datos_mes["motivo_periodo"],
+                )
+            )
+            fillrate_mensual.append(
+                construir_fila_fillrate_historico(
+                    year=year,
+                    month=month,
+                    cliente=cliente,
+                    clientes_fillrate=datos_mes["clientes_fillrate"],
+                    clientes_periodo=datos_mes["clientes_fillrate_periodo"],
+                    fuentes_por_cliente=datos_mes["fuentes_fillrate_por_cliente"],
+                    motivo_base=datos_mes["motivo_periodo"],
+                )
+            )
+
+        motivo_productividad = (
+            (datos_mes.get("info_productividad") or {}).get("mensaje")
+            or "sin datos validos para el periodo"
+        )
+        for cliente_prod, cd_prod in sorted(universo_productividad):
+            subset_prod = filtrar_subset_productividad_cliente_cd(
+                datos_mes.get("df_productividad"),
+                cliente=cliente_prod,
+                cd=cd_prod,
+            )
+            fuentes_prod = []
+            if subset_prod is not None and not subset_prod.empty:
+                fuentes_prod = sorted(
+                    {
+                        str(path)
+                        for path in subset_prod["__archivo_fuente"].dropna().tolist()
+                        if normalizar_texto(path)
+                    }
+                )
+            productividad_mensual_cliente.append(
+                construir_fila_productividad_historica(
+                    year=year,
+                    month=month,
+                    cliente=cliente_prod,
+                    cd=cd_prod,
+                    df_subset=subset_prod,
+                    fuentes=fuentes_prod,
+                    motivo_base=motivo_productividad,
+                )
+            )
+
+        for segmento_ap, cd_derco in sorted(universo_derco_ap):
+            subset_derco_ap = filtrar_subset_derco_ap_productividad(
+                datos_mes.get("df_productividad"),
+                segmento_ap=segmento_ap,
+                cd=cd_derco,
+            )
+            fuentes_derco_ap = []
+            if subset_derco_ap is not None and not subset_derco_ap.empty:
+                fuentes_derco_ap = sorted(
+                    {
+                        str(path)
+                        for path in subset_derco_ap["__archivo_fuente"].dropna().tolist()
+                        if normalizar_texto(path)
+                    }
+                )
+            derco_ap_mensual.append(
+                construir_fila_derco_ap_historica(
+                    year=year,
+                    month=month,
+                    segmento_ap=segmento_ap,
+                    cd=cd_derco,
+                    df_subset=subset_derco_ap,
+                    fuentes=fuentes_derco_ap,
+                    motivo_base=motivo_productividad,
+                )
+            )
+
+    otif_ytd = construir_otif_ytd_desde_mensual(
+        otif_mensual=otif_mensual,
+        year=year,
+        hasta_mes=hasta_mes,
+    )
+    fillrate_ytd = construir_fillrate_ytd_desde_mensual(
+        fillrate_mensual=fillrate_mensual,
+        year=year,
+        hasta_mes=hasta_mes,
+    )
+    productividad_ytd_cliente = []
+    for cliente_prod, cd_prod in sorted(universo_productividad):
+        frames_ytd = []
+        meses_incluidos = []
+        meses_sin_datos = []
+        for month in range(1, hasta_mes + 1):
+            subset_prod = filtrar_subset_productividad_cliente_cd(
+                registros_por_mes[month].get("df_productividad"),
+                cliente=cliente_prod,
+                cd=cd_prod,
+            )
+            if subset_prod is None or subset_prod.empty:
+                meses_sin_datos.append(month)
+                continue
+            frames_ytd.append(subset_prod)
+            meses_incluidos.append(month)
+        df_subset_ytd = pd.concat(frames_ytd, ignore_index=True) if frames_ytd else None
+        productividad_ytd_cliente.append(
+            construir_fila_productividad_ytd(
+                year=year,
+                hasta_mes=hasta_mes,
+                cliente=cliente_prod,
+                cd=cd_prod,
+                df_subset_ytd=df_subset_ytd,
+                meses_incluidos=meses_incluidos,
+                meses_sin_datos=meses_sin_datos,
+            )
+        )
+
+    derco_ap_ytd = []
+    for segmento_ap, cd_derco in sorted(universo_derco_ap):
+        frames_ytd = []
+        meses_incluidos = []
+        meses_sin_datos = []
+        for month in range(1, hasta_mes + 1):
+            subset_derco_ap = filtrar_subset_derco_ap_productividad(
+                registros_por_mes[month].get("df_productividad"),
+                segmento_ap=segmento_ap,
+                cd=cd_derco,
+            )
+            if subset_derco_ap is None or subset_derco_ap.empty:
+                meses_sin_datos.append(month)
+                continue
+            frames_ytd.append(subset_derco_ap)
+            meses_incluidos.append(month)
+        df_subset_ytd = pd.concat(frames_ytd, ignore_index=True) if frames_ytd else None
+        derco_ap_ytd.append(
+            construir_fila_derco_ap_ytd(
+                year=year,
+                hasta_mes=hasta_mes,
+                segmento_ap=segmento_ap,
+                cd=cd_derco,
+                df_subset_ytd=df_subset_ytd,
+                meses_incluidos=meses_incluidos,
+                meses_sin_datos=meses_sin_datos,
+            )
+        )
+
+    return {
+        "disponible": bool(otif_mensual or productividad_mensual_cliente),
+        "criterio_historico": "cierre_recalculado",
+        "origen_historico": "recalculado_desde_fuente_viva",
+        "fecha_generacion": fecha_generacion,
+        "advertencia": "Los valores historicos pueden variar si la fuente NNSS cambia despues del cierre operativo.",
+        "corte_operativo_disponible": False,
+        "periodo_cobertura": {
+            "anio": year,
+            "desde_mes": 1,
+            "hasta_mes": hasta_mes,
+            "tipo": "mensual",
+        },
+        "nnss": {
+            "otif_mensual": otif_mensual,
+            "otif_ytd": otif_ytd,
+            "fillrate_mensual": fillrate_mensual,
+            "fillrate_ytd": fillrate_ytd,
+        },
+        "productividad": {
+            "mensual_cliente": productividad_mensual_cliente,
+            "ytd_cliente": productividad_ytd_cliente,
+            "derco_ap_mensual": derco_ap_mensual,
+            "derco_ap_ytd": derco_ap_ytd,
+        },
+    }
 
 
 def leer_metadata_productividad(path: Path) -> tuple[str, str]:
@@ -4521,6 +5483,7 @@ def main() -> int:
         print(json.dumps(salida, ensure_ascii=False, indent=2))
         return 0
 
+    fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     fecha_consulta = fecha_corte_periodo(args.year, args.month)
     df_nnss, fuente_nnss = leer_consulta_fr(nnss_fuentes, args.year, args.month, verbose=args.verbose)
     nnss_payload, alertas_nnss, recomendaciones_nnss = calcular_nnss(
@@ -4528,6 +5491,13 @@ def main() -> int:
         year=args.year,
         month=args.month,
         fecha_consulta=fecha_consulta,
+    )
+    historico_payload = construir_historico_otif_mensual(
+        nnss_fuentes=nnss_fuentes,
+        year=args.year,
+        hasta_mes=args.month,
+        fecha_generacion=fecha_generacion,
+        ubicaciones_map=ubicaciones_map,
     )
     productividad_payload, fuente_productividad, alertas_prod, recomendaciones_prod = calcular_productividad(
         productividad_fuentes,
@@ -4549,7 +5519,7 @@ def main() -> int:
             or productividad_payload.get("disponible")
             or inventario_payload.get("disponible")
         ),
-        "fecha_generacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "fecha_generacion": fecha_generacion,
         "fuentes": {
             "nnss": fuente_nnss,
             "productividad": fuente_productividad,
@@ -4557,6 +5527,7 @@ def main() -> int:
             "metas": metas_info,
         },
         "nnss": nnss_payload,
+        "historico": historico_payload,
         "productividad": productividad_payload,
         "inventario": inventario_payload,
         "alertas": deduplicar_lista(alertas_nnss + alertas_prod + alertas_inv),
