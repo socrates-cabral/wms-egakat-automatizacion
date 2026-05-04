@@ -36,6 +36,7 @@ from fillrate_config import (
     DOWNLOAD_BASENAME_PREFIXES,
     DOWNLOAD_SUFFIXES,
     ESTADOS_ALERTA,
+    ESTADOS_ENTREGA,
     TARGET_SHEET_NAME,
     WARNING_MAX_DAYS,
     get_sharepoint_relative_path,
@@ -54,9 +55,10 @@ DEFAULT_SP_LIBRARY = "Documentos"
 
 DATA_COLUMNS = 26
 DATA_START_ROW = 2
-DATE_COLUMN_INDEX = 9  # columna I
-STATE_COLUMN_INDEX = 7  # columna G
-ORDER_COLUMN_INDEX = 5  # columna E
+DATE_COLUMN_INDEX = 9       # columna I — Fecha y hora de Ingreso (para reemplazo de mes)
+STATE_COLUMN_INDEX = 7      # columna G — Estado Pedido
+ORDER_COLUMN_INDEX = 5      # columna E — Nro Pedido
+FIN_PREP_COLUMN_INDEX = 13  # columna M — Fecha y hora de Fin Preparación (base de Fecha Entrega)
 OBSERVATION_COLUMN_INDEX = 22  # V
 FORMULA_START_COL = 27  # AA
 MAX_SUPPORTED_FORMULA_COL = 47  # AU
@@ -737,9 +739,13 @@ def find_header_column(target_sheet: Worksheet, header_name: str) -> Optional[in
 
 def fill_corte_column(target_sheet: Worksheet, corte_col_idx: int, meses_corte: Dict[int, str]) -> None:
     for row_idx in range(DATA_START_ROW, target_sheet.max_row + 1):
-        fecha_gen = coerce_datetime(target_sheet.cell(row=row_idx, column=DATE_COLUMN_INDEX).value)
+        estado = str(target_sheet.cell(row=row_idx, column=STATE_COLUMN_INDEX).value or "").strip()
+        fin_prep_raw = target_sheet.cell(row=row_idx, column=FIN_PREP_COLUMN_INDEX).value
+        fecha_entrega = coerce_datetime(fin_prep_raw) if fin_prep_raw else None
         target_sheet.cell(row=row_idx, column=corte_col_idx).value = (
-            calcular_corte(fecha_gen.date(), meses_corte) if fecha_gen is not None else None
+            calcular_corte(fecha_entrega.date(), meses_corte)
+            if estado in ESTADOS_ENTREGA and fecha_entrega is not None
+            else None
         )
 
 
@@ -1051,12 +1057,13 @@ def update_sharepoint_workbook(
                 template_value = formula_templates.get(col_idx)
                 value_to_write = ajustar_formula(template_value, FORMULA_TEMPLATE_ROW, row_number)
                 if col_idx == corte_col_idx:
-                    fecha_gen = coerce_datetime(row_values[DATE_COLUMN_INDEX - 1])
-                    value_to_write = (
-                        calcular_corte(fecha_gen.date(), meses_corte)
-                        if fecha_gen is not None
-                        else None
-                    )
+                    estado = str(row_values[STATE_COLUMN_INDEX - 1] or "").strip()
+                    fin_prep_raw = row_values[FIN_PREP_COLUMN_INDEX - 1]
+                    fecha_entrega = coerce_datetime(fin_prep_raw) if fin_prep_raw else None
+                    if estado in ESTADOS_ENTREGA and fecha_entrega is not None:
+                        value_to_write = calcular_corte(fecha_entrega.date(), meses_corte)
+                    else:
+                        value_to_write = None
                 set_cell_value_like_template(target_cell, template_cell, value_to_write)
 
             row_key = build_month_row_key(row_values)

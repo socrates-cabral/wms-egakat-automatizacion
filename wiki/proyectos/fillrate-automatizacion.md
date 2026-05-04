@@ -101,6 +101,7 @@ Datos cortados en 13-03-26 (automatización empezó en abril). Completado sin p�
 | `start_row` inteligente | `fillrate_utils.py:update_sharepoint_workbook` | Busca última fila con dato en col A en vez de usar `max_row`. Evita que templates con filas de fórmulas vacías (Mascotas: 1826, Nativo: 1852, Runo: 1873) appenden datos al final en vez de después del último registro real |
 | Trim filas vacías | `fillrate_utils.py:update_sharepoint_workbook` | Elimina filas con col A=None (filas de fórmula huérfanas) después del último dato real antes de guardar. Limpia el archivo en cada run |
 | Auto-desfiltrar | `fillrate_utils.py:update_sharepoint_workbook` | Limpia criterios AutoFilter activos antes de guardar (`filterColumn = []`). Evita que filtros manuales oculten filas al abrir en Excel Online |
+| Columna Corte — Fecha Entrega | `fillrate_utils.py:update_sharepoint_workbook` + `fill_corte_column` | Corte ahora se calcula usando col M (Fin Preparación) solo cuando estado ∈ ESTADOS_ENTREGA (Remitido/Despachado/Con Salida). Pedidos en otros estados quedan con Corte=None. Antes usaba col I (Fecha Ingreso) siempre, produciendo cortes incorrectos |
 
 ## Cliente nuevo: Omnitech (2026-05-04)
 - Agregado a `fillrate_config.py` — PUDAHUEL, empresa_wms="OMNITECH", sp_file="data Omnitech.xlsx"
