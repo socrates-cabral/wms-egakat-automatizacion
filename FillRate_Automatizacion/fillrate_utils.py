@@ -1027,12 +1027,15 @@ def update_sharepoint_workbook(
             if target_sheet.cell(row=check_row, column=1).value is not None:
                 last_data_row = check_row
 
-        # Eliminar filas vacías (col A = None) que hayan quedado después del último dato real
-        trim_from = last_data_row + 1
-        rows_to_trim = target_sheet.max_row - last_data_row
-        if rows_to_trim > 0:
-            target_sheet.delete_rows(trim_from, rows_to_trim)
-            log(f"[SP] Filas vacías eliminadas: {rows_to_trim} (desde fila {trim_from}).", log_path)
+        # Eliminar filas vacías (col A = None) después del último dato real.
+        # Solo si hay al menos una fila de datos reales (evita borrar la fila template
+        # en archivos que aún no tienen ningún registro).
+        if last_data_row >= DATA_START_ROW:
+            trim_from = last_data_row + 1
+            rows_to_trim = target_sheet.max_row - last_data_row
+            if rows_to_trim > 0:
+                target_sheet.delete_rows(trim_from, rows_to_trim)
+                log(f"[SP] Filas vacías eliminadas: {rows_to_trim} (desde fila {trim_from}).", log_path)
 
         start_row = last_data_row + 1
         for offset, row_values in enumerate(unique_rows):
