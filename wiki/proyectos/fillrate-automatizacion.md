@@ -95,7 +95,25 @@ Datos cortados en 13-03-26 (automatización empezó en abril). Completado sin p�
 - Unilever: 103 → 256 filas marzo (+153)
 - Nativo Drinks febrero: +1 pedido (20-02-26)
 
+## Fixes aplicados (2026-05-04)
+| Fix | Archivo | Detalle |
+|-----|---------|---------|
+| `start_row` inteligente | `fillrate_utils.py:update_sharepoint_workbook` | Busca última fila con dato en col A en vez de usar `max_row`. Evita que templates con filas de fórmulas vacías (Mascotas: 1826, Nativo: 1852, Runo: 1873) appenden datos al final en vez de después del último registro real |
+| Trim filas vacías | `fillrate_utils.py:update_sharepoint_workbook` | Elimina filas con col A=None (filas de fórmula huérfanas) después del último dato real antes de guardar. Limpia el archivo en cada run |
+| Auto-desfiltrar | `fillrate_utils.py:update_sharepoint_workbook` | Limpia criterios AutoFilter activos antes de guardar (`filterColumn = []`). Evita que filtros manuales oculten filas al abrir en Excel Online |
+
+## Cliente nuevo: Omnitech (2026-05-04)
+- Agregado a `fillrate_config.py` — PUDAHUEL, empresa_wms="OMNITECH", sp_file="data Omnitech.xlsx"
+- Ya existía en `productividad_config.py`
+- Backfill ene-may 2026 ejecutado vía `--mes MM/AAAA --client Omnitech --skip-email --force`
+- Solo abril tiene datos (3 pedidos). Meses anteriores devolvieron 0 filas del WMS (cliente nuevo)
+
+## Advertencia: archivos con filas de fórmulas vacías
+Algunos archivos tienen templates pre-escritos con cientos de filas vacías. El fix del `start_row` inteligente lo resuelve automáticamente a partir de 2026-05-04. Los archivos corregidos manualmente por usuario antes del fix:
+- data Mascotas.xlsx, data Nativo Drinks.xlsx, data Omnitech.xlsx, data Runo Tradicional.xlsx
+
 ## Estado ejecución más reciente
 - **10/04/2026**: 13 clientes OK, 0 errores, 2820s total ✓
 - **11/04/2026**: Crash por PermissionError → resuelto con lock file
 - **15/04/2026**: Derco FALLO por 423 (archivo abierto en Excel Online durante 2h). Resto OK. Corrido manualmente post-cierre del archivo.
+- **04/05/2026**: Omnitech agregado + backfill anual. Bug `start_row`/filas vacías detectado y corregido en `fillrate_utils.py`.

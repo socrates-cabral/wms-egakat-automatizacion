@@ -200,6 +200,16 @@ CLIENTS: List[ClientConfig] = [
         "runtime_notes": "Nombre completo con 'SPA' segun memoria de proyecto.",
     },
     {
+        "nombre": "Omnitech",
+        "deposito_wms": "PUDAHUEL",
+        "empresa_wms": "OMNITECH",
+        "cd": "Pudahuel",
+        "sp_file": "data Omnitech.xlsx",
+        "has_corte": False,
+        "active": True,
+        "runtime_notes": "Confirmado PUDAHUEL 2026-05-04 segun captura WMS.",
+    },
+    {
         "nombre": "Runo SPA",
         "deposito_wms": "PUDAHUEL UNITARIO",
         "empresa_wms": "RUNO SPA",

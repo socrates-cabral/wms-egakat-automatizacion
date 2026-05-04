@@ -1021,7 +1021,20 @@ def update_sharepoint_workbook(
             for col_idx in range(1, formula_end_col + 1)
         }
 
-        start_row = target_sheet.max_row + 1
+        # Última fila con dato real en col A (ignora filas de fórmula vacías del template)
+        last_data_row = DATA_START_ROW - 1
+        for check_row in range(DATA_START_ROW, target_sheet.max_row + 1):
+            if target_sheet.cell(row=check_row, column=1).value is not None:
+                last_data_row = check_row
+
+        # Eliminar filas vacías (col A = None) que hayan quedado después del último dato real
+        trim_from = last_data_row + 1
+        rows_to_trim = target_sheet.max_row - last_data_row
+        if rows_to_trim > 0:
+            target_sheet.delete_rows(trim_from, rows_to_trim)
+            log(f"[SP] Filas vacías eliminadas: {rows_to_trim} (desde fila {trim_from}).", log_path)
+
+        start_row = last_data_row + 1
         for offset, row_values in enumerate(unique_rows):
             row_number = start_row + offset
             for col_idx in range(1, DATA_COLUMNS + 1):
@@ -1049,6 +1062,10 @@ def update_sharepoint_workbook(
                     template_cell = template_cells[col_idx]
                     target_cell = target_sheet.cell(row=row_number, column=col_idx)
                     set_cell_value_like_template(target_cell, template_cell, override_value)
+
+        # Limpiar criterios de filtro activos (mantiene headers de filtro pero quita selecciones)
+        if target_sheet.auto_filter.ref:
+            target_sheet.auto_filter.filterColumn = []
 
         log("[SP] Guardando workbook modificado...", log_path)
         workbook.save(local_copy)
