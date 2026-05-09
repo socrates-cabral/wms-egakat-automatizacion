@@ -113,8 +113,27 @@ Datos cortados en 13-03-26 (automatización empezó en abril). Completado sin p�
 Algunos archivos tienen templates pre-escritos con cientos de filas vacías. El fix del `start_row` inteligente lo resuelve automáticamente a partir de 2026-05-04. Los archivos corregidos manualmente por usuario antes del fix:
 - data Mascotas.xlsx, data Nativo Drinks.xlsx, data Omnitech.xlsx, data Runo Tradicional.xlsx
 
+## Fixes aplicados (2026-05-08)
+| Fix | Archivo | Detalle |
+|-----|---------|---------|
+| Bug duplicación abril | `fillrate_utils.py:update_sharepoint_workbook` | Eliminación basada en `aplica_set` (col D Nro Aplica) en vez de fecha. Antes solo borraba filas con Fecha Ingreso = mes actual → pedidos de abril en ventana cross-month nunca se borraban → acumulaban duplicados en cada run. Fix: colectar todas las aplicas del WMS descargado, borrar cualquier fila SP cuya aplica esté en ese set |
+| Bulk delete O(n²)→O(n) | `fillrate_utils.py:update_sharepoint_workbook` | `delete_rows()` individual por fila (45,681 llamadas para Derco) causaba muerte del proceso por exhaustion. Fix: agrupar índices consecutivos en ranges y llamar `delete_rows(start, count)` una vez por bloque. Tiempo Derco: 37+ min → 2m49s |
+| OMNITECH agregado | `fillrate_config.py` | 14° cliente activo. PUDAHUEL, sp_file="data Omnitech.xlsx" |
+| Pipeline KPI Ops | `run_fillrate.bat` | Llama `generar_resumen_kpi_ops.py` al terminar el run, para mantener bot Telegram con data fresca |
+
+## Clientes activos (14, todos activos excepto Mascotas Pudahuel)
+| CD | Cliente | has_corte |
+|----|---------|-----------|
+| Quilicura | Cerveceria ABI, Daikin, Derco*, Mascotas Latinas, Pochteca | ✓ |
+| Pudahuel | Barentz, Cepas Chile, Collico, Delibest, Intime, Nativo Drinks, Omnitech, Unilever | ✗ |
+| Pudahuel Unitario | Runo SPA | ✗ |
+| Pudahuel (inactivo) | Mascotas Latinas Pudahuel | — |
+
+*Derco: ~46K filas en SP, tarda ~8 min con bulk delete fix, timeout 120s.
+
 ## Estado ejecución más reciente
 - **10/04/2026**: 13 clientes OK, 0 errores, 2820s total ✓
 - **11/04/2026**: Crash por PermissionError → resuelto con lock file
-- **15/04/2026**: Derco FALLO por 423 (archivo abierto en Excel Online durante 2h). Resto OK. Corrido manualmente post-cierre del archivo.
-- **04/05/2026**: Omnitech agregado + backfill anual. Bug `start_row`/filas vacías detectado y corregido en `fillrate_utils.py`.
+- **15/04/2026**: Derco FALLO por 423 (archivo abierto en Excel Online). Resto OK.
+- **04/05/2026**: Omnitech agregado + backfill anual. Bug `start_row`/filas vacías corregido.
+- **08/05/2026**: Bug duplicación abril detectado y corregido (aplica-based). Bug O(n²) delete corregido (bulk ranges). 14 clientes corregidos. Derco: 45,681 duplicados reemplazados, archivo 31MB→13MB.

@@ -3,7 +3,7 @@ title: KPI Operativo — Resumen JSON para Bot Telegram
 type: proyecto
 sources: [WMS_Automatizacion/generar_resumen_kpi_ops.py, WMS_Automatizacion/api_operaciones.py]
 related: [bot-ops-egakat, graph-api-microsoft, n8n-workflows]
-updated: 2026-05-02
+updated: 2026-05-08
 confidence: high
 ---
 
@@ -134,6 +134,13 @@ Si el usuario compara Fill Rate actual vs histórico y nota diferencias, explica
 6. `pedidos_unicos_acum` en ytd_cliente ≠ suma de mensuales
 
 ---
+
+## Pipeline automatizado (2026-05-08)
+`generar_resumen_kpi_ops.py` ahora corre automáticamente al final de:
+- `run_fillrate.bat` (Task Scheduler 9:05)
+- `run_productividad.bat` (Task Scheduler 10:05)
+
+Garantiza que el bot tenga data fresca sin intervención manual.
 
 ## Fix JS — `_FINAL_preparar_contexto_ai.js` (2026-05-02)
 

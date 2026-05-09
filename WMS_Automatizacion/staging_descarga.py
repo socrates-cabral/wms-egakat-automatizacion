@@ -47,7 +47,7 @@ SESIONES = [
     {
         "deposito": "PUDAHUEL",
         "carpeta":  CARPETA_PUDA,
-        "clientes": ["BARENTZ","BURASCHI","CEPAS CHILE","COLLICO","DELIBEST","INTIME","NATIVO DRINKS SPA","TRES MONTES","UNILEVER"],
+        "clientes": ["BARENTZ","BURASCHI","CEPAS CHILE","COLLICO","DELIBEST","INTIME","NATIVO DRINKS SPA","OMNITECH","TRES MONTES","UNILEVER"],
     },
     {
         "deposito": "PUDAHUEL UNITARIO",

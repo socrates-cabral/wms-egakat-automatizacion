@@ -986,6 +986,13 @@ def update_sharepoint_workbook(
     year = year or sample_date.year
     meses_corte = meses_corte or {}
 
+    # Conjunto de Nro Aplica (col D, índice 3) que trae el nuevo download.
+    # Usamos este set para identificar filas a reemplazar en lugar de filtrar por
+    # mes/año de Fecha de Ingreso. El enfoque anterior solo borraba filas del mes
+    # actual, dejando intactas las OPs de meses anteriores todavía activas —
+    # cada corrida las re-insertaba acumulando duplicados.
+    aplica_set = {row[3] for row in unique_rows if row[3] is not None}
+
     relative_path = get_sharepoint_relative_path(client)
     log(f"[SP] Descargando archivo SharePoint: {relative_path}", log_path)
     local_copy = download_sharepoint_file(relative_path, log_path=log_path)
@@ -1000,10 +1007,8 @@ def update_sharepoint_workbook(
 
         rows_to_delete: List[int] = []
         for row_idx, row in enumerate(ws_readonly.iter_rows(min_row=DATA_START_ROW, values_only=True), start=DATA_START_ROW):
-            if len(row) >= DATE_COLUMN_INDEX:
-                row_date = coerce_datetime(row[DATE_COLUMN_INDEX - 1])
-                if should_remove_row_by_month(row_date, month, year):
-                    rows_to_delete.append(row_idx)
+            if len(row) >= 4 and row[3] in aplica_set:
+                rows_to_delete.append(row_idx)
 
         wb_readonly.close()
         log(f"[SP] Escaneo completado. Filas a reemplazar: {len(rows_to_delete)}.", log_path)
@@ -1019,8 +1024,15 @@ def update_sharepoint_workbook(
 
         manual_overrides = collect_manual_overrides_for_month(target_sheet, rows_to_delete)
 
-        for row_idx in reversed(rows_to_delete):
-            target_sheet.delete_rows(row_idx, 1)
+        # Agrupar filas consecutivas y eliminar en bulk (evita O(n²) con delete_rows x fila)
+        import itertools, operator as _op
+        sorted_rows = sorted(rows_to_delete)
+        groups = []
+        for _, grp in itertools.groupby(enumerate(sorted_rows), lambda x: x[0] - x[1]):
+            g = list(map(_op.itemgetter(1), grp))
+            groups.append((g[0], len(g)))
+        for start_row, count in reversed(groups):
+            target_sheet.delete_rows(start_row, count)
 
         template_cells = {
             col_idx: target_sheet.cell(row=FORMULA_TEMPLATE_ROW, column=col_idx)
