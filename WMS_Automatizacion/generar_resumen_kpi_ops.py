@@ -22,7 +22,7 @@ import os
 import re
 import unicodedata
 import warnings
-from collections import defaultdict
+from collections import defaultdict, Counter
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
@@ -140,6 +140,7 @@ COLUMNAS_NNSS_REQUERIDAS = [
     "Tiempo entrega real",
     "Entregado a tiempo?",
     "Entregado completo y sin danos?",
+    "Motivos de Diferencias",
 ]
 COLUMNAS_PRODUCTIVIDAD_BASE = [
     "Centro",
@@ -445,7 +446,12 @@ def leer_consulta_fr(fuentes: list[FuenteDetectada], year: int, month: int, verb
             df = df[df["Nro Pedido"] != ""].copy()
             if df.empty:
                 continue
-            if "Ano" in df.columns and "Mes" in df.columns:
+            fe_col = df["Fecha Entrega"].map(parse_fecha) if "Fecha Entrega" in df.columns else None
+            if fe_col is not None and fe_col.notna().any():
+                df_periodo = df[
+                    fe_col.map(lambda x: bool(x) and x.year == year and x.month == month)
+                ].copy()
+            elif "Ano" in df.columns and "Mes" in df.columns:
                 anos = pd.to_numeric(df["Ano"], errors="coerce").fillna(0).astype(int)
                 meses = pd.to_numeric(df["Mes"], errors="coerce").fillna(0).astype(int)
                 df_periodo = df[(anos == year) & (meses == month)].copy()
@@ -545,6 +551,14 @@ def resumir_pedidos_nnss(df_pedidos: pd.DataFrame, fecha_consulta: datetime) -> 
             ],
             default=None,
         )
+        fecha_entrega = min([f for f in grupo["Fecha Entrega"].tolist() if es_fecha_valida(f)], default=None)
+        es_arrastre = bool(
+            fecha_ingreso is not None
+            and fecha_entrega is not None
+            and hasattr(fecha_ingreso, "month")
+            and hasattr(fecha_entrega, "month")
+            and (fecha_ingreso.year != fecha_entrega.year or fecha_ingreso.month != fecha_entrega.month)
+        )
         base_antiguedad = fecha_inicio or fecha_ingreso
         dias_abierto = None
         if base_antiguedad:
@@ -570,6 +584,16 @@ def resumir_pedidos_nnss(df_pedidos: pd.DataFrame, fecha_consulta: datetime) -> 
         pedido_otif = pedido_on_time and pedido_in_full if evaluable_otif else False
         es_pendiente = estado_consolidado in ESTADOS_PENDIENTES
 
+        motivos_no_if: list[str] = []
+        if evaluable_otif and not pedido_in_full:
+            ec_norm = grupo["Entregado completo y sin danos?"].map(normalizar_bool_si_no)
+            motivos_raw = grupo["Motivos de Diferencias"].map(normalizar_texto)
+            motivos_no_if = [
+                (m if (m and m.lower() != "nan") else "Sin motivo registrado")
+                for ec, m in zip(ec_norm, motivos_raw)
+                if ec == "NO"
+            ]
+
         if es_pendiente:
             motivo_no_evaluable = "Pendiente / sin entrega evaluable"
         else:
@@ -593,6 +617,8 @@ def resumir_pedidos_nnss(df_pedidos: pd.DataFrame, fecha_consulta: datetime) -> 
                 "es_pendiente": es_pendiente,
                 "fillrate_evaluable": fillrate_evaluable,
                 "motivo_no_evaluable": motivo_no_evaluable,
+                "es_arrastre": es_arrastre,
+                "motivos_no_in_full": motivos_no_if,
             }
         )
 
@@ -601,7 +627,7 @@ def resumir_pedidos_nnss(df_pedidos: pd.DataFrame, fecha_consulta: datetime) -> 
 
 def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str, Any]:
     pedidos_por_cliente: dict[str, dict[str, int]] = defaultdict(
-        lambda: {"pedidos_evaluados": 0, "pedidos_on_time": 0, "pedidos_in_full": 0, "pedidos_otif": 0, "pedidos_no_evaluables": 0}
+        lambda: {"pedidos_evaluados": 0, "pedidos_on_time": 0, "pedidos_in_full": 0, "pedidos_otif": 0, "pedidos_no_evaluables": 0, "arrastres": 0, "arrastres_on_time": 0}
     )
     no_evaluables_por_cliente: dict[str, list[dict[str, Any]]] = defaultdict(list)
     evaluados = 0
@@ -609,6 +635,9 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
     in_full = 0
     otif = 0
     no_evaluable = 0
+    arrastres_global = {"total": 0, "on_time": 0}
+    motivos_no_if_por_cliente: dict[str, list[str]] = defaultdict(list)
+    motivos_no_if_global: list[str] = []
 
     for pedido in pedidos_resumen:
         empresa = pedido["cliente"]
@@ -632,18 +661,57 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
         pedidos_por_cliente[empresa]["pedidos_in_full"] += int(pedido_in_full)
         pedidos_por_cliente[empresa]["pedidos_otif"] += int(pedido_otif)
 
+        if pedido.get("es_arrastre"):
+            pedidos_por_cliente[empresa]["arrastres"] += 1
+            if pedido_on_time:
+                pedidos_por_cliente[empresa]["arrastres_on_time"] += 1
+            arrastres_global["total"] += 1
+            if pedido_on_time:
+                arrastres_global["on_time"] += 1
+
+        if not pedido_in_full:
+            for m in pedido.get("motivos_no_in_full") or []:
+                motivos_no_if_por_cliente[empresa].append(m)
+                motivos_no_if_global.append(m)
+
     por_cliente = []
     for cliente, payload in sorted(pedidos_por_cliente.items()):
         evaluados_cliente = payload["pedidos_evaluados"]
-        por_cliente.append(
-            {
-                "cliente": cliente,
-                **payload,
-                "pct_on_time": porcentaje_safe(payload["pedidos_on_time"], evaluados_cliente),
-                "pct_in_full": porcentaje_safe(payload["pedidos_in_full"], evaluados_cliente),
-                "pct_otif": porcentaje_safe(payload["pedidos_otif"], evaluados_cliente),
+        arrastres_c = payload.get("arrastres", 0)
+        arrastres_ot_c = payload.get("arrastres_on_time", 0)
+        pedidos_no_ot = evaluados_cliente - payload["pedidos_on_time"]
+        pedidos_no_if = evaluados_cliente - payload["pedidos_in_full"]
+        entry = {
+            "cliente": cliente,
+            "pedidos_evaluados": payload["pedidos_evaluados"],
+            "pedidos_on_time": payload["pedidos_on_time"],
+            "pedidos_no_on_time": pedidos_no_ot,
+            "pedidos_in_full": payload["pedidos_in_full"],
+            "pedidos_no_in_full": pedidos_no_if,
+            "pedidos_otif": payload["pedidos_otif"],
+            "pedidos_no_evaluables": payload["pedidos_no_evaluables"],
+            "pct_on_time": porcentaje_safe(payload["pedidos_on_time"], evaluados_cliente),
+            "pct_in_full": porcentaje_safe(payload["pedidos_in_full"], evaluados_cliente),
+            "pct_otif": porcentaje_safe(payload["pedidos_otif"], evaluados_cliente),
+        }
+        if arrastres_c > 0:
+            arrastres_tardios = arrastres_c - arrastres_ot_c
+            entry["arrastres"] = {
+                "total": arrastres_c,
+                "on_time": arrastres_ot_c,
+                "arrastres_tardios": arrastres_tardios,
+                "pct_on_time_arrastres": porcentaje_safe(arrastres_ot_c, arrastres_c),
+                "nota": f"De los {pedidos_no_ot} pedidos no on time, {arrastres_tardios} son arrastres de mes anterior (ingresados mes previo, Fecha Entrega mes en curso)",
             }
-        )
+        motivos_c = motivos_no_if_por_cliente.get(cliente, [])
+        if motivos_c:
+            entry["motivos_no_in_full"] = [
+                {"motivo": m, "lineas": c}
+                for m, c in Counter(motivos_c).most_common(10)
+            ]
+        elif pedidos_no_if > 0:
+            entry["motivos_no_in_full"] = []
+        por_cliente.append(entry)
 
     def detalle_no_evaluable_payload(cliente: str, pedido: dict[str, Any]) -> dict[str, Any]:
         return {
@@ -751,6 +819,22 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
     pedidos_no_evaluables_detalle_truncado = pedidos_no_evaluables_detalle_mostrados < pedidos_no_evaluables_detalle_total
     pedidos_no_evaluables_detalle_por_cliente.sort(key=lambda item: (-item["total_pedidos"], -item["unidades"], item["cliente"]))
 
+    arrastres_payload: dict[str, Any] | None = None
+    if arrastres_global["total"] > 0:
+        arrastres_tardios_global = arrastres_global["total"] - arrastres_global["on_time"]
+        arrastres_payload = {
+            "total": arrastres_global["total"],
+            "on_time": arrastres_global["on_time"],
+            "arrastres_tardios": arrastres_tardios_global,
+            "pct_on_time_arrastres": porcentaje_safe(arrastres_global["on_time"], arrastres_global["total"]),
+            "nota": f"Pedidos ingresados en mes anterior con Fecha Entrega en el mes en curso. {arrastres_tardios_global} de {arrastres_global['total']} arrastres no llegaron a tiempo.",
+        }
+
+    motivos_no_if_global_top = (
+        [{"motivo": m, "lineas": c} for m, c in Counter(motivos_no_if_global).most_common(10)]
+        if motivos_no_if_global else []
+    )
+
     return {
         "pedidos_evaluados": evaluados,
         "pedidos_no_evaluables": no_evaluable,
@@ -758,6 +842,8 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
         "pct_in_full": porcentaje_safe(in_full, evaluados),
         "pct_otif": porcentaje_safe(otif, evaluados),
         "por_cliente": por_cliente,
+        "arrastres": arrastres_payload,
+        "motivos_no_in_full_global": motivos_no_if_global_top,
         "clientes_no_evaluables": clientes_no_evaluables,
         "pedidos_no_evaluables_detalle_total": pedidos_no_evaluables_detalle_total,
         "pedidos_no_evaluables_detalle_mostrados": pedidos_no_evaluables_detalle_mostrados,

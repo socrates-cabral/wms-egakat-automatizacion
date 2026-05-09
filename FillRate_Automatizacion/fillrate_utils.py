@@ -64,6 +64,7 @@ FORMULA_START_COL = 27  # AA
 MAX_SUPPORTED_FORMULA_COL = 47  # AU
 COL_ENTREGADO_TIEMPO = 40     # "Entregado a tiempo?"
 COL_ENTREGADO_COMPLETO = 41   # "Entregado completo y sin daños?"
+COL_FECHA_ENTREGA = 35        # "Fecha Entrega" (= fecha Remisión para pedidos completados; vacía para pendientes)
 OTIF_UMBRAL_VERDE = 95.0
 OTIF_UMBRAL_AMARILLO = 85.0
 FORMULA_TEMPLATE_ROW = 2
@@ -419,8 +420,10 @@ def recalculation_settle_wait(file_size_kb: int, log_path: Optional[Path] = None
     Espera inicial proporcional al tamaño del archivo para que Excel Online comience
     a persistir el recalculo. Los reintentos usan su propio wait adicional.
     """
-    if file_size_kb >= 5_000:
-        wait_s = 20
+    if file_size_kb >= 10_000:
+        wait_s = 45
+    elif file_size_kb >= 5_000:
+        wait_s = 25
     elif file_size_kb >= 500:
         wait_s = 10
     else:
@@ -855,45 +858,63 @@ def compute_pending_summary(ws, month: int, year: int) -> Dict[str, Any]:
 
 def compute_otif_summary(ws, month: int, year: int) -> Dict[str, Any]:
     """
-    Calcula % On Time, % In Full y % OTIF agrupado por Nro Pedido (col 5)
-    para el mes dado. Solo incluye pedidos con ET no nulo (entregados).
+    Calcula % On Time, % In Full y % OTIF agrupado por Nro Pedido (col 5).
+    Filtra por Fecha Entrega (col 35 = fecha Remisión para pedidos completados).
+    Criterio logístico: si el compromiso era este mes, se evalúa aquí,
+    independientemente de cuándo fue recibido el pedido.
+    Pedidos pendientes (Fecha Entrega vacía) quedan excluidos automáticamente.
     """
-    pedidos: Dict[Any, Dict[str, bool]] = {}
+    pedidos: Dict[Any, Dict[str, Any]] = {}
 
     for row in ws.iter_rows(min_row=DATA_START_ROW, values_only=True):
         if not row[0]:
             continue
-        fecha = row[DATE_COLUMN_INDEX - 1]
-        if not isinstance(fecha, (datetime, date)):
+        # Filtrar por Fecha Entrega (= fecha Remisión; vacía para pendientes)
+        fe_raw = row[COL_FECHA_ENTREGA - 1] if len(row) >= COL_FECHA_ENTREGA else None
+        if not isinstance(fe_raw, (datetime, date)):
             continue
-        f = fecha if isinstance(fecha, datetime) else datetime.combine(fecha, datetime.min.time())
-        if f.month != month or f.year != year:
+        fe = fe_raw if isinstance(fe_raw, datetime) else datetime.combine(fe_raw, datetime.min.time())
+        if fe.month != month or fe.year != year:
             continue
         et_raw = row[COL_ENTREGADO_TIEMPO - 1]
         if et_raw is None:
-            continue  # pendiente, excluir del cálculo
+            continue
         nro = row[ORDER_COLUMN_INDEX - 1]
         et = str(et_raw).strip().upper() == "SI"
         ec_raw = row[COL_ENTREGADO_COMPLETO - 1]
         ec = str(ec_raw).strip().upper() == "SI" if ec_raw is not None else False
+        # Detectar arrastres: Fecha Entrega en el mes pero Fecha de Ingreso en mes distinto
+        fi_raw = row[DATE_COLUMN_INDEX - 1]
+        es_arrastre = False
+        if isinstance(fi_raw, (datetime, date)):
+            fi = fi_raw if isinstance(fi_raw, datetime) else datetime.combine(fi_raw, datetime.min.time())
+            es_arrastre = (fi.month != month or fi.year != year)
         if nro not in pedidos:
-            pedidos[nro] = {"on_time": et, "in_full": ec}
+            pedidos[nro] = {"on_time": et, "in_full": ec, "arrastre": es_arrastre}
         else:
             pedidos[nro]["on_time"] = pedidos[nro]["on_time"] and et
             pedidos[nro]["in_full"] = pedidos[nro]["in_full"] and ec
 
     total = len(pedidos)
     if total == 0:
-        return {"pedidos": 0, "pct_on_time": None, "pct_in_full": None, "pct_otif": None}
+        return {
+            "pedidos": 0, "pct_on_time": None, "pct_in_full": None, "pct_otif": None,
+            "arrastres": 0, "arrastres_on_time": 0, "arrastres_no_on_time": 0,
+        }
 
-    ot = sum(1 for p in pedidos.values() if p["on_time"])
-    inf = sum(1 for p in pedidos.values() if p["in_full"])
+    ot   = sum(1 for p in pedidos.values() if p["on_time"])
+    inf  = sum(1 for p in pedidos.values() if p["in_full"])
     otif = sum(1 for p in pedidos.values() if p["on_time"] and p["in_full"])
+    arr  = sum(1 for p in pedidos.values() if p["arrastre"])
+    arr_ot = sum(1 for p in pedidos.values() if p["arrastre"] and p["on_time"])
     return {
         "pedidos": total,
         "pct_on_time": round(ot / total * 100, 1),
         "pct_in_full": round(inf / total * 100, 1),
-        "pct_otif": round(otif / total * 100, 1),
+        "pct_otif":    round(otif / total * 100, 1),
+        "arrastres":          arr,
+        "arrastres_on_time":  arr_ot,
+        "arrastres_no_on_time": arr - arr_ot,
     }
 
 
@@ -1105,7 +1126,7 @@ def update_sharepoint_workbook(
         if recalc_ok:
             file_size_kb = local_copy.stat().st_size // 1024
             max_attempts = 3
-            retry_wait_s = 15 if file_size_kb >= 5_000 else 10
+            retry_wait_s = 30 if file_size_kb >= 10_000 else (20 if file_size_kb >= 5_000 else 10)
             recalc_confirmed = False
 
             for attempt in range(1, max_attempts + 1):
@@ -1116,26 +1137,38 @@ def update_sharepoint_workbook(
                     wb_recalc = load_workbook(recalc_copy, data_only=True, read_only=True)
                     ws_recalc, _ = get_target_sheet(wb_recalc, log_path)
 
-                    # Verificar que al menos una celda ET no sea None (recalculo persistido)
+                    # Verificar que ET (col 40) Y Fecha Entrega (col 35) estén calculados.
+                    # ET sola puede venir de filas históricas; FE confirma que las filas
+                    # recién insertadas también fueron recalculadas.
                     et_found = False
+                    fe_found = False
                     for row in ws_recalc.iter_rows(min_row=DATA_START_ROW, values_only=True):
-                        if len(row) >= COL_ENTREGADO_TIEMPO and row[COL_ENTREGADO_TIEMPO - 1] is not None:
+                        if not et_found and len(row) >= COL_ENTREGADO_TIEMPO and row[COL_ENTREGADO_TIEMPO - 1] is not None:
                             et_found = True
+                        if not fe_found and len(row) >= COL_FECHA_ENTREGA and isinstance(row[COL_FECHA_ENTREGA - 1], (datetime, date)):
+                            fe_found = True
+                        if et_found and fe_found:
                             break
 
-                    if not et_found:
+                    if not et_found or not fe_found:
                         wb_recalc.close()
+                        missing = []
+                        if not et_found:
+                            missing.append("ET")
+                        if not fe_found:
+                            missing.append("FechaEntrega")
                         if attempt < max_attempts:
                             log(
-                                f"[SP] Recalculo aun no persiste (intento {attempt}/{max_attempts}). "
-                                f"Reintentando en {retry_wait_s}s...",
+                                f"[SP] Recalculo incompleto ({', '.join(missing)} aun null) "
+                                f"(intento {attempt}/{max_attempts}). Reintentando en {retry_wait_s}s...",
                                 log_path,
                             )
                             time.sleep(retry_wait_s)
                             continue
                         else:
                             log(
-                                f"[WARN] Recalculo no persistio tras {max_attempts} intentos. "
+                                f"[WARN] Recalculo no persistio tras {max_attempts} intentos "
+                                f"(columnas faltantes: {', '.join(missing)}). "
                                 "OTIF quedara sin datos para este cliente.",
                                 log_path,
                             )
@@ -1358,6 +1391,34 @@ def build_summary_html(results: Sequence[ClientExecutionResult], warnings: Seque
           <td style="padding:8px 10px;border:1px solid #d9e2ec;text-align:center;background:{otif_bg};color:{otif_fg};font-weight:bold">{_fmt_pct(o.get("pct_otif"))}</td>
         </tr>""")
 
+    # ── Nota de arrastres ────────────────────────────────────────────────────
+    total_arrastres   = sum((r.otif or {}).get("arrastres", 0)           for r in results)
+    arrastres_ot      = sum((r.otif or {}).get("arrastres_on_time", 0)   for r in results)
+    arrastres_no_ot   = sum((r.otif or {}).get("arrastres_no_on_time", 0) for r in results)
+    if total_arrastres > 0:
+        arr_pct_ot    = round(arrastres_ot  / total_arrastres * 100, 1)
+        arr_pct_no_ot = round(arrastres_no_ot / total_arrastres * 100, 1)
+        arrastre_detalle = (
+            f"Este mes incluye <strong>{total_arrastres} pedido{'s' if total_arrastres != 1 else ''} "
+            f"ingresado{'s' if total_arrastres != 1 else ''} en el mes anterior</strong> con plazo de "
+            f"entrega en {mes_label} (arrastres): "
+            f"<strong style='color:#1f7a4c'>{arrastres_ot} cumplieron a tiempo ({arr_pct_ot}%)</strong> y "
+            f"<strong style='color:#c0392b'>{arrastres_no_ot} no cumplieron ({arr_pct_no_ot}%)</strong>. "
+            f"Son los pedidos mas exigentes del periodo &mdash; pesan sobre el On Time global."
+        )
+    else:
+        arrastre_detalle = "Este mes no hay pedidos con arrastres de meses anteriores."
+    arrastre_note_html = (
+        "<div style='margin-top:10px;padding:10px 14px;background:#f0f6ff;"
+        "border-left:3px solid #3b82f6;border-radius:4px;font-size:11px;color:#334155;line-height:1.6'>"
+        "<strong style='color:#1e3a5f'>&#128204; Criterio de periodo:</strong> "
+        "Se contabilizan los pedidos cuya <strong>Fecha de Remision cae en el mes en curso</strong>, "
+        "independientemente de cuando fueron recibidos. "
+        "Si el compromiso de entrega era este mes y no se cumplio, penaliza aqui. "
+        f"{arrastre_detalle}"
+        "</div>"
+    )
+
     otif_html = f"""
     <div style="margin-top:22px">
       <div style="font-family:Calibri,Arial,sans-serif;font-size:16px;font-weight:bold;color:#1e3a5f;margin-bottom:10px">
@@ -1386,6 +1447,7 @@ def build_summary_html(results: Sequence[ClientExecutionResult], warnings: Seque
         &nbsp;<span style="color:#d97706;font-weight:bold">&#9646;</span> Amarillo 85&#8211;94%
         &nbsp;<span style="color:#c0392b;font-weight:bold">&#9646;</span> Rojo &lt;85%
       </div>
+      {arrastre_note_html}
     </div>"""
 
     warnings_html = ""
