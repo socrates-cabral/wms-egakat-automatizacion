@@ -370,6 +370,41 @@ Páginas faltantes sugeridas: [lista]
 
 ---
 
+## [2026-05-10] fix | Bot Ops — Desglose canales DERCO AP/MY/SG/CAP/GT + AP Rack/Estantería
+
+**Tipo:** Bug fix detección consulta + exposición datos  
+**Archivo:** `WMS_Automatizacion/bots/_FINAL_preparar_contexto_ai.js`  
+**Commit:** 953f264
+
+**Síntoma:** "separa AP, MY, SG, CAP, CES y GT" → bot sin respuesta. No detectaba intención sin keywords "canal" o "DERCO".
+
+**Fix:** `pideDercoCanales` detecta 2+ codes de {my, sg, cap, gt, ces}, o 'ap' + 1 code, o 'ap rack'/'ap estantería'. Expone `prod.derco.canales` (AP agrupado) y `prod.derco.canales_originales` (AP_R/AP_E separados). CES no existe → bot lo indica.
+
+**Validado:** 5/5 canales coinciden exacto con WMS. AP_R+AP_E = AP total ✓.
+
+**Páginas actualizadas:**
+- wiki/proyectos/kpi-ops.md (sección "Desglose canales DERCO")
+- memory/project_bot_ops_bloqueado.md (Fix 2026-05-10)
+- memory/MEMORY.md (entrada EgakatOpsBot actualizada)
+
+---
+
+## [2026-05-09] fix | Bot Ops — OTIF por CD + terminología WMS + PUDAHUEL UNITARIO
+
+**Tipo:** Fixes múltiples en bot  
+**Archivos:** `_FINAL_preparar_contexto_ai.js`, `generar_resumen_kpi_ops.py`, `_FINAL_system_message.txt`  
+**Commits:** ver project_bot_ops_bloqueado.md
+
+**Fixes:**
+1. OTIF por CD: JS ahora expone `por_cd`, `por_cd_filtrado`, `regla_otif_por_cd` + `generar_resumen_kpi_ops.py` agrega `detalle_no_on_time`, `detalle_no_in_full`, `motivos_no_in_full` a cada CD
+2. Terminología: "días trabajados" → "Días activos WMS", regla metodológica obligatoria en system prompt
+3. `cdFromMsg()`: prioridad QUILICURA → PUDAHUEL UNITARIO → PUDAHUEL → SANTA ROSA (fix bug detección)
+
+**Páginas actualizadas:**
+- wiki/proyectos/kpi-ops.md (sección OTIF por CD)
+
+---
+
 ## [2026-05-01] ingest | Remediación seguridad agente_apuestas
 Fuente: SECURITY_REMEDIATION_STEPS.md + `.gitignore` + `agente_apuestas/*.py`
 Páginas creadas:

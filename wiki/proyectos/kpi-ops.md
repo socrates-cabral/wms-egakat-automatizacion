@@ -1,9 +1,10 @@
 ---
 title: KPI Operativo — Resumen JSON para Bot Telegram
+updated: 2026-05-10
 type: proyecto
 sources: [WMS_Automatizacion/generar_resumen_kpi_ops.py, WMS_Automatizacion/api_operaciones.py]
 related: [bot-ops-egakat, graph-api-microsoft, n8n-workflows]
-updated: 2026-05-08
+updated: 2026-05-09
 confidence: high
 ---
 
@@ -161,3 +162,86 @@ Garantiza que el bot tenga data fresca sin intervención manual.
 - "Fill Rate de febrero" → devuelve `historico.nnss.fillrate_mensual`
 - "productividad DERCO AP YTD" → devuelve `historico.productividad.derco_ap_ytd`
 - "OTIF DERCO" (mes actual) → flujo normal `esOTIF` sin toca historico
+
+---
+
+## OTIF por CD — Fix completo (2026-05-09)
+
+### Raíz del problema (diagnosticado vía Claude.ai)
+`esOTIF` block en `_FINAL_preparar_contexto_ai.js` compactaba `otif` pero descartaba `otif.por_cd`. La data existía en la API pero nunca llegaba al LLM.
+
+### 3 fixes aplicados en `_FINAL_preparar_contexto_ai.js`:
+1. **`por_cd` en contexto:** `otifCompacto` ahora incluye `por_cd` (array completo), `por_cd_filtrado` (filtrado por CD del mensaje via `normText(x.cd) === cdSolicitado`) y `regla_otif_por_cd` (instrucción dinámica que nombra el CD solicitado).
+2. **`esOTIF` ampliado:** Añadidos `msg.includes('in full')`, `msg.includes('infull')`, `msg.includes('on time')` — sin estos, preguntas de motivos IF/OT no entraban al bloque correcto.
+3. **Regla anti-confusión:** `regla_otif_por_cd` prohíbe usar `pedidos_no_evaluables_detalle` (pedidos pendientes, concepto distinto) para responder motivos IF/OT.
+
+### 3 fixes en `generar_resumen_kpi_ops.py` (`calcular_otif_por_pedido`):
+Cada entrada de `otif.por_cd` ahora incluye:
+```python
+"motivos_no_in_full": [{"motivo": m, "lineas": c} for m, c in Counter(motivos_cd).most_common(10)]
+"detalle_no_in_full": [{"nro_pedido", "cliente", "estado", "motivos": [...]}]  # por pedido
+"detalle_no_on_time": [{"nro_pedido", "cliente", "estado", "es_arrastre"}]     # por pedido
+```
+Mismo patrón que `por_cliente`. Tracking via `detalle_no_ot_por_cd`, `detalle_no_if_por_cd`, `motivos_no_if_por_cd` (defaultdict).
+
+### Valores validados (abril 2026):
+| CD | Evaluados | OTIF % | No OT | No IF |
+|----|-----------|--------|-------|-------|
+| QUILICURA | 872 | 91,40 % | 54 (todos DERCO) | 31 (30 DERCO + 2 MASCOTAS) |
+| PUDAHUEL | 15 | 86,67 % | 0 | 2 (ambos UNILEVER) |
+
+### System prompt (`_FINAL_system_message.txt`) — Regla 6 ampliada:
+- Para motivos no IF: usar `motivos_no_in_full` (agregado) + `detalle_no_in_full` (por pedido)
+- Para pedidos no OT: usar `detalle_no_on_time`
+- Prohibido usar `pedidos_no_evaluables_detalle` para estas preguntas
+
+---
+
+## Desglose canales DERCO — Fix (2026-05-10)
+
+**Síntoma:** Consulta "separa AP, MY, SG, CAP, CES y GT" → bot sin respuesta. No incluía keywords "canal" ni "DERCO" explícitos.
+
+### Canales DERCO y su origen
+
+Canal derivado en `calcular_canal_derco()` combinando `Comprobante externo[:2]` + `Destino[:4]` del WMS MovDerco.xlsx:
+
+| Clave | Canal | Ejemplo Destino |
+|-------|-------|-----------------|
+| `46AP00` | AP | AP0066-San Pablo Qui |
+| `31SODI/WALM/EASY/REND/HIPE` | GT | SODIMAC, WALMART, EASY... |
+| `46SG00` | SG | SG0001-... |
+| `91SG00/AP00/CORO` | CAP | — |
+| default | MY | — |
+
+AP se subdivide en AP_R (Rack) y AP_E (Estantería) según `Tipo_Ubicacion_Dim`. **CES no existe** en datos DERCO.
+
+### Cambios en `_FINAL_preparar_contexto_ai.js`
+
+```javascript
+// Detector — no requiere "canal" ni "DERCO" explícito
+const _DERCO_CANAL_KEYS = ['my', 'sg', 'cap', 'gt', 'ces'];
+const pideDercoCanales = _dercoCanalesCount >= 2 ||
+    (msg.includes(' ap') && _dercoCanalesCount >= 1) ||
+    msg.includes('ap rack') || msg.includes('ap estanteria') ||
+    (msg.includes('rack') && msg.includes('estanteria'));
+
+// Handler expone ambas versiones
+prodCompacta.derco_canales = {
+  canales: prod.derco.canales,           // AP agrupado (AP_R+AP_E → AP)
+  canales_originales: prod.derco.canales_originales,  // AP_R y AP_E separados
+  nota: 'CES no existe en datos DERCO — indicarlo si se pregunta.'
+};
+```
+
+### Valores validados mayo 2026 (parcial, vs WMS directo)
+
+| Canal | Bot | WMS | Match |
+|-------|-----|-----|-------|
+| AP | 26.445 | 26.445 | ✓ |
+| MY | 1.580 | 1.580 | ✓ |
+| SG | 67 | 67 | ✓ |
+| CAP | 562 | 562 | ✓ |
+| GT | 295 | 295 | ✓ |
+| AP_R + AP_E | 15.642 + 10.803 | — | = 26.445 ✓ |
+
+**Commit:** 953f264
