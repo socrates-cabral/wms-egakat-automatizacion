@@ -304,6 +304,7 @@
   function cdFromMsg(text) {
     const t = normText(text);
     if (t.includes('QUILICURA')) return 'QUILICURA';
+    if (t.includes('PUDAHUEL UNITARIO') || (t.includes('PUDAHUEL') && t.includes('UNITARIO'))) return 'PUDAHUEL UNITARIO';
     if (t.includes('PUDAHUEL')) return 'PUDAHUEL';
     if (t.includes('SANTA ROSA') || t.includes('STA ROSA') || t.includes('STA. ROSA')) return 'SANTA ROSA';
     return null;
@@ -1060,8 +1061,9 @@
         texto_ranking: textoRanking,
         regla: [
           'El array por_usuario YA ESTÁ ORDENADO según criterio_ranking. Presentar los registros en el MISMO ORDEN del campo posicion. NO reordenar.',
-          'Cada registro es independiente y autónomo. NO mezclar campos (lineas, dias_trabajados, lineas_por_dia_activo, etc.) entre registros distintos.',
-          'horas_activas representa slots de hora únicos con actividad WMS; no son horas reales trabajadas ni asistencia.',
+          'Cada registro es independiente y autónomo. NO mezclar campos entre registros distintos.',
+          'TERMINOLOGIA OBLIGATORIA: el campo dias_trabajados se presenta como "Días activos WMS"; horas_activas como "Horas activas WMS"; lineas_por_hora_activa como "Líneas por hora activa WMS"; unidades_por_hora_activa como "Unidades por hora activa WMS". NUNCA usar "días trabajados", "horas trabajadas reales", "horas trabajadas" ni "asistencia".',
+          'REGLA METODOLOGICA: estos indicadores provienen de movimientos WMS, no de asistencia RRHH. dias_activos_wms = fechas_turno distintas con actividad; horas_activas_wms = slots hora únicos con actividad. La conclusión DEBE incluir: "El criterio usado es líneas por hora activa WMS. No corresponde a asistencia ni horas trabajadas reales."',
           'Para "ranking de operadores": usar lineas totales, texto "' + textoRanking + '".',
           'Para "operador más productivo": usar lineas_por_hora_activa, texto "criterio: líneas por hora activa WMS".',
           'Si se filtra por usuario específico, mostrar todos sus meses disponibles si el mes solicitado no tiene datos.'
