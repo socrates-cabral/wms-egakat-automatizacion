@@ -611,7 +611,7 @@
 
     if (kpiTipo === 'otif' || kpiTipo === 'nnss') return arrTiene(hn.otif_mensual);
     if (kpiTipo === 'fillrate') return arrTiene(hn.fillrate_mensual);
-    if (kpiTipo === 'productividad') return arrTiene(hp.mensual_cliente) || arrTiene(hp.derco_ap_mensual);
+    if (kpiTipo === 'productividad') return arrTiene(hp.mensual_cliente) || arrTiene(hp.derco_ap_mensual) || arrTiene(hp.derco_canales_mensual);
     return arrTiene(hn.otif_mensual) || arrTiene(hn.fillrate_mensual) || arrTiene(hp.mensual_cliente);
   }
 
@@ -661,7 +661,7 @@
   }
 
   if ((periodoSolicitadoNoDisponible || periodoSolicitado.es_ytd || periodoSolicitado.es_comparativo) && historicoResponde && !esUsuario) {
-    return JSON.stringify({
+    const historicoOut = {
       disponible: $json.disponible,
       fecha_consulta: $json.fecha_consulta,
       consulta_historico: {
@@ -679,7 +679,22 @@
       kpi_ops: {
         historico: contexto.kpi_ops.historico
       }
-    });
+    };
+    if (pideDercoCanales && !periodoSolicitado.es_ytd) {
+      const canalMensual = Array.isArray(contexto.kpi_ops?.historico?.productividad?.derco_canales_mensual)
+        ? contexto.kpi_ops.historico.productividad.derco_canales_mensual
+        : [];
+      const filtrado = canalMensual.filter(r =>
+        (!periodoSolicitado.mes || Number(r.mes) === Number(periodoSolicitado.mes)) &&
+        (!periodoSolicitado.anio || Number(r.anio) === Number(periodoSolicitado.anio))
+      );
+      historicoOut.derco_canales_historico = {
+        periodo: `${periodoSolicitado.mes_nombre || 'mes'} ${periodoSolicitado.anio || ''}`.trim(),
+        canales: filtrado,
+        regla: 'Mostrar desglose líneas/unidades por canal DERCO desde derco_canales_historico.canales. CES no existe en datos DERCO — indicarlo si se pregunta. La conclusión debe señalar el canal con mayor carga operativa del período.'
+      };
+    }
+    return JSON.stringify(historicoOut);
   }
 
   if (esConsultaUbicacionesLayout && !esConsultaConteoCiclico && !esProductividad && !esOTIF) {

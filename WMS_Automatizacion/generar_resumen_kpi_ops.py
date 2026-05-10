@@ -1915,6 +1915,7 @@ def construir_historico_otif_mensual(
     fillrate_mensual = []
     productividad_mensual_cliente = []
     derco_ap_mensual = []
+    derco_canales_mensual = []
     for month in range(1, hasta_mes + 1):
         datos_mes = registros_por_mes[month]
         clientes_mes = sorted(
@@ -2005,6 +2006,31 @@ def construir_historico_otif_mensual(
                     motivo_base=motivo_productividad,
                 )
             )
+
+        # Canal DERCO historico — MY, SG, CAP, GT, AP por mes
+        df_prod_mes = datos_mes.get("df_productividad")
+        if df_prod_mes is not None and not df_prod_mes.empty:
+            df_derco_mes = df_prod_mes[df_prod_mes["Es_Derco_Historico"]].copy()
+            if not df_derco_mes.empty:
+                cds_derco = sorted(
+                    {normalizar_texto(cd) for cd in df_derco_mes["Centro_Norm"].dropna() if normalizar_texto(cd)}
+                )
+                for cd_derco in cds_derco:
+                    df_derco_cd = df_derco_mes[df_derco_mes["Centro_Norm"] == cd_derco]
+                    for canal, grupo in df_derco_cd.groupby("Canal_Agrupado", dropna=False):
+                        canal_str = str(canal).strip() if canal and str(canal).strip() else ""
+                        if not canal_str:
+                            continue
+                        derco_canales_mensual.append({
+                            "anio": year,
+                            "mes": month,
+                            "cd": cd_derco,
+                            "canal": canal_str,
+                            "lineas": int(len(grupo)),
+                            "unidades": round_safe(grupo["Salida"].sum(), 2),
+                            "pedidos": contar_pedidos_validos(grupo["Nro. de Doc. Externo"]),
+                            "disponible": True,
+                        })
 
     otif_ytd = construir_otif_ytd_desde_mensual(
         otif_mensual=otif_mensual,
@@ -2108,6 +2134,7 @@ def construir_historico_otif_mensual(
             "ytd_cliente": productividad_ytd_cliente,
             "derco_ap_mensual": derco_ap_mensual,
             "derco_ap_ytd": derco_ap_ytd,
+            "derco_canales_mensual": derco_canales_mensual,
             "por_usuario": por_usuario,
             "por_usuario_mensual": por_usuario_mensual,
         },
