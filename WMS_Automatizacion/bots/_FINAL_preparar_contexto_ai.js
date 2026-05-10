@@ -91,7 +91,8 @@
   const fechaISO = fmtDateISOFromMsg(msg);
   const clienteSolicitado = clienteFromMsg(msg);
 
-  const esProductividad =
+  // Condiciones base de productividad (palabras de dominio WMS)
+  const esProductividadBase =
     msg.includes('productividad') ||
     msg.includes('lineas') ||
     msg.includes('líneas') ||
@@ -100,7 +101,7 @@
     msg.includes('preparó') ||
     msg.includes('preparadas');
 
-  // Leer datos de usuarios disponibles para detección dinámica
+  // Leer datos de usuarios disponibles para detección dinámica (antes de esProductividad)
   const _porUsuarioMensualGlobal = Array.isArray(kpi.historico?.productividad?.por_usuario_mensual)
     ? kpi.historico.productividad.por_usuario_mensual
     : [];
@@ -110,23 +111,39 @@
   const _msgUpper = rawMsg.toUpperCase();
   const usuarioDetectado = _usuariosDisponibles.find(u => u && _msgUpper.includes(u)) || null;
 
-  const esUsuario =
-    esProductividad && (
-      usuarioDetectado !== null ||
-      msg.includes('usuario') ||
-      msg.includes('operador') ||
-      msg.includes('trabajador') ||
-      msg.includes('registró') ||
-      msg.includes('registro') ||
-      msg.includes('quien preparo') ||
-      msg.includes('quién preparó') ||
-      msg.includes('quien preparó') ||
-      msg.includes('quién preparo') ||
-      msg.includes('top operador') ||
-      msg.includes('ranking') ||
-      msg.includes('por persona') ||
-      msg.includes('por operador')
-    );
+  // Consulta de operador/usuario: se activa aunque no diga "productividad" ni "líneas"
+  const esConsultaUsuarioOperador =
+    usuarioDetectado !== null ||
+    msg.includes('usuario') ||
+    msg.includes('usuarios') ||
+    msg.includes('operador') ||
+    msg.includes('operadores') ||
+    msg.includes('trabajador') ||
+    msg.includes('trabajadores') ||
+    msg.includes('registró') ||
+    msg.includes('registro') ||
+    msg.includes('ranking') ||
+    msg.includes('top operador') ||
+    msg.includes('top operadores') ||
+    msg.includes('por persona') ||
+    msg.includes('por operador') ||
+    msg.includes('quien preparo') ||
+    msg.includes('quién preparó') ||
+    msg.includes('quien preparó') ||
+    msg.includes('quién preparo') ||
+    msg.includes('mas productivo') ||
+    msg.includes('más productivo') ||
+    msg.includes('mejor operador') ||
+    msg.includes('mayor eficiencia') ||
+    msg.includes('eficiencia') ||
+    msg.includes('lineas por hora') ||
+    msg.includes('líneas por hora');
+
+  // esProductividad se activa por dominio WMS o por consulta de operador
+  const esProductividad = esProductividadBase || esConsultaUsuarioOperador;
+
+  // esUsuario ya no depende de esProductividad; se activa solo con señales de operador
+  const esUsuario = esConsultaUsuarioOperador;
 
   // Detectar si pide "más productivo" (criterio eficiencia) vs ranking por volumen
   const esMasProductivo =
@@ -424,7 +441,13 @@
     const t = String(texto || '').toLowerCase();
     if (t.includes('otif') || t.includes('on time') || t.includes('in full')) return 'otif';
     if (t.includes('fill rate') || t.includes('fillrate')) return 'fillrate';
-    if (t.includes('productividad') || t.includes('lineas') || t.includes('líneas') || t.includes('unidades preparadas')) return 'productividad';
+    if (
+      t.includes('productividad') || t.includes('lineas') || t.includes('líneas') ||
+      t.includes('unidades preparadas') || t.includes('operador') || t.includes('operadores') ||
+      t.includes('usuario') || t.includes('usuarios') || t.includes('ranking') ||
+      t.includes('mas productivo') || t.includes('más productivo') ||
+      t.includes('mejor operador') || t.includes('eficiencia')
+    ) return 'productividad';
     if (t.includes('inventario') || t.includes('ubicacion') || t.includes('ubicación') || t.includes('ocupacion') || t.includes('ocupación') || t.includes('ira') || t.includes('ila')) return 'inventario';
     if (t.includes('nnss') || t.includes('pedido') || t.includes('pedidos')) return 'nnss';
     return 'general';
