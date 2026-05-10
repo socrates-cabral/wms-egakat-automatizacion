@@ -99,7 +99,12 @@
     msg.includes('unidades preparadas') ||
     msg.includes('preparo') ||
     msg.includes('preparó') ||
-    msg.includes('preparadas');
+    msg.includes('preparadas') ||
+    msg.includes('ap rack') ||
+    msg.includes('ap estanteria') ||
+    msg.includes('ap estantería') ||
+    (msg.includes('rack') && msg.includes('estanteria')) ||
+    (msg.includes('rack') && msg.includes('estantería'));
 
   // Leer datos de usuarios disponibles para detección dinámica (antes de esProductividad)
   const _porUsuarioMensualGlobal = Array.isArray(kpi.historico?.productividad?.por_usuario_mensual)
@@ -237,6 +242,18 @@
     msg.includes('cap') ||
     msg.includes('my') ||
     msg.includes('sg');
+
+  // Detecta consulta de desglose por canal DERCO (AP/MY/SG/CAP/GT/CES)
+  // sin requerir que el usuario escriba "canal" o "DERCO"
+  const _DERCO_CANAL_KEYS = ['my', 'sg', 'cap', 'gt', 'ces'];
+  const _dercoCanalesCount = _DERCO_CANAL_KEYS.filter(k => msg.includes(k)).length;
+  const pideDercoCanales = _dercoCanalesCount >= 2 ||
+    (msg.includes(' ap') && _dercoCanalesCount >= 1) ||
+    msg.includes('ap rack') ||
+    msg.includes('ap estanteria') ||
+    msg.includes('ap estantería') ||
+    (msg.includes('rack') && msg.includes('estanteria')) ||
+    (msg.includes('rack') && msg.includes('estantería'));
 
   const esInventario =
     msg.includes('inventario') ||
@@ -969,6 +986,21 @@
                 nota_pedidos: 'AP total no debe asumirse como suma de AP Rack + AP Estantería; cada bloque trae pedidos únicos de su propio universo.'
               }))
           : []
+      };
+    }
+
+    if (pideDercoCanales) {
+      prodCompacta.derco_canales = {
+        canales: Array.isArray(prod?.derco?.canales) ? prod.derco.canales : [],
+        canales_originales: Array.isArray(prod?.derco?.canales_originales) ? prod.derco.canales_originales : [],
+        top_canal_por_lineas: prod?.derco?.top_canal_por_lineas || null,
+        top_canal_por_unidades: prod?.derco?.top_canal_por_unidades || null,
+        nota: 'canales agrupa AP_R+AP_E como AP. canales_originales los mantiene separados (AP_R=Rack, AP_E=Estantería). CES no existe en datos DERCO — indicarlo si se pregunta.'
+      };
+      prodCompacta.consulta_resuelta = {
+        tipo: 'derco_canales_totales',
+        cliente: 'DERCO',
+        regla: 'Mostrar desglose de líneas y unidades por canal DERCO desde derco_canales.canales (agrupado). Si se pide AP separado, usar canales_originales. CES no existe en los datos: indicarlo explícitamente. La conclusión debe señalar qué canal concentra mayor carga operativa del período.'
       };
     }
 
