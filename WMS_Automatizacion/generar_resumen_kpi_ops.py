@@ -646,6 +646,8 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
     detalle_no_ot_por_cd: dict[str, list[dict[str, Any]]] = defaultdict(list)
     detalle_no_if_por_cd: dict[str, list[dict[str, Any]]] = defaultdict(list)
     motivos_no_if_por_cd: dict[str, list[str]] = defaultdict(list)
+    detalle_no_ot_por_cliente: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    detalle_no_if_por_cliente: dict[str, list[dict[str, Any]]] = defaultdict(list)
     evaluados = 0
     on_time = 0
     in_full = 0
@@ -699,14 +701,16 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
                 motivos_no_if_global.append(m)
 
         if not pedido_on_time:
-            detalle_no_ot_por_cd[cd].append({
+            _det_ot = {
                 "nro_pedido": pedido["nro_pedido"],
                 "cliente": pedido["cliente"],
                 "estado": pedido.get("estado", ""),
                 "es_arrastre": bool(pedido.get("es_arrastre")),
-            })
+            }
+            detalle_no_ot_por_cd[cd].append(_det_ot)
+            detalle_no_ot_por_cliente[empresa].append(_det_ot)
         if not pedido_in_full:
-            detalle_no_if_por_cd[cd].append({
+            _det_if = {
                 "nro_pedido": pedido["nro_pedido"],
                 "cliente": pedido["cliente"],
                 "estado": pedido.get("estado", ""),
@@ -714,7 +718,9 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
                     {"motivo": m, "lineas": c}
                     for m, c in Counter(pedido.get("motivos_no_in_full") or []).most_common()
                 ],
-            })
+            }
+            detalle_no_if_por_cd[cd].append(_det_if)
+            detalle_no_if_por_cliente[empresa].append(_det_if)
 
     por_cliente = []
     for cliente, payload in sorted(pedidos_por_cliente.items()):
@@ -753,6 +759,10 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
             ]
         elif pedidos_no_if > 0:
             entry["motivos_no_in_full"] = []
+        if pedidos_no_ot > 0:
+            entry["detalle_no_on_time"] = detalle_no_ot_por_cliente.get(cliente, [])
+        if pedidos_no_if > 0:
+            entry["detalle_no_in_full"] = detalle_no_if_por_cliente.get(cliente, [])
         por_cliente.append(entry)
 
     def detalle_no_evaluable_payload(cliente: str, pedido: dict[str, Any]) -> dict[str, Any]:

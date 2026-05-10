@@ -1016,7 +1016,12 @@
       pct_otif: otif.pct_otif,
       criterio_calculo: otif.criterio_calculo,
       por_cliente_filtrado: clienteSolicitado && resumenCliente ? [resumenCliente] : undefined,
-      por_cliente: !clienteSolicitado && !pideListaPedidos ? porCliente : undefined,
+      por_cliente: !clienteSolicitado && !pideListaPedidos
+        ? porCliente.map(x => {
+            const { detalle_no_on_time, detalle_no_in_full, ...rest } = x;
+            return rest;
+          })
+        : undefined,
       clientes_no_evaluables: clientesNoEvaluables,
       pedidos_no_evaluables_detalle_total: otif.pedidos_no_evaluables_detalle_total ?? detalle.length,
       pedidos_no_evaluables_detalle_mostrados: pedidosMostrados.length,
