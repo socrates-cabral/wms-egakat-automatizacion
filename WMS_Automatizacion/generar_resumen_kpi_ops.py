@@ -599,10 +599,20 @@ def resumir_pedidos_nnss(df_pedidos: pd.DataFrame, fecha_consulta: datetime) -> 
         else:
             motivo_no_evaluable = "Sin datos suficientes para evaluar entrega."
 
+        deposito_raw = normalizar_texto(grupo["Deposito"].iloc[0]) if "Deposito" in grupo.columns else ""
+        deposito_lower = deposito_raw.lower()
+        if "pudahuel" in deposito_lower:
+            deposito_cd = "PUDAHUEL"
+        elif "quilicura" in deposito_lower:
+            deposito_cd = "QUILICURA"
+        else:
+            deposito_cd = deposito_raw.upper() if deposito_raw else "SIN_CD"
+
         pedidos_resumen.append(
             {
                 "pedido_key": pedido_key,
                 "cliente": empresa,
+                "cd": deposito_cd,
                 "nro_pedido": nro_pedido,
                 "estado": estado_consolidado,
                 "lineas": lineas,
@@ -629,7 +639,13 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
     pedidos_por_cliente: dict[str, dict[str, int]] = defaultdict(
         lambda: {"pedidos_evaluados": 0, "pedidos_on_time": 0, "pedidos_in_full": 0, "pedidos_otif": 0, "pedidos_no_evaluables": 0, "arrastres": 0, "arrastres_on_time": 0}
     )
+    pedidos_por_cd: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"pedidos_evaluados": 0, "pedidos_on_time": 0, "pedidos_in_full": 0, "pedidos_otif": 0, "pedidos_no_evaluables": 0}
+    )
     no_evaluables_por_cliente: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    detalle_no_ot_por_cd: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    detalle_no_if_por_cd: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    motivos_no_if_por_cd: dict[str, list[str]] = defaultdict(list)
     evaluados = 0
     on_time = 0
     in_full = 0
@@ -641,8 +657,10 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
 
     for pedido in pedidos_resumen:
         empresa = pedido["cliente"]
+        cd = pedido.get("cd", "SIN_CD")
         if not pedido["evaluable_otif"]:
             pedidos_por_cliente[empresa]["pedidos_no_evaluables"] += 1
+            pedidos_por_cd[cd]["pedidos_no_evaluables"] += 1
             no_evaluables_por_cliente[empresa].append(pedido)
             no_evaluable += 1
             continue
@@ -661,6 +679,11 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
         pedidos_por_cliente[empresa]["pedidos_in_full"] += int(pedido_in_full)
         pedidos_por_cliente[empresa]["pedidos_otif"] += int(pedido_otif)
 
+        pedidos_por_cd[cd]["pedidos_evaluados"] += 1
+        pedidos_por_cd[cd]["pedidos_on_time"] += int(pedido_on_time)
+        pedidos_por_cd[cd]["pedidos_in_full"] += int(pedido_in_full)
+        pedidos_por_cd[cd]["pedidos_otif"] += int(pedido_otif)
+
         if pedido.get("es_arrastre"):
             pedidos_por_cliente[empresa]["arrastres"] += 1
             if pedido_on_time:
@@ -672,7 +695,26 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
         if not pedido_in_full:
             for m in pedido.get("motivos_no_in_full") or []:
                 motivos_no_if_por_cliente[empresa].append(m)
+                motivos_no_if_por_cd[cd].append(m)
                 motivos_no_if_global.append(m)
+
+        if not pedido_on_time:
+            detalle_no_ot_por_cd[cd].append({
+                "nro_pedido": pedido["nro_pedido"],
+                "cliente": pedido["cliente"],
+                "estado": pedido.get("estado", ""),
+                "es_arrastre": bool(pedido.get("es_arrastre")),
+            })
+        if not pedido_in_full:
+            detalle_no_if_por_cd[cd].append({
+                "nro_pedido": pedido["nro_pedido"],
+                "cliente": pedido["cliente"],
+                "estado": pedido.get("estado", ""),
+                "motivos": [
+                    {"motivo": m, "lineas": c}
+                    for m, c in Counter(pedido.get("motivos_no_in_full") or []).most_common()
+                ],
+            })
 
     por_cliente = []
     for cliente, payload in sorted(pedidos_por_cliente.items()):
@@ -835,6 +877,35 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
         if motivos_no_if_global else []
     )
 
+    por_cd = []
+    for cd_nombre, payload_cd in sorted(pedidos_por_cd.items()):
+        evaluados_cd = payload_cd["pedidos_evaluados"]
+        no_ot_cd = evaluados_cd - payload_cd["pedidos_on_time"]
+        no_if_cd = evaluados_cd - payload_cd["pedidos_in_full"]
+        entry_cd = {
+            "cd": cd_nombre,
+            "pedidos_evaluados": evaluados_cd,
+            "pedidos_on_time": payload_cd["pedidos_on_time"],
+            "pedidos_no_on_time": no_ot_cd,
+            "pedidos_in_full": payload_cd["pedidos_in_full"],
+            "pedidos_no_in_full": no_if_cd,
+            "pedidos_otif": payload_cd["pedidos_otif"],
+            "pedidos_no_evaluables": payload_cd["pedidos_no_evaluables"],
+            "pct_on_time": porcentaje_safe(payload_cd["pedidos_on_time"], evaluados_cd),
+            "pct_in_full": porcentaje_safe(payload_cd["pedidos_in_full"], evaluados_cd),
+            "pct_otif": porcentaje_safe(payload_cd["pedidos_otif"], evaluados_cd),
+        }
+        if no_ot_cd > 0:
+            entry_cd["detalle_no_on_time"] = detalle_no_ot_por_cd.get(cd_nombre, [])
+        if no_if_cd > 0:
+            entry_cd["detalle_no_in_full"] = detalle_no_if_por_cd.get(cd_nombre, [])
+            motivos_cd = motivos_no_if_por_cd.get(cd_nombre, [])
+            entry_cd["motivos_no_in_full"] = (
+                [{"motivo": m, "lineas": c} for m, c in Counter(motivos_cd).most_common(10)]
+                if motivos_cd else []
+            )
+        por_cd.append(entry_cd)
+
     return {
         "pedidos_evaluados": evaluados,
         "pedidos_no_evaluables": no_evaluable,
@@ -842,6 +913,7 @@ def calcular_otif_por_pedido(pedidos_resumen: list[dict[str, Any]]) -> dict[str,
         "pct_in_full": porcentaje_safe(in_full, evaluados),
         "pct_otif": porcentaje_safe(otif, evaluados),
         "por_cliente": por_cliente,
+        "por_cd": por_cd,
         "arrastres": arrastres_payload,
         "motivos_no_in_full_global": motivos_no_if_global_top,
         "clientes_no_evaluables": clientes_no_evaluables,

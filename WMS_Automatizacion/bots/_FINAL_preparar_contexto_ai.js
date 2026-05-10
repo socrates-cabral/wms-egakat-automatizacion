@@ -102,6 +102,9 @@
 
   const esOTIF =
     msg.includes('otif') ||
+    msg.includes('in full') ||
+    msg.includes('infull') ||
+    msg.includes('on time') ||
     msg.includes('no evaluable') ||
     msg.includes('no evaluables') ||
     msg.includes('pendiente') ||
@@ -940,6 +943,10 @@
     const detalle = Array.isArray(otif.pedidos_no_evaluables_detalle) ? otif.pedidos_no_evaluables_detalle : [];
     const detallePorCliente = Array.isArray(otif.pedidos_no_evaluables_detalle_por_cliente) ? otif.pedidos_no_evaluables_detalle_por_cliente : [];
     const clientesNoEvaluables = Array.isArray(otif.clientes_no_evaluables) ? otif.clientes_no_evaluables : [];
+    const porCdOtif = Array.isArray(otif.por_cd) ? otif.por_cd : [];
+    const porCdFiltradoOtif = cdSolicitado
+      ? porCdOtif.filter(x => normText(x.cd) === cdSolicitado)
+      : [];
 
     const resumenCliente =
       clienteSolicitado
@@ -1032,7 +1039,12 @@
       mensaje_si_pide_todos: pideTodosLosPedidos
         ? 'El usuario pidió todos los pedidos. Por límite de Telegram, se debe mostrar solo el corte indicado y aclarar el total disponible. Para entregar todos, se requiere implementar archivo, paginación o consulta por rangos.'
         : undefined,
-      aclaracion_202: 'En el contexto vigente no aparece 202 como total de pedidos no evaluables. El total vigente global es 125. DERCO tiene 90.'
+      aclaracion_202: 'En el contexto vigente no aparece 202 como total de pedidos no evaluables. El total vigente global es 125. DERCO tiene 90.',
+      por_cd: porCdOtif,
+      por_cd_filtrado: cdSolicitado && porCdFiltradoOtif.length > 0 ? porCdFiltradoOtif : undefined,
+      regla_otif_por_cd: cdSolicitado
+        ? `OTIF por CD ${cdSolicitado}: usar el objeto de por_cd_filtrado con cd="${cdSolicitado}". Campos de resumen: pedidos_evaluados, pedidos_no_on_time, pedidos_no_in_full, pedidos_otif, pct_on_time, pct_in_full, pct_otif. gap_pct = 100 - pct_otif. gap_pedidos = pedidos_evaluados - pedidos_otif. NO usar pedidos_evaluados ni pct_otif globales. NO sumar pedidos_no_on_time + pedidos_no_in_full (se solapan). NO confundir arrastres.total con pedidos_no_on_time. Para motivos de no IN FULL: usar motivos_no_in_full (agregado por motivo con lineas) y detalle_no_in_full (listado por pedido con nro_pedido, cliente, estado, motivos). Para pedidos no OT: usar detalle_no_on_time (nro_pedido, cliente, estado, es_arrastre).`
+        : 'Si el usuario pregunta por OTIF o gap de un CD, usar el objeto correspondiente en por_cd filtrado por campo cd. NO usar totales globales. gap_pct = 100 - pct_otif del CD. gap_pedidos = pedidos_evaluados - pedidos_otif. NO sumar pedidos_no_on_time + pedidos_no_in_full. Para motivos de no IN FULL usar motivos_no_in_full y detalle_no_in_full del objeto CD. Para pedidos no OT usar detalle_no_on_time.'
     };
 
     contexto = {
