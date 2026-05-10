@@ -566,12 +566,6 @@ def _resumen_kpi_ops_desde_logs() -> dict:
                 "error": "Contenido JSON inválido o vacío.",
             }
 
-        print("[API_DEBUG] __file__ =", __file__)
-        print("[API_DEBUG] kpi_ops_path =", ruta)
-        print("[API_DEBUG] payload_keys =", list(payload.keys()))
-        print("[API_DEBUG] payload_historico_presente =", "historico" in payload)
-        print("[API_DEBUG] payload_historico_tipo =", type(payload.get("historico")).__name__)
-        print("[API_DEBUG] payload_historico_disponible =", (payload.get("historico") or {}).get("disponible") if isinstance(payload.get("historico"), dict) else None)
         return {
             "disponible": True,
             "fuente": str(ruta),
@@ -708,9 +702,6 @@ def contexto_resumen():
     """Contexto ejecutivo-operativo consolidado para EgakatOpsBot."""
     try:
         respuesta = _resumen_contexto_ops()
-        print("[API_DEBUG] respuesta_kpi_ops_keys =", list(respuesta.get("kpi_ops", {}).keys()))
-        print("[API_DEBUG] respuesta_kpi_ops_historico_presente =", "historico" in respuesta.get("kpi_ops", {}))
-        print("[API_DEBUG] respuesta_kpi_ops_historico_is_none =", respuesta.get("kpi_ops", {}).get("historico") is None)
         return jsonify(respuesta)
     except Exception as e:
         print(f"[FALLO] /ops/contexto/resumen: {traceback.format_exc()}")
