@@ -100,6 +100,34 @@
     msg.includes('preparó') ||
     msg.includes('preparadas');
 
+  // Leer datos de usuarios disponibles para detección dinámica
+  const _porUsuarioMensualGlobal = Array.isArray(kpi.historico?.productividad?.por_usuario_mensual)
+    ? kpi.historico.productividad.por_usuario_mensual
+    : [];
+  const _usuariosDisponibles = [
+    ...new Set(_porUsuarioMensualGlobal.map(x => (x.usuario || '').toUpperCase().trim()).filter(Boolean))
+  ];
+  const _msgUpper = rawMsg.toUpperCase();
+  const usuarioDetectado = _usuariosDisponibles.find(u => u && _msgUpper.includes(u)) || null;
+
+  const esUsuario =
+    esProductividad && (
+      usuarioDetectado !== null ||
+      msg.includes('usuario') ||
+      msg.includes('operador') ||
+      msg.includes('trabajador') ||
+      msg.includes('registró') ||
+      msg.includes('registro') ||
+      msg.includes('quien preparo') ||
+      msg.includes('quién preparó') ||
+      msg.includes('quien preparó') ||
+      msg.includes('quién preparo') ||
+      msg.includes('top operador') ||
+      msg.includes('ranking') ||
+      msg.includes('por persona') ||
+      msg.includes('por operador')
+    );
+
   const esOTIF =
     msg.includes('otif') ||
     msg.includes('in full') ||
@@ -476,10 +504,12 @@
         fillrate_ytd:      filtrarClientes ? filtrarRows(hn.fillrate_ytd)      : hn.fillrate_ytd
       },
       productividad: {
-        mensual_cliente:  filtrarClientes ? filtrarRows(hp.mensual_cliente) : hp.mensual_cliente,
-        ytd_cliente:      filtrarClientes ? filtrarRows(hp.ytd_cliente)     : hp.ytd_cliente,
-        derco_ap_mensual: hp.derco_ap_mensual,
-        derco_ap_ytd:     hp.derco_ap_ytd
+        mensual_cliente:     filtrarClientes ? filtrarRows(hp.mensual_cliente) : hp.mensual_cliente,
+        ytd_cliente:         filtrarClientes ? filtrarRows(hp.ytd_cliente)     : hp.ytd_cliente,
+        derco_ap_mensual:    hp.derco_ap_mensual,
+        derco_ap_ytd:        hp.derco_ap_ytd,
+        por_usuario:         hp.por_usuario,
+        por_usuario_mensual: hp.por_usuario_mensual
       }
     };
   };
@@ -539,7 +569,7 @@
     periodoSolicitado.es_ytd
   );
 
-  if ((periodoSolicitadoNoDisponible || solicitudYtdSinHistorico || solicitudComparativaSinHistorico) && !historicoResponde) {
+  if ((periodoSolicitadoNoDisponible || solicitudYtdSinHistorico || solicitudComparativaSinHistorico) && !historicoResponde && !esUsuario) {
     const solicitadoTexto = periodoSolicitado.es_ytd
       ? 'acumulado anual / YTD'
       : periodoSolicitado.es_comparativo
@@ -577,7 +607,7 @@
     return JSON.stringify(contexto);
   }
 
-  if ((periodoSolicitadoNoDisponible || periodoSolicitado.es_ytd || periodoSolicitado.es_comparativo) && historicoResponde) {
+  if ((periodoSolicitadoNoDisponible || periodoSolicitado.es_ytd || periodoSolicitado.es_comparativo) && historicoResponde && !esUsuario) {
     return JSON.stringify({
       disponible: $json.disponible,
       fecha_consulta: $json.fecha_consulta,
@@ -767,6 +797,7 @@
     const porFechaClienteCanal = Array.isArray(prod.por_fecha_cliente_canal) ? prod.por_fecha_cliente_canal : [];
     const porFechaClienteTurno = Array.isArray(prod.por_fecha_cliente_turno) ? prod.por_fecha_cliente_turno : [];
     const porClienteMensual = Array.isArray(prod.por_cliente) ? prod.por_cliente : [];
+    const porUsuarioMensual = _porUsuarioMensualGlobal; // ya cargado arriba
 
     let prodCompacta = {
       disponible: prod.disponible,
@@ -925,6 +956,63 @@
           pedidos_unicos_fecha: x.pedidos_unicos_fecha ?? x.pedidos ?? null,
           pedidos_tipo: 'pedidos_unicos_fecha'
         }));
+    }
+
+    if (esUsuario && porUsuarioMensual.length > 0) {
+      const TOP_USUARIOS = 25;
+
+      // Determinar mes objetivo: el solicitado o el más reciente disponible
+      const mesObjetivo = periodoSolicitado.mes || null;
+
+      // Filtrar base: por mes si se especificó, sino todos los meses
+      let porUsuarioBase = mesObjetivo
+        ? porUsuarioMensual.filter(x => Number(x.mes) === mesObjetivo)
+        : porUsuarioMensual;
+
+      // Filtrar por CD si se menciona uno
+      if (cdSolicitado) {
+        porUsuarioBase = porUsuarioBase.filter(
+          x => normText(x.cd).includes(cdSolicitado)
+        );
+      }
+
+      // Filtrar por usuario específico si se detectó en el mensaje
+      let porUsuarioFiltrado;
+      if (usuarioDetectado) {
+        porUsuarioFiltrado = porUsuarioBase.filter(
+          x => (x.usuario || '').toUpperCase() === usuarioDetectado
+        );
+        // Si no hay resultados para el mes solicitado, ampliar a todos los meses del usuario
+        if (porUsuarioFiltrado.length === 0) {
+          porUsuarioFiltrado = porUsuarioMensual.filter(
+            x => (x.usuario || '').toUpperCase() === usuarioDetectado
+          );
+        }
+      } else {
+        // Sin usuario específico: ranking top N por lineas
+        porUsuarioFiltrado = porUsuarioBase
+          .slice()
+          .sort((a, b) => Number(b.lineas || 0) - Number(a.lineas || 0))
+          .slice(0, TOP_USUARIOS);
+      }
+
+      const totalBase = porUsuarioBase.length;
+      prodCompacta.consulta_resuelta = {
+        tipo: 'por_usuario_operador',
+        cd: cdSolicitado || 'TODOS',
+        mes: mesObjetivo || 'todos',
+        usuario_filtrado: usuarioDetectado || null,
+        regla: [
+          'Usar exclusivamente por_usuario para responder preguntas de productividad por operador/usuario.',
+          'horas_activas representa slots de hora únicos con actividad WMS; no son horas reales trabajadas ni asistencia.',
+          'Para ranking sin usuario específico, ordenar por lineas descendente.',
+          'Si se filtra por usuario específico, mostrar todos sus meses disponibles si el mes solicitado no tiene datos.'
+        ].join(' ')
+      };
+      prodCompacta.por_usuario = porUsuarioFiltrado;
+      prodCompacta.por_usuario_total = totalBase;
+      prodCompacta.por_usuario_mostrados = porUsuarioFiltrado.length;
+      prodCompacta.por_usuario_truncado = !usuarioDetectado && totalBase > TOP_USUARIOS;
     }
 
     contexto = {

@@ -35,6 +35,7 @@ except ImportError:  # Específico, no Exception genérico
 
 from openpyxl import load_workbook
 from dotenv import load_dotenv
+from productividad_usuarios import calcular_por_usuario
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -2073,6 +2074,16 @@ def construir_historico_otif_mensual(
             )
         )
 
+    # por_usuario_mensual: un registro por (cd, usuario, mes) para todos los meses disponibles
+    por_usuario_mensual: list[dict] = []
+    for _month in range(1, hasta_mes + 1):
+        _df = registros_por_mes.get(_month, {}).get("df_productividad")
+        if _df is not None and not _df.empty:
+            por_usuario_mensual.extend(calcular_por_usuario(_df, year, _month))
+
+    # Alias: mes más reciente como atajo rápido para consultas del periodo actual
+    por_usuario = [f for f in por_usuario_mensual if f.get("mes") == hasta_mes]
+
     return {
         "disponible": bool(otif_mensual or productividad_mensual_cliente),
         "criterio_historico": "cierre_recalculado",
@@ -2097,6 +2108,8 @@ def construir_historico_otif_mensual(
             "ytd_cliente": productividad_ytd_cliente,
             "derco_ap_mensual": derco_ap_mensual,
             "derco_ap_ytd": derco_ap_ytd,
+            "por_usuario": por_usuario,
+            "por_usuario_mensual": por_usuario_mensual,
         },
     }
 
