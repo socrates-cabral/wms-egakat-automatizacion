@@ -128,6 +128,18 @@
       msg.includes('por operador')
     );
 
+  // Detectar si pide "más productivo" (criterio eficiencia) vs ranking por volumen
+  const esMasProductivo =
+    esUsuario && (
+      msg.includes('mas productivo') ||
+      msg.includes('más productivo') ||
+      msg.includes('mejor operador') ||
+      msg.includes('mayor eficiencia') ||
+      msg.includes('eficiencia') ||
+      msg.includes('lineas por hora') ||
+      msg.includes('líneas por hora')
+    );
+
   const esOTIF =
     msg.includes('otif') ||
     msg.includes('in full') ||
@@ -969,10 +981,12 @@
         ? porUsuarioMensual.filter(x => Number(x.mes) === mesObjetivo)
         : porUsuarioMensual;
 
-      // Filtrar por CD si se menciona uno
+      // Filtrar por CD con coincidencia exacta: "PUDAHUEL" → "CD PUDAHUEL" únicamente.
+      // No usar .includes() — evita que "PUDAHUEL" coincida con "CD PUDAHUEL UNITARIO".
       if (cdSolicitado) {
+        const cdExacto = 'CD ' + cdSolicitado;
         porUsuarioBase = porUsuarioBase.filter(
-          x => normText(x.cd).includes(cdSolicitado)
+          x => normText(x.cd) === cdExacto
         );
       }
 
@@ -988,24 +1002,45 @@
             x => (x.usuario || '').toUpperCase() === usuarioDetectado
           );
         }
+        // Ordenar por mes para mostrar evolución
+        porUsuarioFiltrado = porUsuarioFiltrado.slice().sort((a, b) => Number(a.mes) - Number(b.mes));
+      } else if (esMasProductivo) {
+        // "Operador más productivo" → criterio eficiencia: lineas_por_hora_activa
+        porUsuarioFiltrado = porUsuarioBase
+          .slice()
+          .sort((a, b) => Number(b.lineas_por_hora_activa || 0) - Number(a.lineas_por_hora_activa || 0))
+          .slice(0, TOP_USUARIOS)
+          .map((x, i) => ({ ...x, posicion: i + 1 }));
       } else {
-        // Sin usuario específico: ranking top N por lineas
+        // "Ranking de operadores" → criterio volumen: lineas totales descendente
         porUsuarioFiltrado = porUsuarioBase
           .slice()
           .sort((a, b) => Number(b.lineas || 0) - Number(a.lineas || 0))
-          .slice(0, TOP_USUARIOS);
+          .slice(0, TOP_USUARIOS)
+          .map((x, i) => ({ ...x, posicion: i + 1 }));
       }
 
       const totalBase = porUsuarioBase.length;
+      const criterioRanking = esMasProductivo
+        ? 'lineas_por_hora_activa (eficiencia WMS)'
+        : 'lineas (volumen total)';
+      const textoRanking = esMasProductivo
+        ? 'Ranking por líneas por hora activa WMS'
+        : 'Ranking por volumen de líneas';
+
       prodCompacta.consulta_resuelta = {
         tipo: 'por_usuario_operador',
-        cd: cdSolicitado || 'TODOS',
+        cd: cdSolicitado ? 'CD ' + cdSolicitado : 'TODOS',
         mes: mesObjetivo || 'todos',
         usuario_filtrado: usuarioDetectado || null,
+        criterio_ranking: criterioRanking,
+        texto_ranking: textoRanking,
         regla: [
-          'Usar exclusivamente por_usuario para responder preguntas de productividad por operador/usuario.',
+          'El array por_usuario YA ESTÁ ORDENADO según criterio_ranking. Presentar los registros en el MISMO ORDEN del campo posicion. NO reordenar.',
+          'Cada registro es independiente y autónomo. NO mezclar campos (lineas, dias_trabajados, lineas_por_dia_activo, etc.) entre registros distintos.',
           'horas_activas representa slots de hora únicos con actividad WMS; no son horas reales trabajadas ni asistencia.',
-          'Para ranking sin usuario específico, ordenar por lineas descendente.',
+          'Para "ranking de operadores": usar lineas totales, texto "' + textoRanking + '".',
+          'Para "operador más productivo": usar lineas_por_hora_activa, texto "criterio: líneas por hora activa WMS".',
           'Si se filtra por usuario específico, mostrar todos sus meses disponibles si el mes solicitado no tiene datos.'
         ].join(' ')
       };
