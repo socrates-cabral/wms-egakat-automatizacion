@@ -244,4 +244,17 @@ prodCompacta.derco_canales = {
 | GT | 295 | 295 | ✓ |
 | AP_R + AP_E | 15.642 + 10.803 | — | = 26.445 ✓ |
 
-**Commit:** 953f264
+**Commits:** 953f264 → 547c2c6 → 574657a
+
+### Gotcha: Canal_Agrupado vs Canal_Principal
+
+```python
+# Línea 1600 — Canal_Agrupado agrupa CAP+MY+SG intencionalmente
+df["Canal_Agrupado"] = df["Canal_Principal"].map(
+    lambda c: "CAP-MY-SG" if c in {"CAP", "MY", "SG"} else c
+)
+```
+
+Para el historico usar siempre `Canal_Principal` (separado: MY, SG, CAP, GT, AP). `Canal_Agrupado` es solo para la vista consolidada del período actual.
+
+**Validado abril 2026:** CAP 2.430 + MY 7.347 + SG 288 = 10.065 ✓ (idéntico al grupo anterior)

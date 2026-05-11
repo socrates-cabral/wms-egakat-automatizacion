@@ -370,6 +370,15 @@ Páginas faltantes sugeridas: [lista]
 
 ---
 
+## [2026-05-10] fix | Bot Ops — Canal_Principal en historico DERCO (MY/SG/CAP separados)
+
+**Tipo:** Bug fix Canal_Agrupado → Canal_Principal  
+**Commit:** 574657a
+
+`Canal_Agrupado` agrupa CAP+MY+SG → "CAP-MY-SG" (diseño intencional para vista actual). El historico debe usar `Canal_Principal` para mantenerlos separados. Validado: CAP 2.430 + MY 7.347 + SG 288 = 10.065 ✓
+
+---
+
 ## [2026-05-10] fix | Bot Ops — Desglose canales DERCO AP/MY/SG/CAP/GT + AP Rack/Estantería
 
 **Tipo:** Bug fix detección consulta + exposición datos  
