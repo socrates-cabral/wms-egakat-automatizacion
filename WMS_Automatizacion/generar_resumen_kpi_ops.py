@@ -2017,7 +2017,7 @@ def construir_historico_otif_mensual(
                 )
                 for cd_derco in cds_derco:
                     df_derco_cd = df_derco_mes[df_derco_mes["Centro_Norm"] == cd_derco]
-                    for canal, grupo in df_derco_cd.groupby("Canal_Agrupado", dropna=False):
+                    for canal, grupo in df_derco_cd.groupby("Canal_Principal", dropna=False):
                         canal_str = str(canal).strip() if canal and str(canal).strip() else ""
                         if not canal_str:
                             continue
