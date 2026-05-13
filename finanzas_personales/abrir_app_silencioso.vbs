@@ -1,44 +1,40 @@
-' Lanzador Finanzas Personales — sin ventana visible
+' Lanzador Finanzas Personales — siempre relanza con código fresco
 ' El proceso Streamlit corre oculto en segundo plano.
-' Para cerrar la app: Administrador de tareas → py.exe → Finalizar tarea
+' Cada doble-click: mata la instancia previa y arranca una nueva.
+' Esto garantiza que los cambios en .py se reflejen sin tener que matar manualmente.
 
-Dim WshShell, oExec, puerto, url, ya_corriendo
-
+Dim WshShell, puerto, url
 puerto = 8501
 url    = "http://localhost:" & puerto
 Set WshShell = CreateObject("WScript.Shell")
 
-' ── Verificar si ya está corriendo ──────────────────────────────────────────
-Set oExec = WshShell.Exec("cmd /c netstat -an | findstr :" & puerto)
-Dim salida : salida = ""
-Do While Not oExec.StdOut.AtEndOfStream
-    salida = salida & oExec.StdOut.ReadLine()
-Loop
-ya_corriendo = (InStr(salida, ":" & puerto) > 0)
+' ── Matar cualquier instancia previa escuchando en el puerto ────────────────
+' netstat -ano lista PIDs; findstr LISTENING filtra solo el proceso servidor.
+' tokens=5 extrae el PID; taskkill /F lo termina.
+Dim cmdKill
+cmdKill = "cmd /c for /f ""tokens=5"" %a in ('netstat -ano ^| findstr :" & puerto & " ^| findstr LISTENING') do taskkill /F /PID %a >nul 2>&1"
+WshShell.Run cmdKill, 0, True   ' 0 = oculto, True = esperar a que termine
 
-If ya_corriendo Then
-    ' Solo abrir navegador
-    WshShell.Run url, 1, False
-Else
-    ' Cambiar al directorio correcto antes de lanzar
-    WshShell.CurrentDirectory = "C:\ClaudeWork"
+' Esperar a que el puerto quede libre (Windows tarda en liberar sockets TIME_WAIT)
+WScript.Sleep 2000
 
-    ' Lanzar Streamlit completamente oculto (windowStyle=0)
-    Dim cmd
-    cmd = "py -m streamlit run " & _
-          "C:\ClaudeWork\finanzas_personales\app\main.py " & _
-          "--server.port " & puerto & " " & _
-          "--server.headless true " & _
-          "--browser.gatherUsageStats false " & _
-          "--server.fileWatcherType none"
+' ── Lanzar instancia fresca ─────────────────────────────────────────────────
+WshShell.CurrentDirectory = "C:\ClaudeWork"
 
-    WshShell.Run cmd, 0, False   ' 0 = oculto, False = no esperar
+Dim cmd
+cmd = "py -m streamlit run " & _
+      "C:\ClaudeWork\finanzas_personales\app\main.py " & _
+      "--server.port " & puerto & " " & _
+      "--server.headless true " & _
+      "--browser.gatherUsageStats false " & _
+      "--server.fileWatcherType none"
 
-    ' Esperar a que Streamlit arranque
-    WScript.Sleep 7000
+WshShell.Run cmd, 0, False   ' 0 = oculto, False = no esperar
 
-    ' Abrir navegador
-    WshShell.Run url, 1, False
-End If
+' Esperar a que Streamlit arranque
+WScript.Sleep 7000
+
+' Abrir navegador
+WshShell.Run url, 1, False
 
 Set WshShell = Nothing
