@@ -16,6 +16,7 @@ Roles usados:
 
 import os
 import sys
+import time
 from pathlib import Path
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -59,10 +60,10 @@ entregar insights accionables, lenguaje técnico pero comprensible para cualquie
 Principios:
 - Usa los datos exactos que te pasan — nunca inventes cifras.
 - Personaliza: "tus gastos", "tu saldo", "tu situación" — no genérico.
-- Cada análisis termina con 2-3 recomendaciones concretas y priorizadas.
+- Si el caso lo amerita, cierra con recomendaciones concretas y priorizadas.
 - Usa el contexto del mercado chileno: UF, AFP, ISAPRE, CMF, BCI, BancoEstado, etc.
 - Formato: párrafos cortos, sin bullets excesivos, lenguaje directo.
-- Máximo 350 palabras salvo que se indique otro límite.
+- Respeta los límites de palabras que indique cada prompt.
 - Responde en español.
 """
 
@@ -158,17 +159,27 @@ def _claude_personal(prompt_usuario: str, nivel: str = "senior") -> str:
     """Llama al agente con el system prompt de finanzas personales."""
     if not _agente_disponible:
         return "_Agente no disponible. Verifica ANTHROPIC_API_KEY en .env_"
-    try:
-        return _claude(
-            system=_SYSTEM_PERSONAL + _CONTEXTO_CHILE,
-            user=prompt_usuario,
-            nivel=nivel,
-        )
-    except Exception as e:
-        err = str(e)
-        if "credit balance" in err or "insufficient" in err or "402" in err:
-            return "⚠️ **Análisis AI no disponible** — recarga saldo en [console.anthropic.com](https://console.anthropic.com)"
-        return f"_Error al consultar el agente: {e}_"
+    ultimo_error = None
+    for intento in range(2):
+        try:
+            return _claude(
+                system=_SYSTEM_PERSONAL + _CONTEXTO_CHILE,
+                user=prompt_usuario,
+                nivel=nivel,
+            )
+        except Exception as e:
+            ultimo_error = e
+            err = str(e).lower()
+            if "credit balance" in err or "insufficient" in err or "402" in err:
+                return "⚠️ **Análisis AI no disponible** — recarga saldo en [console.anthropic.com](https://console.anthropic.com)"
+            es_sobrecarga = "529" in err or "overloaded" in err or "overload" in err
+            if es_sobrecarga and intento == 0:
+                time.sleep(1.2)
+                continue
+            if es_sobrecarga:
+                return "_Claude temporalmente sobrecargado. Probando fallback._"
+            return f"_Error al consultar el agente: {e}_"
+    return f"_Error al consultar el agente: {ultimo_error}_"
 
 
 def _openai_personal(prompt_usuario: str) -> str | None:
@@ -296,6 +307,7 @@ Máximo 350 palabras. Directo, sin repetir obviedades. Español."""
 
 def analizar_resumen_mes(
     mes_nombre: str,
+    anio: int | None,
     ingresos: float,
     gastos: float,
     saldo_inicial: float,
@@ -311,6 +323,7 @@ def analizar_resumen_mes(
     Análisis ejecutivo del mes: qué pasó, cómo comparar, qué hacer.
     Úsalo en el Dashboard como "Resumen inteligente del mes".
     """
+    periodo = f"{mes_nombre} {anio}" if anio else mes_nombre
     top_grupos = sorted(por_grupo.items(), key=lambda x: x[1], reverse=True)[:5]
     top_str = " | ".join(f"{g}: {_fmt(v)}" for g, v in top_grupos)
 
@@ -318,12 +331,14 @@ def analizar_resumen_mes(
     dolar = indicadores.get("dolar", 913) if indicadores else 913
 
     ctx_vivienda = _contexto_vivienda(arriendo_cobrado, dividendo_mensual, gastos_compartidos)
+    flujo_neto = ingresos - gastos
 
     prompt = f"""
-Analiza el resumen financiero de {mes_nombre}:
+Analiza el resumen financiero de {periodo}:
 
 INGRESOS: {_fmt(ingresos)}
 GASTOS TOTALES: {_fmt(gastos)} ({_pct(gastos, ingresos)} de los ingresos)
+FLUJO NETO DEL MES (INGRESOS - GASTOS): {_fmt(flujo_neto)}
 SALDO INICIAL: {_fmt(saldo_inicial)}
 SALDO ACTUAL: {_fmt(saldo_actual)}
 VARIACIÓN SALDO: {_fmt(saldo_actual - saldo_inicial)} ({'+' if saldo_actual >= saldo_inicial else ''}{_pct(abs(saldo_actual - saldo_inicial), saldo_inicial)})
@@ -331,6 +346,11 @@ TASA DE AHORRO: {tasa_ahorro:.1f}%
 TOP GASTOS: {top_str}
 UF del mes: {uf} | USD/CLP: {dolar}
 {ctx_vivienda}
+REGLAS CRITICAS PARA INTERPRETAR ESTOS DATOS:
+- Si el flujo neto del mes es positivo y la tasa de ahorro es sana, NO describas el mes como deficitario.
+- Una caida del saldo de caja puede deberse a timing, inversiones, pagos adelantados o movimientos no categorizados; trátala como contexto, no como contradicción principal, salvo que gastos > ingresos.
+- Prioriza el diagnóstico sobre flujo mensual real (ingresos vs gastos) por sobre la variación puntual del saldo.
+
 Entrega:
 1) Diagnóstico del mes en 2 frases (positivo o preocupante, con datos concretos)
 2) El gasto más relevante y si está dentro de parámetros sanos
@@ -463,7 +483,7 @@ PASIVOS:
 TOTAL PASIVOS: {_fmt(sum(v for v in pasivos.values() if v > 0))}
 
 PATRIMONIO NETO: {_fmt(neto)} ({neto_uf:.1f} UF)
-RATIO ENDEUDAMIENTO: {ratio_endeudamiento:.1f}%
+DEUDA/ACTIVOS: {ratio_endeudamiento:.1f}% (solidez patrimonial — sano <40%)
 FONDO EMERGENCIA: {meses_cubrir:.1f} meses de ingresos en activos líquidos
 INGRESOS MENSUALES: {_fmt(ingresos_mensuales)}
 UF actual: {uf}
@@ -565,6 +585,18 @@ Máximo 250 palabras.
     return _analizar_tres_modelos(prompt)
 
 
+_PALABRAS_ESTRATEGIA = (
+    "plan", "meta", "ahorrar", "ahorrar más", "escenario", "estrategia",
+    "mejorar", "optimizar", "subir tasa", "subir ahorro", "priorizar",
+    "mecanismo", "qué hago", "que hago", "como debo", "cómo debo",
+)
+
+
+def _es_pregunta_estrategia(pregunta: str) -> bool:
+    p = (pregunta or "").lower()
+    return any(k in p for k in _PALABRAS_ESTRATEGIA)
+
+
 def consulta_libre(pregunta: str, contexto_usuario: dict | None = None) -> str:
     """
     Responde preguntas libres del usuario sobre su situación financiera.
@@ -574,10 +606,90 @@ def consulta_libre(pregunta: str, contexto_usuario: dict | None = None) -> str:
     if contexto_usuario:
         ctx = "\nContexto del usuario:\n" + "\n".join(
             f"  {k}: {v}" for k, v in contexto_usuario.items() if v
-        ) + "\n\n"
+        ) + "\n"
 
-    prompt = f"{ctx}Pregunta del usuario: {pregunta}\n\nResponde con precisión técnica y lenguaje accesible. Máximo 300 palabras."
-    return _claude_personal(prompt)
+    es_estrategia = _es_pregunta_estrategia(pregunta)
+
+    reglas_base = """REGLAS DE INTERPRETACIÓN DE DATOS:
+- Usa SOLO el contexto entregado. No inventes cifras.
+- Bases de planificación: "base_promedio" (ventana móvil de varios meses, usar para planes 3-6m y tendencias) vs "base_tactica" (mes actual ajustado, usar para decisiones del mes en curso). Nunca confundas un nombre con el otro.
+- Si la pregunta menciona "promedio", "últimos meses", "3 a 6 meses" o "planificación" → usa base promedio.
+- Si la pregunta menciona "este mes" → usa base táctica del mes actual.
+- Si existe "regla_anclaje_planificacion" o "contexto_dividendo_planificacion", respétalas literalmente.
+- Para fondo de emergencia: prioriza el promedio multimensual sobre el mes actual.
+- "tasa_ahorro_ajustada_si_falta_dividendo" solo aplica a decisiones tácticas del mes, no a planes.
+
+REGLAS DE RECOMENDACIÓN:
+- NO recomiendes recortar gastos listados en "gastos_no_recortables_declarados".
+- Evita usar manutención, pensión o gasto familiar base como palanca principal de ahorro.
+- Distingue siempre: no recortable | estructural optimizable | discrecional recortable.
+- No mezcles un concepto específico con el total del grupo (ej: "Crédito de Consumo" ≠ todo "Financiero - Deudas").
+- Si una meta exige recortes inviables, dilo explícitamente; no la presentes como realista.
+- Prioriza conceptos sobre su promedio reciente (ver "conceptos_sobre_promedio").
+- Aterriza siempre los planes en CLP y conceptos concretos.
+
+REGLAS DE INTERPRETACIÓN AMBIGUA:
+- "Subir tasa de ahorro en X%": calcula ambas (relativo y puntos porcentuales) y di cuál usas.
+- "Déficit": si ingresos > gastos pero el saldo bajó, es un tema de flujo/caja, no déficit operacional — explícalo así.
+
+VALIDACIÓN MATEMÁTICA (antes de responder):
+- Si propones una meta de ahorro, verifica:
+  • ahorro_meta = ingresos - gasto_meta
+  • brecha_ahorro = ahorro_meta - ahorro_actual
+  • recorte_necesario = gasto_actual - gasto_meta
+  • Si ingresos no cambian: brecha_ahorro ≈ recorte_necesario
+  • Si propones aumentar ingresos en lugar de recortar: brecha_ahorro proviene del ingreso extra, recorte_necesario puede ser 0 — declarar explícitamente.
+- Corrige cualquier cifra inconsistente antes de entregar.
+
+FORMATO:
+- Sin tablas. Sin markdown de énfasis (no **, *, _, #).
+- Párrafos cortos o bullets simples con "-".
+- Español claro, técnico, accionable."""
+
+    if es_estrategia:
+        formato_extra = """
+
+ESTRUCTURA DE RESPUESTA (pregunta de estrategia/plan/meta):
+1) Diagnóstico corto (2-3 frases)
+2) Meta realista aterrizada en CLP
+3) Medidas concretas por concepto (recorte viable vs estructural vs no viable)
+4) Escenarios breves: Conservador / Base / Agresivo
+   - meta mensual aproximada en CLP
+   - principal mecanismo
+   - exigencia esperada
+5) Recomendación final priorizada (privilegia "Base" salvo razón clara)
+
+Hasta 450 palabras."""
+    else:
+        formato_extra = """
+
+ESTRUCTURA DE RESPUESTA (pregunta directa):
+- Responde directo a lo que se pregunta con los datos del contexto.
+- Si la pregunta es de hechos (cuánto, cuándo, cuál) → 1-2 párrafos cortos.
+- Si pide opinión/diagnóstico → 2-3 párrafos máximo.
+- Cierra con 1-2 acciones concretas SOLO si aplica.
+
+Hasta 250 palabras."""
+
+    prompt = f"""{reglas_base}{formato_extra}
+{ctx}
+Pregunta del usuario: {pregunta}"""
+    resp_claude = _claude_personal(prompt)
+    _resp_low = (resp_claude or "").strip().lower()
+    if resp_claude and not _resp_low.startswith("_error al consultar") and "temporalmente sobrecargado" not in _resp_low:
+        return resp_claude
+
+    resp_openai = _openai_personal(prompt)
+    if resp_openai:
+        return resp_openai
+
+    resp_gemini = _gemini_personal(prompt)
+    if resp_gemini:
+        return resp_gemini
+
+    if resp_claude:
+        return "⚠️ El proveedor principal está temporalmente sobrecargado. Reintenta en 30-60 segundos."
+    return "_Sin respuesta disponible en este momento._"
 
 
 # ══════════════════════════════════════════════════════════════════════════════

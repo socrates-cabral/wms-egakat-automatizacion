@@ -1,7 +1,10 @@
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
+import html
 import os
+import re
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -28,6 +31,8 @@ from calculators import (
     calc_tasa_ahorro,
     calc_regla_50_30_20,
     calc_patrimonio_neto,
+    marcar_movimientos_patrimoniales,
+    filtrar_transacciones_operativas,
     calc_proyeccion_afp,
     calc_fire_number,
     calc_tiempo_para_meta,
@@ -311,8 +316,8 @@ init_config()
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 # ── Helper tablas BI ─────────────────────────────────────────────────────────
 def _bi_table(df: "pd.DataFrame", money_cols: list = None, pct_cols: list = None,
-               height: int = None, right_cols: list = None, highlight_cols: list = None,
-               neg_col: str = None):
+              height: int = None, right_cols: list = None, highlight_cols: list = None,
+              neg_col: str = None):
     """Tabla HTML dark — reemplaza st.dataframe(). **text** → bold teal.
     highlight_cols: columnas resaltadas (mes en curso) — header blanco + borde teal + celda sutil."""
     if df is None or df.empty:
@@ -369,6 +374,305 @@ def _bi_table(df: "pd.DataFrame", money_cols: list = None, pct_cols: list = None
         f'<tbody>{rows_html}</tbody></table></div>',
         unsafe_allow_html=True,
     )
+
+
+def _limpiar_texto_chat_ai(texto: str) -> str:
+    """Quita artefactos markdown del chat AI para mostrar texto legible."""
+    _t = str(texto or "").replace("\r\n", "\n").replace("\r", "\n")
+    _t = _t.replace("**", "").replace("__", "").replace("```", "").replace("`", "")
+    _t = _t.replace("*", "").replace("_", "")
+    _lineas_limpias = []
+    for _linea in _t.split("\n"):
+        _linea = re.sub(r"^\s{0,3}#{1,6}\s*", "", _linea)
+        _linea = re.sub(r"^\s*>\s?", "", _linea)
+        if re.fullmatch(r"\s*[-=]{3,}\s*", _linea):
+            continue
+        _lineas_limpias.append(_linea)
+    _t = "\n".join(_lineas_limpias)
+    _t = re.sub(r"\n{3,}", "\n\n", _t).strip()
+    return _t
+
+
+def _render_chat_ai(texto: str):
+    _safe = html.escape(_limpiar_texto_chat_ai(texto)).replace("\n", "<br>")
+    st.markdown(
+        f'<div style="color:#E2E8F0;line-height:1.65;white-space:normal">{_safe}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _dividir_consultas_chat(texto: str) -> list[str]:
+    """Separa varias consultas, preservando instrucciones de contexto como prefijo común."""
+    _t = str(texto or "").replace("\r\n", "\n").replace("\r", "\n")
+    _lineas = [ln.strip() for ln in _t.split("\n") if ln.strip()]
+    if not _lineas:
+        return []
+    if len(_lineas) == 1:
+        return _lineas
+
+    _prefijos_directiva = (
+        "responde ", "usa ", "no ", "considera ", "toma ", "trabaja ", "prioriza ",
+        "basate ", "básate ", "basa ", "apóyate ", "apoyate ",
+    )
+    _prefijos_consulta = (
+        "¿", "que ", "qué ", "como ", "cómo ", "dame ", "quiero ", "conviene ",
+        "si ", "en que ", "en qué ", "cual ", "cuál ", "puedes ", "podrías ",
+        "debería ", "deberia ", "haz ", "analiza ",
+    )
+
+    def _normalizar_linea(_linea: str) -> str:
+        _linea = _linea.strip().strip("“”\"'")
+        _linea = re.sub(r"^\s*(consulta\s*\d+\s*:\s*)", "", _linea, flags=re.IGNORECASE)
+        _linea = re.sub(r"^\s*[-*•]+\s*", "", _linea)
+        return _linea.strip()
+
+    _directivas = []
+    _consultas = []
+
+    for _linea in _lineas:
+        _clean = _normalizar_linea(_linea)
+        if not _clean:
+            continue
+        _lower = _clean.lower()
+        _es_consulta = "?" in _clean or any(_lower.startswith(p) for p in _prefijos_consulta)
+        _es_directiva = any(_lower.startswith(p) for p in _prefijos_directiva)
+
+        if _es_consulta:
+            _prefijo = " ".join(_directivas).strip()
+            _consultas.append(f"{_prefijo} {_clean}".strip() if _prefijo else _clean)
+        elif _es_directiva or not _consultas:
+            _directivas.append(_clean)
+        else:
+            _consultas[-1] = f"{_consultas[-1]} {_clean}".strip()
+
+    return _consultas if _consultas else [_t.strip()]
+
+
+def _calc_dashboard_patrimonio():
+    """Replica la base consolidada de Patrimonio Neto para el KPI del Dashboard."""
+    _deudas_json = obtener_deudas()
+    _auto_hipoteca = sum(d["saldo_actual"] for d in _deudas_json if d.get("tipo", "").lower() in ["vivienda", "hipotecario"])
+    _auto_consumo = sum(d["saldo_actual"] for d in _deudas_json if d.get("tipo", "").lower() in ["consumo", "comercial", "automotriz"])
+    _auto_tarjetas = sum(d["saldo_actual"] for d in _deudas_json if d.get("tipo", "").lower() in ["tarjeta"])
+    _auto_linea = sum(d["saldo_actual"] for d in _deudas_json if d.get("tipo", "").lower() in ["línea de crédito", "linea de credito", "línea", "linea"])
+
+    import time as _time
+    _cache_key = "patrimonio_crypto_cache"
+    _cache_time = "patrimonio_crypto_time"
+    _now = _time.time()
+    if (_cache_key not in st.session_state or
+            _now - st.session_state.get(_cache_time, 0) > 300):
+        try:
+            from kraken_client import get_balances as _gb
+            from crypto_prices import get_top50_prices_clp as _gp
+            _bal = _gb()
+            if "_error" not in _bal:
+                _prices = _gp()
+                _map = {"BTC": "bitcoin", "ETH": "ethereum", "USDT": "tether", "XBT": "bitcoin"}
+                _total = sum(
+                    _qty * (_prices.get(_map.get(_s.upper(), _s.lower()), {}) or {}).get("price_clp", 0)
+                    for _s, _qty in _bal.items()
+                )
+                st.session_state[_cache_key] = (int(_total), "Kraken Live")
+            else:
+                st.session_state[_cache_key] = (0, "manual")
+        except Exception:
+            st.session_state[_cache_key] = (0, "manual")
+        st.session_state[_cache_time] = _now
+
+    _crypto_clp_total, _crypto_fuente = st.session_state[_cache_key]
+    if _crypto_fuente == "manual":
+        _crypto_clp_total = int(get_cfg("patrimonio_usdt") * get_cfg("precio_usdt_clp"))
+
+    activos = {
+        "Cta. Corriente/Vista": get_cfg("patrimonio_cc"),
+        "Cta. Ahorro": get_cfg("patrimonio_ca"),
+        f"Crypto ({_crypto_fuente})": int(_crypto_clp_total),
+        "Dpto 505 Los Claros": get_cfg("patrimonio_dpto505"),
+        "AFP ProVida": get_cfg("afp_saldo"),
+        "AFC Cesantía": get_cfg("afc_saldo"),
+        "Otros activos": get_cfg("patrimonio_otros_activos"),
+    }
+    pasivos = {
+        "Hipoteca": int(_auto_hipoteca or get_cfg("hipoteca_saldo") or 0),
+        "Tarjetas": int(_auto_tarjetas),
+        "Consumo": int(_auto_consumo),
+        "Línea crédito": int(_auto_linea),
+        "Otros pasivos": 0,
+    }
+    _ingresos_anuales_pat = float(get_cfg("sueldo_liquido") or 0) * 12
+    patr = calc_patrimonio_neto(activos, pasivos, ingresos_anuales=_ingresos_anuales_pat)
+    activos_liquidos = get_cfg("patrimonio_cc") + get_cfg("patrimonio_ca") + int(_crypto_clp_total)
+    return patr, activos_liquidos
+
+
+def _conceptos_promedio_ultimos_meses(df: pd.DataFrame, meses_disponibles: list[int], lookback: int = 5) -> pd.DataFrame:
+    """Promedio por concepto en ventana móvil y comparación contra el mes actual."""
+    if df.empty or not meses_disponibles:
+        return pd.DataFrame()
+
+    meses_ref = meses_disponibles[-max(1, min(lookback, len(meses_disponibles))):]
+    mes_ref_actual = meses_ref[-1]
+    df_base = filtrar_transacciones_operativas(df, incluir_ingresos=False)
+    df_base = df_base[df_base["mes"].isin(meses_ref)].copy()
+    if df_base.empty:
+        return pd.DataFrame()
+
+    n_meses = len(meses_ref)
+    agg = (
+        df_base.groupby(["grupo", "concepto"])
+        .agg(
+            total_periodo=("importe", "sum"),
+            frecuencia=("mes", "nunique"),
+        )
+        .reset_index()
+    )
+    actual = (
+        df_base[df_base["mes"] == mes_ref_actual]
+        .groupby(["grupo", "concepto"])["importe"]
+        .sum()
+        .reset_index(name="mes_actual")
+    )
+    out = agg.merge(actual, on=["grupo", "concepto"], how="left")
+    out["mes_actual"] = out["mes_actual"].fillna(0.0)
+    out["promedio_mensual"] = out["total_periodo"] / n_meses
+    out["variacion_abs"] = out["mes_actual"] - out["promedio_mensual"]
+    out["variacion_pct"] = out.apply(
+        lambda r: (r["variacion_abs"] / r["promedio_mensual"] * 100) if r["promedio_mensual"] > 0 else 0.0,
+        axis=1,
+    )
+    out["frecuencia_label"] = out["frecuencia"].astype(int).astype(str) + f"/{n_meses}"
+    return out.sort_values(["promedio_mensual", "mes_actual"], ascending=False).reset_index(drop=True)
+
+
+def _ingresos_promedio_ultimos_meses(df: pd.DataFrame, meses_disponibles: list[int], lookback: int = 5) -> float:
+    """Promedio mensual de ingresos reales en la ventana. Retorna 0 si no hay datos."""
+    if df is None or df.empty or not meses_disponibles:
+        return 0.0
+    meses_ref = meses_disponibles[-max(1, min(lookback, len(meses_disponibles))):]
+    col_tipo = "tipo_tx" if "tipo_tx" in df.columns else ("tipo" if "tipo" in df.columns else None)
+    if not col_tipo:
+        return 0.0
+    df_ing = df[(df["mes"].isin(meses_ref)) & (df[col_tipo] == "Ingreso")]
+    if df_ing.empty:
+        return 0.0
+    return float(df_ing["importe"].sum()) / len(meses_ref)
+
+
+def _contexto_ai_app(df: pd.DataFrame, saldos: dict, mes_ref: int, ingresos_mes_ref: float) -> dict:
+    """Contexto resumido de la app para consultas libres al agente."""
+    resumen_ref = calc_resumen_mes(df, mes_ref)
+    ahorro_ref = calc_tasa_ahorro(ingresos_mes_ref, resumen_ref["total"])
+    patr_ref, liquidos_ref = _calc_dashboard_patrimonio()
+    top_grupos = sorted((resumen_ref.get("por_grupo") or {}).items(), key=lambda x: x[1], reverse=True)[:5]
+    conceptos_ref = _conceptos_promedio_ultimos_meses(df, meses_con_datos, lookback=min(5, len(meses_con_datos)))
+
+    top_sobreprom = ""
+    if not conceptos_ref.empty:
+        _sobre = conceptos_ref[conceptos_ref["variacion_abs"] > 0].head(5)
+        top_sobreprom = " | ".join(
+            f"{r['concepto']}: {fmt_clp(r['variacion_abs'])} sobre promedio"
+            for _, r in _sobre.iterrows()
+        )
+
+    no_recortables = []
+    if not conceptos_ref.empty:
+        _mask_no_rec = conceptos_ref["concepto"].astype(str).str.contains(
+            "Manutención|Pensión Alimentos|Pension Alimentos", case=False, na=False
+        )
+        no_recortables = conceptos_ref[_mask_no_rec]["concepto"].drop_duplicates().tolist()
+
+    _lookback_ctx = min(5, len(meses_con_datos))
+    gasto_promedio_ctx = float(conceptos_ref["promedio_mensual"].sum()) if not conceptos_ref.empty else 0.0
+    ingresos_promedio_real = _ingresos_promedio_ultimos_meses(df, meses_con_datos, lookback=_lookback_ctx)
+    ingresos_base_promedio = ingresos_promedio_real if ingresos_promedio_real > 0 else ingresos_mes_ref
+    ahorro_promedio_ctx = ingresos_base_promedio - gasto_promedio_ctx
+    tasa_promedio_ctx = (ahorro_promedio_ctx / ingresos_base_promedio * 100) if ingresos_base_promedio > 0 else 0.0
+
+    tasa_ajustada = ""
+    gastos_ajustados = ""
+    gasto_tactico_plan = resumen_ref["total"]
+    ahorro_tactico_plan = ahorro_ref["absoluto"]
+    tasa_tactica_plan = ahorro_ref["tasa"]
+    contexto_dividendo = "El dividendo hipotecario es un gasto de vivienda, no un ingreso."
+    dividendo_cfg = float(get_cfg("dividendo_mensual") or 0)
+    if dividendo_cfg > 0 and not df.empty and "concepto" in df.columns and "mes" in df.columns:
+        _div_tx = df[df["concepto"].str.contains("Dividendo", case=False, na=False)]
+        _div_mes = float(_div_tx[_div_tx["mes"] == mes_ref]["importe"].sum()) if not _div_tx.empty else 0
+        _hubo_prev = bool((_div_tx[_div_tx["mes"] < mes_ref]["importe"] > 0).any()) if not _div_tx.empty else False
+        if _div_mes <= 0 and _hubo_prev:
+            _gastos_adj = resumen_ref["total"] + dividendo_cfg
+            _ahorro_adj = ingresos_mes_ref - _gastos_adj
+            _tasa_adj = (_ahorro_adj / ingresos_mes_ref * 100) if ingresos_mes_ref > 0 else 0
+            gastos_ajustados = fmt_clp(_gastos_adj)
+            tasa_ajustada = f"{_tasa_adj:.1f}%"
+            gasto_tactico_plan = _gastos_adj
+            ahorro_tactico_plan = _ahorro_adj
+            tasa_tactica_plan = _tasa_adj
+            contexto_dividendo = (
+                "El dividendo hipotecario es un gasto pendiente/variable del mes y aun no está "
+                "registrado en las transacciones actuales; no lo trates como ingreso ni como ahorro."
+            )
+        elif _div_mes > 0:
+            contexto_dividendo = (
+                "El dividendo hipotecario es un gasto variable indexado a UF; trátalo como gasto de vivienda, "
+                "no como ingreso."
+            )
+
+    gasto_base_planificacion_ctx = gasto_promedio_ctx if gasto_promedio_ctx > 0 else gasto_tactico_plan
+    ahorro_base_planificacion_ctx = ahorro_promedio_ctx if gasto_promedio_ctx > 0 else ahorro_tactico_plan
+    tasa_base_planificacion_ctx = tasa_promedio_ctx if gasto_promedio_ctx > 0 else tasa_tactica_plan
+
+    gasto_base_emergencia = gasto_promedio_ctx if gasto_promedio_ctx > 0 else gasto_tactico_plan
+    fondo_emerg_min = max(gasto_base_emergencia * 3, 0)
+    fondo_emerg_max = max(gasto_base_emergencia * 6, 0)
+
+    return {
+        "mes_actual": NOMBRES_MESES.get(mes_ref, str(mes_ref)),
+        "ingresos_mensuales_configurados": fmt_clp(ingresos_mes_ref),
+        "gastos_operativos_mes": fmt_clp(resumen_ref["total"]),
+        "ahorro_mensual_estimado": fmt_clp(ahorro_ref["absoluto"]),
+        "tasa_ahorro": f"{ahorro_ref['tasa']}%",
+        "ventana_promedio_meses": _lookback_ctx,
+        "ingresos_promedio_base_planificacion": fmt_clp(ingresos_base_promedio),
+        "gasto_promedio_base_planificacion": fmt_clp(gasto_promedio_ctx),
+        "ahorro_promedio_base_planificacion": fmt_clp(ahorro_promedio_ctx),
+        "tasa_promedio_base_planificacion": f"{tasa_promedio_ctx:.1f}%",
+        "gastos_ajustados_si_falta_dividendo": gastos_ajustados,
+        "tasa_ahorro_ajustada_si_falta_dividendo": tasa_ajustada,
+        "gasto_base_para_planificacion": fmt_clp(gasto_base_planificacion_ctx),
+        "ahorro_base_para_planificacion": fmt_clp(ahorro_base_planificacion_ctx),
+        "tasa_base_para_planificacion": f"{tasa_base_planificacion_ctx:.1f}%",
+        "gasto_base_tactica_mes_actual": fmt_clp(gasto_tactico_plan),
+        "ahorro_base_tactica_mes_actual": fmt_clp(ahorro_tactico_plan),
+        "tasa_base_tactica_mes_actual": f"{tasa_tactica_plan:.1f}%",
+        "base_planificacion_promedio": (
+            f"Promedio operativo de {_lookback_ctx} meses para planes de mediano plazo."
+        ),
+        "base_planificacion_tactica": (
+            "Mes actual ajustado para decisiones tácticas del mes en curso."
+        ),
+        "regla_anclaje_planificacion": (
+            "Para metas y escenarios de 3 a 6 meses, usa la base promedio de planificación; "
+            "la base táctica del mes actual solo sirve para decisiones del mes en curso."
+        ),
+        "fondo_emergencia_recomendado": f"{fmt_clp(fondo_emerg_min)} a {fmt_clp(fondo_emerg_max)}",
+        "base_fondo_emergencia": (
+            f"Promedio operativo de {_lookback_ctx} meses como referencia conservadora."
+            if gasto_promedio_ctx > 0 else
+            "Mes actual ajustado como referencia transitoria por falta de promedio histórico suficiente."
+        ),
+        "contexto_dividendo_planificacion": contexto_dividendo,
+        "saldo_inicial_mes": fmt_clp(saldos.get(mes_ref, {}).get("saldo_inicial", 0)),
+        "saldo_actual_mes": fmt_clp(saldos.get(mes_ref, {}).get("saldo_actual", 0)),
+        "patrimonio_neto": fmt_clp(patr_ref["neto"]),
+        "activos_liquidos": fmt_clp(liquidos_ref),
+        "dividendo_mensual": fmt_clp(get_cfg("dividendo_mensual")),
+        "arriendo_cobrado": fmt_clp(get_cfg("arriendo_cobrado")),
+        "top_gastos": " | ".join(f"{g}: {fmt_clp(v)}" for g, v in top_grupos),
+        "conceptos_sobre_promedio": top_sobreprom,
+        "gastos_no_recortables_declarados": " | ".join(no_recortables),
+    }
 
 
 _OPT_MAP = {
@@ -461,6 +765,8 @@ try:
     if not df_cats.empty and not df_tx.empty:
         tipo_map = df_cats.set_index("grupo")["tipo"].to_dict()
         df_tx["tipo"] = df_tx["grupo"].map(tipo_map).fillna("Variable")
+    if not df_tx.empty:
+        df_tx = marcar_movimientos_patrimoniales(df_tx)
 except Exception as e:
     error_carga = str(e)
 
@@ -471,6 +777,7 @@ if error_carga:
 # Meses con datos
 meses_con_datos = sorted(df_tx["mes"].unique().tolist()) if not df_tx.empty else []
 mes_actual = meses_con_datos[-1] if meses_con_datos else 1
+df_tx_oper = filtrar_transacciones_operativas(df_tx, incluir_ingresos=False) if not df_tx.empty else pd.DataFrame()
 
 # Ingresos desde config — calc_total_ingresos() incluye sueldo + amipass + arriendo_cobrado + variables
 from config_manager import calc_total_ingresos as _calc_ingresos
@@ -506,13 +813,8 @@ if pagina == "📊 Dashboard":
     gastos_mes_prev = calc_resumen_mes(df_tx, mes_prev)["total"] if mes_prev else None
     mes_prev_nombre = NOMBRES_MESES.get(mes_prev, "") if mes_prev else ""
 
-    # Patrimonio neto básico (desde config)
-    afp_saldo = get_cfg("afp_saldo")
-    afc_saldo_dash = get_cfg("afc_saldo")
-    activos_base = {"AFP ProVida": afp_saldo, "AFC Cesantía": afc_saldo_dash}
-    hipoteca_dash = get_cfg("hipoteca_saldo") or 0
-    pasivos_base = {"Hipoteca": hipoteca_dash}
-    patr = calc_patrimonio_neto(activos_base, pasivos_base)
+    # Patrimonio neto consolidado (misma base que la página Patrimonio Neto)
+    patr, activos_liquidos_dash = _calc_dashboard_patrimonio()
 
     # ── KPI Cards ────────────────────────────────────────────────────────────
     col1, col2, col3, col4 = st.columns(4)
@@ -554,20 +856,21 @@ if pagina == "📊 Dashboard":
         st.metric(
             label="💎 Patrimonio Neto",
             value=fmt_clp(patr["neto"]),
-            delta=f"AFP+AFC: {fmt_clp(afp_saldo + afc_saldo_dash)}",
+            delta=f"Liquidos: {fmt_clp(activos_liquidos_dash)}",
         )
 
     st.markdown("---")
 
     # ── Row 2: Barras gastos + dona tipos ─────────────────────────────────────
     df_mes_actual = df_tx[df_tx["mes"] == mes_actual]
+    df_mes_actual_oper = filtrar_transacciones_operativas(df_mes_actual, incluir_ingresos=False)
     col_a, col_b = st.columns(2)
     with col_a:
-        st.plotly_chart(chart_barras_gastos_mes(df_mes_actual), use_container_width=True)
+        st.plotly_chart(chart_barras_gastos_mes(df_mes_actual_oper), use_container_width=True)
     with col_b:
         por_tipo = resumen.get("por_tipo", {})
-        if not por_tipo and "tipo_tx" in df_mes_actual.columns:
-            por_tipo = df_mes_actual.groupby("tipo_tx")["importe"].sum().to_dict()
+        if not por_tipo and "tipo_tx" in df_mes_actual_oper.columns:
+            por_tipo = df_mes_actual_oper.groupby("tipo_tx")["importe"].sum().to_dict()
         tipos_con_datos = {k: v for k, v in por_tipo.items() if v > 0}
         if len(tipos_con_datos) <= 1:
             # Sin desglose por tipo: mostrar dona por categoría de gasto
@@ -595,7 +898,7 @@ if pagina == "📊 Dashboard":
             st.plotly_chart(chart_dona_tipos(por_tipo), use_container_width=True)
 
     # ── Row 3: Evolución mensual ──────────────────────────────────────────────
-    st.plotly_chart(chart_evolucion_mensual(df_tx), use_container_width=True)
+    st.plotly_chart(chart_evolucion_mensual(df_tx_oper), use_container_width=True)
 
     # ── Alertas ───────────────────────────────────────────────────────────────
     st.markdown("### 🔔 Alertas Automáticas")
@@ -605,6 +908,47 @@ if pagina == "📊 Dashboard":
         alertas.append(("rojo", f"Gastos ({fmt_clp(gastos_mes)}) superan los ingresos ({fmt_clp(ingresos_mes)})."))
 
     por_grupo = resumen.get("por_grupo", {})
+    dividendo_cfg = float(get_cfg("dividendo_mensual") or 0)
+    dividendo_registrado_mes = 0
+    hubo_dividendos_previos = False
+    if (dividendo_cfg > 0 and not df_tx.empty and
+            "concepto" in df_tx.columns and "mes" in df_tx.columns):
+        _mask_div = df_tx["concepto"].str.contains("Dividendo", case=False, na=False)
+        _div_tx = df_tx[_mask_div]
+        dividendo_registrado_mes = float(_div_tx[_div_tx["mes"] == mes_actual]["importe"].sum()) if not _div_tx.empty else 0
+        hubo_dividendos_previos = bool((_div_tx[_div_tx["mes"] < mes_actual]["importe"] > 0).any()) if not _div_tx.empty else False
+    if dividendo_cfg > 0 and dividendo_registrado_mes <= 0 and hubo_dividendos_previos:
+        gastos_ajustados = gastos_mes + dividendo_cfg
+        ahorro_ajustado = ingresos_mes - gastos_ajustados
+        tasa_ajustada = (ahorro_ajustado / ingresos_mes * 100) if ingresos_mes > 0 else 0
+        alertas.append((
+            "amarillo",
+            f"No hay 'Dividendo Hipotecario' registrado en {NOMBRES_MESES.get(mes_actual, '')}. "
+            f"El Dashboard puede verse optimista: si lo pagaras este mes, gastos aprox {fmt_clp(gastos_ajustados)} "
+            f"y tasa de ahorro aprox {tasa_ajustada:.1f}%."
+        ))
+    saldo_inicial_mes = saldos_mes.get(mes_actual, {}).get("saldo_inicial", 0)
+    saldo_actual_mes = saldos_mes.get(mes_actual, {}).get("saldo_actual", 0)
+    variacion_saldo_mes = saldo_actual_mes - saldo_inicial_mes
+    brecha_flujo_vs_caja = ahorro_info["absoluto"] - variacion_saldo_mes
+    mov_patrimoniales_mes = 0.0
+    if "es_movimiento_patrimonial" in df_mes_actual.columns:
+        mov_patrimoniales_mes = float(df_mes_actual[df_mes_actual["es_movimiento_patrimonial"]]["importe"].sum())
+    if abs(brecha_flujo_vs_caja) >= 50_000:
+        if mov_patrimoniales_mes > 0:
+            brecha_no_exp = max(abs(brecha_flujo_vs_caja) - mov_patrimoniales_mes, 0)
+            alertas.append((
+                "amarillo",
+                f"Brecha flujo vs caja: {fmt_clp(abs(brecha_flujo_vs_caja))}. "
+                f"Se detectaron movimientos patrimoniales/traspasos por {fmt_clp(mov_patrimoniales_mes)} "
+                f"que explican parte del diferencial; restante aprox {fmt_clp(brecha_no_exp)}."
+            ))
+        else:
+            alertas.append((
+                "amarillo",
+                f"Brecha flujo vs caja: {fmt_clp(abs(brecha_flujo_vs_caja))}. "
+                "No proviene de movimientos patrimoniales detectados en este mes; revisa timing, pagos no registrados o clasificación."
+            ))
     deudas = por_grupo.get("Financiero - Deudas", 0)
     if ingresos_mes > 0 and (deudas / ingresos_mes) > 0.30:
         alertas.append(("amarillo", f"Deudas financieras = {fmt_clp(deudas)} ({deudas/ingresos_mes*100:.1f}% ingresos). Límite recomendado: 30%."))
@@ -691,16 +1035,37 @@ if pagina == "📊 Dashboard":
                 limpiar_cache_ai()
         with col_ai:
             _gc_dash = cargar_gastos_compartidos(excel_path) if excel_path else None
+            if ("fecha" in df_mes_actual.columns and not df_mes_actual.empty and
+                    pd.api.types.is_datetime64_any_dtype(df_mes_actual["fecha"])):
+                anio_analisis = int(df_mes_actual["fecha"].dt.year.mode().iat[0])
+            else:
+                anio_analisis = datetime.now().year
+            _gc_total = _gc_dash.get("total", 0) if isinstance(_gc_dash, dict) else 0
+            _gc_persona = _gc_dash.get("por_persona", 0) if isinstance(_gc_dash, dict) else 0
+            _dash_ai_signature = (
+                anio_analisis,
+                mes_actual,
+                int(ingresos_config),
+                int(gastos_mes),
+                int(saldos_mes.get(mes_actual, {}).get("saldo_inicial", 0)),
+                int(saldos_mes.get(mes_actual, {}).get("saldo_actual", 0)),
+                round(float(get_cfg("arriendo_cobrado")), 2),
+                round(float(get_cfg("dividendo_mensual")), 2),
+                int(_gc_total),
+                int(_gc_persona),
+                tuple(sorted((por_grupo or {}).items())),
+            )
             analisis = render_insight_con_spinner(
                 "Resumen inteligente del mes",
                 analizar_resumen_mes,
                 NOMBRES_MESES.get(mes_actual, ""),
+                anio_analisis,
                 ingresos_config, gastos_mes,
                 saldos_mes.get(mes_actual, {}).get("saldo_inicial", 0),
                 saldos_mes.get(mes_actual, {}).get("saldo_actual", 0),
                 por_grupo, ahorro_info["tasa"], indicadores,
                 get_cfg("arriendo_cobrado"), get_cfg("dividendo_mensual"), _gc_dash,
-                cache_key=f"dash_{mes_actual}",
+                cache_key=f"dash_{mes_actual}_{abs(hash(_dash_ai_signature))}",
             )
             if analisis:
                 render_insight_card("🤖 Análisis AI — Resumen del Mes", analisis)
@@ -1039,6 +1404,14 @@ elif pagina == "📅 Mes Detalle":
         st.metric("💎 Ahorro", fmt_clp(regla["ahorro_deudas"]),
                   delta=fmt_clp(regla["diferencia_ahorro"]), delta_color=color)
 
+    if "es_movimiento_patrimonial" in df_mes.columns:
+        _mov_pat_mes = df_mes[df_mes["es_movimiento_patrimonial"]]
+        if not _mov_pat_mes.empty:
+            st.caption(
+                f"Se detectaron {len(_mov_pat_mes)} movimientos patrimoniales/traspasos por "
+                f"{fmt_clp(_mov_pat_mes['importe'].sum())}. Se muestran en la tabla, pero no cuentan como gasto en KPIs."
+            )
+
     st.markdown("---")
     st.subheader("📋 Transacciones del Mes")
 
@@ -1100,11 +1473,11 @@ elif pagina == "📈 Anual":
 
     # Ingresos por mes (constante de config)
     ingresos_lista = [ingresos_config] * len(meses_con_datos)
-    gastos_lista = [df_tx[df_tx["mes"] == m]["importe"].sum() for m in meses_con_datos]
+    gastos_lista = [calc_resumen_mes(df_tx, m)["total"] for m in meses_con_datos]
     meses_nombres = [NOMBRES_MESES[m] for m in meses_con_datos]
 
     st.plotly_chart(chart_ingresos_vs_gastos(ingresos_lista, gastos_lista, meses_nombres), use_container_width=True)
-    st.plotly_chart(chart_barras_apiladas_grupos(df_tx), use_container_width=True)
+    st.plotly_chart(chart_barras_apiladas_grupos(df_tx_oper), use_container_width=True)
 
     st.markdown("---")
     st.subheader("📊 Resumen Anual por Grupo")
@@ -1122,6 +1495,9 @@ elif pagina == "📈 Anual":
             col_grupo = next((c for c in df_resumen.columns if "grupo" in c.lower()), None)
             cols_show = ([col_grupo] if col_grupo else []) + cols_meses
             df_show = df_resumen[cols_show].copy()
+            if col_grupo:
+                _grupo_norm = df_show[col_grupo].astype(str).str.strip().str.lower()
+                df_show = df_show[~_grupo_norm.isin(["ahorro e inversión", "ahorro e inversion"])]
             for col in cols_meses:
                 df_show[col] = df_show[col].apply(lambda v: fmt_clp(v) if isinstance(v, (int, float)) and v > 0 else "-")
             mes_actual_up = NOMBRES_MESES.get(mes_actual, "").upper()
@@ -1131,8 +1507,8 @@ elif pagina == "📈 Anual":
 
     st.markdown("---")
     st.subheader("🏆 Top 5 Gastos del Año")
-    top5 = df_tx.groupby("grupo")["importe"].sum().sort_values(ascending=False).head(5)
-    total_anual = df_tx["importe"].sum()
+    top5 = df_tx_oper.groupby("grupo")["importe"].sum().sort_values(ascending=False).head(5)
+    total_anual = df_tx_oper["importe"].sum()
     df_top5 = pd.DataFrame({
         "Grupo": top5.index,
         "Total": top5.values,
@@ -1142,6 +1518,38 @@ elif pagina == "📈 Anual":
     df_top5["% del Total"] = df_top5["% del Total"].apply(lambda v: f"{v:.1f}%")
     _bi_table(df_top5, right_cols=["Total","% del Total"])
     st.metric("Total anual acumulado", fmt_clp(total_anual))
+
+    st.markdown("---")
+    st.subheader("🔎 Promedio por Concepto — Últimos 5 Meses")
+    _lookback_conceptos = min(5, len(meses_con_datos))
+    df_conceptos = _conceptos_promedio_ultimos_meses(df_tx, meses_con_datos, lookback=_lookback_conceptos)
+    if not df_conceptos.empty:
+        mes_ref_nombre = NOMBRES_MESES.get(meses_con_datos[-1], "")
+        df_conc_show = df_conceptos[["grupo", "concepto", "promedio_mensual", "mes_actual", "variacion_abs", "variacion_pct", "frecuencia_label"]].copy()
+        df_conc_show.columns = [
+            "Grupo", "Concepto", f"Promedio {_lookback_conceptos}m",
+            mes_ref_nombre, "Var CLP", "Var %", "Frecuencia"
+        ]
+        _bi_table(
+            df_conc_show.head(20),
+            money_cols=[f"Promedio {_lookback_conceptos}m", mes_ref_nombre, "Var CLP"],
+            pct_cols=["Var %"],
+            right_cols=["Frecuencia"],
+            height=420,
+        )
+
+        st.caption(f"Promedio mensual usando los últimos {_lookback_conceptos} meses con gasto operativo, excluyendo ahorro, inversión y traspasos.")
+
+        df_sobre = df_conceptos[df_conceptos["variacion_abs"] > 0].copy().head(8)
+        if not df_sobre.empty:
+            st.markdown("**Conceptos por sobre su promedio**")
+            df_sobre_show = df_sobre[["grupo", "concepto", "promedio_mensual", "mes_actual", "variacion_abs", "variacion_pct"]].copy()
+            df_sobre_show.columns = ["Grupo", "Concepto", f"Promedio {_lookback_conceptos}m", mes_ref_nombre, "Var CLP", "Var %"]
+            _bi_table(
+                df_sobre_show,
+                money_cols=[f"Promedio {_lookback_conceptos}m", mes_ref_nombre, "Var CLP"],
+                pct_cols=["Var %"],
+            )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1270,7 +1678,8 @@ elif pagina == "💎 Patrimonio Neto":
     }
 
     set_cfg("hipoteca_saldo", hipoteca_saldo)
-    patr = calc_patrimonio_neto(activos, pasivos)
+    _ingresos_anuales_pat = float(ingresos_config or 0) * 12
+    patr = calc_patrimonio_neto(activos, pasivos, ingresos_anuales=_ingresos_anuales_pat)
 
     # KPIs
     col1, col2, col3 = st.columns(3)
@@ -1280,17 +1689,27 @@ elif pagina == "💎 Patrimonio Neto":
         st.metric("💳 Total Pasivos", fmt_clp(patr["total_pasivos"]))
     with col3:
         st.metric("💎 Patrimonio Neto", fmt_clp(patr["neto"]),
-                  delta=f"Endeudamiento: {patr['ratio_endeudamiento']}%",
-                  delta_color="inverse" if patr["ratio_endeudamiento"] > 50 else "normal")
+                  delta=f"Deuda/Activos: {patr['ratio_deuda_activos']}%",
+                  delta_color="inverse" if patr["ratio_deuda_activos"] > 50 else "normal")
 
-    # Semáforo endeudamiento
-    ratio = patr["ratio_endeudamiento"]
+    # Semáforo endeudamiento — Deuda/Activos (solidez patrimonial)
+    ratio = patr["ratio_deuda_activos"]
     if ratio > 60:
-        st.markdown(f'<div class="alert-rojo">🔴 Ratio de endeudamiento ALTO: {ratio:.1f}%. Considera reducir pasivos.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="alert-rojo">🔴 Deuda/Activos ALTO: {ratio:.1f}%. Considera reducir pasivos.</div>', unsafe_allow_html=True)
     elif ratio > 40:
-        st.markdown(f'<div class="alert-amarillo">🟡 Ratio de endeudamiento MODERADO: {ratio:.1f}%.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="alert-amarillo">🟡 Deuda/Activos MODERADO: {ratio:.1f}%.</div>', unsafe_allow_html=True)
     else:
-        st.markdown(f'<div class="alert-verde">🟢 Ratio de endeudamiento saludable: {ratio:.1f}%.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="alert-verde">🟢 Deuda/Activos saludable: {ratio:.1f}%.</div>', unsafe_allow_html=True)
+
+    # Ratio Deuda/Ingresos anuales — estándar finanzas personales (regla 35% mensual = 420% anual)
+    ratio_di = patr["ratio_deuda_ingresos"]
+    if ratio_di > 0:
+        if ratio_di > 420:
+            st.markdown(f'<div class="alert-rojo">🔴 Deuda/Ingresos anuales ALTO: {ratio_di:.0f}% (sobre 420% / regla 35% mensual).</div>', unsafe_allow_html=True)
+        elif ratio_di > 200:
+            st.markdown(f'<div class="alert-amarillo">🟡 Deuda/Ingresos anuales MODERADO: {ratio_di:.0f}%.</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="alert-verde">🟢 Deuda/Ingresos anuales saludable: {ratio_di:.0f}%.</div>', unsafe_allow_html=True)
 
     # Activos líquidos
     activos_liquidos = cc + ca + int(_crypto_clp_total)
@@ -2132,6 +2551,298 @@ elif pagina == "🎯 Simulador":
             )
             st.plotly_chart(fig_meta, use_container_width=True)
 
+        st.markdown("---")
+        st.subheader("Meta Basada en Gasto Real")
+        _lookback_meta = min(5, len(meses_con_datos))
+        df_conceptos_meta = _conceptos_promedio_ultimos_meses(df_tx, meses_con_datos, lookback=_lookback_meta)
+        gasto_prom_meta = float(df_conceptos_meta["promedio_mensual"].sum()) if not df_conceptos_meta.empty else 0.0
+        ahorro_prom_meta = ingresos_config - gasto_prom_meta
+        st.caption(
+            f"Este bloque usa tu promedio operativo de {_lookback_meta} meses para metas de 3 a 6 meses. "
+            "No usa la base táctica del mes actual como referencia principal de planificación."
+        )
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric(f"Gasto operativo promedio {_lookback_meta}m", fmt_clp(gasto_prom_meta))
+        col_m2.metric(f"Ahorro promedio {_lookback_meta}m", fmt_clp(ahorro_prom_meta))
+        col_m3.metric("Tasa de ahorro promedio", f"{(ahorro_prom_meta / ingresos_config * 100):.1f}%" if ingresos_config > 0 else "0%")
+
+        _resumen_tactico_mes = calc_resumen_mes(df_tx, mes_actual)
+        _gasto_tactico_mes = float(_resumen_tactico_mes.get("total", 0) or 0)
+        _ahorro_tactico_mes = ingresos_config - _gasto_tactico_mes
+        _tasa_tactica_mes = (_ahorro_tactico_mes / ingresos_config * 100) if ingresos_config > 0 else 0.0
+
+        meta_ahorro_real = st.number_input(
+            "Meta de ahorro promedio objetivo (CLP)",
+            value=max(int(ahorro_prom_meta), 0),
+            step=50_000,
+            format="%d",
+            key="meta_ahorro_realista",
+        )
+        gap_meta_real = meta_ahorro_real - ahorro_prom_meta
+        col_g1, col_g2 = st.columns(2)
+        if gap_meta_real <= 0:
+            col_g1.success("Con tu promedio actual ya alcanzas esa meta.")
+            col_g2.metric("Holgura mensual", fmt_clp(abs(gap_meta_real)))
+        else:
+            col_g1.warning(f"Te faltan {fmt_clp(gap_meta_real)} al mes para llegar a esa meta.")
+            col_g2.metric("Recorte o ingreso extra requerido", fmt_clp(gap_meta_real))
+
+        st.markdown("---")
+        st.subheader("Plan de Ahorro")
+        st.caption(
+            f"Escenarios fijos usando tu promedio operativo de los últimos {_lookback_meta} meses "
+            f"como base de planificación. Ingreso base: {fmt_clp(ingresos_config)}."
+        )
+
+        _dividendo_cfg_plan = float(get_cfg("dividendo_mensual") or 0)
+        _dividendo_falta_mes = False
+        if _dividendo_cfg_plan > 0 and not df_tx.empty and "concepto" in df_tx.columns and "mes" in df_tx.columns:
+            _div_tx_plan = df_tx[df_tx["concepto"].str.contains("Dividendo", case=False, na=False)]
+            _div_mes_plan = float(_div_tx_plan[_div_tx_plan["mes"] == mes_actual]["importe"].sum()) if not _div_tx_plan.empty else 0
+            _hubo_prev_plan = bool((_div_tx_plan[_div_tx_plan["mes"] < mes_actual]["importe"] > 0).any()) if not _div_tx_plan.empty else False
+            _dividendo_falta_mes = _div_mes_plan <= 0 and _hubo_prev_plan
+        if _dividendo_falta_mes:
+            _gasto_tactico_mes += _dividendo_cfg_plan
+            _ahorro_tactico_mes = ingresos_config - _gasto_tactico_mes
+            _tasa_tactica_mes = (_ahorro_tactico_mes / ingresos_config * 100) if ingresos_config > 0 else 0.0
+            st.info(
+                f"Este mes aún no registra dividendo. Para decisiones tácticas del mes actual, "
+                f"tu gasto podría verse más bajo de lo normal en aprox {fmt_clp(_dividendo_cfg_plan)}."
+            )
+
+        st.caption(
+            f"Base promedio {_lookback_meta}m: gasto {fmt_clp(gasto_prom_meta)}, ahorro {fmt_clp(ahorro_prom_meta)}, "
+            f"tasa {(ahorro_prom_meta / ingresos_config * 100):.1f}% | "
+            f"Base táctica {NOMBRES_MESES.get(mes_actual, '')} ajustada: gasto {fmt_clp(_gasto_tactico_mes)}, "
+            f"ahorro {fmt_clp(_ahorro_tactico_mes)}, tasa {_tasa_tactica_mes:.1f}%."
+        )
+
+        _mask_no_rec_plan = pd.Series(False, index=df_conceptos_meta.index)
+        if not df_conceptos_meta.empty:
+            _mask_no_rec_plan = df_conceptos_meta["concepto"].astype(str).str.contains(
+                "Manutención|Pensión Alimentos|Pension Alimentos", case=False, na=False
+            )
+        _df_viable_plan = df_conceptos_meta.loc[~_mask_no_rec_plan].copy() if not df_conceptos_meta.empty else pd.DataFrame()
+        _sobre_plan = _df_viable_plan[_df_viable_plan["variacion_abs"] > 0].copy() if not _df_viable_plan.empty else pd.DataFrame()
+
+        _mask_deuda_plan = pd.Series(False, index=_df_viable_plan.index)
+        _mask_disc_plan = pd.Series(False, index=_df_viable_plan.index)
+        if not _df_viable_plan.empty:
+            _mask_deuda_plan = (
+                _df_viable_plan["grupo"].astype(str).str.contains("Financiero - Deudas", case=False, na=False)
+                | _df_viable_plan["concepto"].astype(str).str.contains(
+                    "Crédito|Credito|Línea de Crédito|Linea de Crédito|Comisiones Bancarias|Pago Tarjeta",
+                    case=False,
+                    na=False,
+                )
+            )
+            _mask_disc_plan = (
+                _df_viable_plan["grupo"].astype(str).str.contains(
+                    "Varios y Otros|Ocio y Vida Social|Suscripciones Digitales",
+                    case=False,
+                    na=False,
+                )
+                | _df_viable_plan["concepto"].astype(str).str.contains(
+                    "Café y Snacks|Cafe y Snacks|Comida Delivery|Restaurantes|Apps Transporte|Ropa y Calzado",
+                    case=False,
+                    na=False,
+                )
+            )
+
+        # Heurísticas de palanca: tope realista de recorte/mes sin afectar viabilidad.
+        # 25% deuda asume refinanciación + corte de comisiones; 20% discrecional refleja
+        # estudios de FP&A personal (Warren, Ramsey) sobre recorte sostenible sin retroceso.
+        _PALANCA_DEUDA_PCT = 0.25
+        _PALANCA_DISC_PCT = 0.20
+        _pool_sobre = float(_sobre_plan["variacion_abs"].sum()) if not _sobre_plan.empty else 0.0
+        _df_base_plan = _df_viable_plan[_df_viable_plan["variacion_abs"] <= 0].copy() if not _df_viable_plan.empty else pd.DataFrame()
+        _mask_deuda_base_plan = _mask_deuda_plan.loc[_df_base_plan.index] if not _df_base_plan.empty else pd.Series(dtype=bool)
+        _mask_disc_base_plan = _mask_disc_plan.loc[_df_base_plan.index] if not _df_base_plan.empty else pd.Series(dtype=bool)
+        _pool_deuda = float(_df_base_plan.loc[_mask_deuda_base_plan, "promedio_mensual"].sum() * _PALANCA_DEUDA_PCT) if not _df_base_plan.empty else 0.0
+        _pool_disc = float(_df_base_plan.loc[_mask_disc_base_plan, "promedio_mensual"].sum() * _PALANCA_DISC_PCT) if not _df_base_plan.empty else 0.0
+        _pool_total = _pool_sobre + _pool_deuda + _pool_disc
+
+        col_p1, col_p2, col_p3 = st.columns(3)
+        col_p1.metric("Sobrepromedios viables", fmt_clp(_pool_sobre))
+        col_p2.metric("Palanca deuda/comisiones", fmt_clp(_pool_deuda))
+        col_p3.metric("Palanca discrecional", fmt_clp(_pool_disc))
+
+        _top_sobre_labels = (
+            _sobre_plan.sort_values("variacion_abs", ascending=False)["concepto"].head(3).tolist()
+            if not _sobre_plan.empty else []
+        )
+        if len(_top_sobre_labels) >= 2:
+            _top_sobre_str = f"{_top_sobre_labels[0]} y {_top_sobre_labels[1]}"
+        elif _top_sobre_labels:
+            _top_sobre_str = _top_sobre_labels[0]
+        else:
+            _top_sobre_str = "sobregastos puntuales"
+
+        mejora_objetivo_pct = st.slider(
+            f"Mejora objetivo sobre tu ahorro promedio {_lookback_meta}m (%)",
+            min_value=10,
+            max_value=60,
+            value=30,
+            step=5,
+            key="plan_ahorro_mejora_pct",
+            help="30% significa mejorar tu ahorro promedio mensual en 30% respecto a tu base de los últimos meses.",
+        )
+
+        _escenarios_cfg = [
+            ("Conservador", max(5.0, mejora_objetivo_pct * 0.5)),
+            ("Base", float(mejora_objetivo_pct)),
+            ("Agresivo", min(90.0, mejora_objetivo_pct * 1.5)),
+        ]
+
+        _filas_plan = []
+        for _escenario, _mejora_pct in _escenarios_cfg:
+            _ahorro_meta_plan = max(ahorro_prom_meta * (1 + _mejora_pct / 100), 0)
+            _gasto_meta_plan = max(ingresos_config - _ahorro_meta_plan, 0)
+            _brecha_plan = max(_ahorro_meta_plan - ahorro_prom_meta, 0)
+            _tasa_meta_plan = (_ahorro_meta_plan / ingresos_config * 100) if ingresos_config > 0 else 0
+
+            if _brecha_plan <= _pool_sobre:
+                _exigencia = "Baja"
+                _mecanismo = f"Normalizar {_top_sobre_str}."
+            elif _brecha_plan <= (_pool_sobre + _pool_deuda + _pool_disc):
+                _exigencia = "Media"
+                _mecanismo = "Corregir sobrepromedios, bajar deuda/comisiones y recortar gasto discrecional."
+            else:
+                _exigencia = "Alta"
+                _mecanismo = "Combinar recortes con prepago/refinanciamiento de deuda e ingreso extra recurrente."
+
+            _filas_plan.append({
+                "Escenario": _escenario,
+                "Meta ahorro": fmt_clp(_ahorro_meta_plan),
+                "Meta gasto": fmt_clp(_gasto_meta_plan),
+                "Tasa objetivo": f"{_tasa_meta_plan:.1f}%",
+                "Mejora mensual": fmt_clp(_brecha_plan),
+                "Exigencia": _exigencia,
+                "Mecanismo principal": _mecanismo,
+            })
+
+        df_plan_ahorro = pd.DataFrame(_filas_plan)
+        _bi_table(df_plan_ahorro, money_cols=["Meta ahorro", "Meta gasto", "Mejora mensual"])
+
+        _ahorro_base_esc = max(ahorro_prom_meta * (1 + mejora_objetivo_pct / 100), 0)
+        _gasto_base_esc = max(ingresos_config - _ahorro_base_esc, 0)
+        st.success(
+            f"Escenario recomendado: Base. Meta sugerida: ahorrar {fmt_clp(_ahorro_base_esc)}/mes, "
+            f"llevar tu gasto a {fmt_clp(_gasto_base_esc)} y mejorar tu ahorro promedio en "
+            f"{fmt_clp(max(_ahorro_base_esc - ahorro_prom_meta, 0))}."
+        )
+        if _ahorro_tactico_mes > _ahorro_base_esc:
+            st.info(
+                f"Tu base táctica ajustada de {NOMBRES_MESES.get(mes_actual, '')} ya va en "
+                f"{fmt_clp(_ahorro_tactico_mes)}, por encima del escenario Base. "
+                "Este bloque busca consolidar y subir tu promedio de 5 meses, no competir contra un solo mes."
+            )
+
+        st.markdown("**Plan de acción sugerido para el escenario Base**")
+        _objetivo_base = max(_ahorro_base_esc - ahorro_prom_meta, 0)
+        _faltante_base = _objetivo_base
+        _acciones_plan = []
+
+        if not _df_viable_plan.empty and _objetivo_base > 0:
+            _candidatos_plan = []
+            for _, _r in _df_viable_plan.iterrows():
+                _prom = float(_r.get("promedio_mensual", 0) or 0)
+                _var = float(_r.get("variacion_abs", 0) or 0)
+                _concepto = str(_r.get("concepto", ""))
+                _grupo = str(_r.get("grupo", ""))
+
+                # Potencial = vuelta a promedio (si sobregirado) + palanca estructural del concepto.
+                # %s: deuda 15% (refinanciación), discrecional 12% (recorte sostenible), estructural 5%.
+                _RECORTE_DEUDA = 0.15
+                _RECORTE_DISC = 0.12
+                _RECORTE_ESTRUCT = 0.05
+                _es_deuda = bool(_mask_deuda_plan.get(_, False))
+                _es_disc = bool(_mask_disc_plan.get(_, False))
+                _vuelta_promedio = max(_var, 0)
+                if _es_deuda:
+                    _extra = _prom * _RECORTE_DEUDA
+                    _mec = ("Volver a promedio + " if _var > 0 else "") + "prepago/refinanciación/menos comisiones"
+                    _tipo = "Sobrepromedio+Deuda" if _var > 0 else "Deuda"
+                elif _es_disc:
+                    _extra = _prom * _RECORTE_DISC
+                    _mec = ("Volver a promedio + " if _var > 0 else "") + "recorte discrecional"
+                    _tipo = "Sobrepromedio+Discrecional" if _var > 0 else "Discrecional"
+                elif _var > 0:
+                    _extra = 0.0
+                    _mec = "Volver a promedio reciente"
+                    _tipo = "Sobrepromedio"
+                else:
+                    _extra = _prom * _RECORTE_ESTRUCT
+                    _mec = "Optimización gradual"
+                    _tipo = "Estructural"
+                _pot = _vuelta_promedio + _extra
+
+                if _pot <= 0:
+                    continue
+
+                _candidatos_plan.append({
+                    "grupo": _grupo,
+                    "concepto": _concepto,
+                    "promedio": _prom,
+                    "mes_actual": float(_r.get("mes_actual", 0) or 0),
+                    "potencial": _pot,
+                    "tipo": _tipo,
+                    "mecanismo": _mec,
+                    "base_objetivo": "mes_actual" if _var > 0 else "promedio",
+                })
+
+            _candidatos_plan = sorted(_candidatos_plan, key=lambda x: x["potencial"], reverse=True)
+            for _c in _candidatos_plan:
+                if _faltante_base <= 0:
+                    break
+                _recorte = min(_c["potencial"], _faltante_base)
+                if _recorte < 10_000:
+                    continue
+                if _c["base_objetivo"] == "mes_actual":
+                    _target = max(_c["mes_actual"] - _recorte, _c["promedio"])
+                    _pct_base = _c["mes_actual"]
+                else:
+                    _target = max(_c["promedio"] - _recorte, 0)
+                    _pct_base = _c["promedio"]
+                _pct = (_recorte / _pct_base * 100) if _pct_base > 0 else 0
+                _acciones_plan.append({
+                    "Grupo": _c["grupo"],
+                    "Concepto": _c["concepto"],
+                    f"Promedio {_lookback_meta}m": fmt_clp(_c["promedio"]),
+                    "Meta recorte": fmt_clp(_recorte),
+                    "Meta objetivo": fmt_clp(_target),
+                    "% ajuste": f"{_pct:.1f}%",
+                    "Tipo": _c["tipo"],
+                    "Mecanismo": _c["mecanismo"],
+                })
+                _faltante_base -= _recorte
+
+        if _acciones_plan:
+            _bi_table(
+                pd.DataFrame(_acciones_plan),
+                money_cols=[f"Promedio {_lookback_meta}m", "Meta recorte", "Meta objetivo"],
+            )
+            if _faltante_base > 0:
+                st.warning(
+                    f"Aun faltarían {fmt_clp(_faltante_base)} para cumplir completamente el escenario Base; "
+                    "eso probablemente requiere ingreso extra o una acción más agresiva sobre deuda."
+                )
+            else:
+                st.success("Las acciones sugeridas cubren la meta mensual del escenario Base.")
+        elif _objetivo_base <= 0:
+            st.info("Tu ahorro promedio actual ya cumple o supera el escenario Base seleccionado.")
+        else:
+            st.info("No hay palancas suficientes detectadas automáticamente; revisa ingreso extra o ajustes manuales.")
+
+        if not df_conceptos_meta.empty:
+            st.markdown("**Principales palancas por gasto promedio**")
+            df_palancas = df_conceptos_meta[["grupo", "concepto", "promedio_mensual", "mes_actual", "variacion_abs"]].copy().head(8)
+            df_palancas.columns = ["Grupo", "Concepto", f"Promedio {_lookback_meta}m", NOMBRES_MESES.get(mes_actual, ""), "Var CLP"]
+            _bi_table(
+                df_palancas,
+                money_cols=[f"Promedio {_lookback_meta}m", NOMBRES_MESES.get(mes_actual, ""), "Var CLP"],
+            )
+
     # ── Tab FIRE ──────────────────────────────────────────────────────────────
     with tab_fire:
         st.subheader("🔥 FIRE — Financial Independence, Retire Early")
@@ -2231,6 +2942,58 @@ elif pagina == "🎯 Simulador":
 # ═══════════════════════════════════════════════════════════════════════════════
 # PÁGINA: AJUSTES
 # ═══════════════════════════════════════════════════════════════════════════════
+    st.markdown("---")
+    st.subheader("Asistente AI")
+    st.caption("Consulta libre sobre gastos, ingresos, patrimonio, inversiones, metas o estrategias usando el contexto real de tu app.")
+
+    if not agente_disponible():
+        st.info("Configura ANTHROPIC_API_KEY para habilitar el asistente.")
+    else:
+        _ctx_ai = _contexto_ai_app(df_tx, saldos_mes, mes_actual, ingresos_config)
+        _chat_key = "ai_chat_historial"
+        if _chat_key not in st.session_state:
+            st.session_state[_chat_key] = [
+                {
+                    "role": "assistant",
+                    "content": "Puedo responder sobre tus ingresos, gastos, patrimonio, inversiones, metas de ahorro y estrategias usando el contexto actual de la app.",
+                }
+            ]
+
+        for _msg in st.session_state[_chat_key]:
+            with st.chat_message(_msg["role"]):
+                if _msg["role"] == "assistant":
+                    _render_chat_ai(_msg["content"])
+                else:
+                    st.markdown(_msg["content"])
+
+        st.caption(
+            "Sugerencias: "
+            "¿En qué conceptos debería enfocarme para ahorrar 200 mil pesos más al mes? | "
+            "¿Conviene priorizar APV, DAP o prepago hipotecario? | "
+            "¿Qué tan sano es mi gasto en vivienda y familia respecto a mis ingresos?"
+        )
+
+        _prompt_ai = st.chat_input("Haz una pregunta sobre tu situación financiera", key="chat_input_finanzas")
+        if _prompt_ai:
+            st.session_state[_chat_key].append({"role": "user", "content": _prompt_ai})
+            with st.chat_message("user"):
+                st.markdown(_prompt_ai)
+            with st.chat_message("assistant"):
+                with st.spinner("Analizando tu contexto..."):
+                    _consultas_ai = _dividir_consultas_chat(_prompt_ai)
+                    if len(_consultas_ai) <= 1:
+                        _resp_ai = consulta_libre(_prompt_ai, _ctx_ai)
+                    else:
+                        _bloques_ai = []
+                        for _idx, _consulta in enumerate(_consultas_ai[:4], start=1):
+                            _resp_unit = consulta_libre(_consulta, _ctx_ai)
+                            _bloques_ai.append(
+                                f"Consulta {_idx}: {_consulta}\n{_limpiar_texto_chat_ai(_resp_unit)}"
+                            )
+                        _resp_ai = "\n\n".join(_bloques_ai)
+                _render_chat_ai(_resp_ai)
+            st.session_state[_chat_key].append({"role": "assistant", "content": _limpiar_texto_chat_ai(_resp_ai)})
+
 elif pagina == "⚙️ Ajustes":
     st.title("⚙️ Ajustes y Configuración")
 

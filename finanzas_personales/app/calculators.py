@@ -5,6 +5,53 @@ import math
 from typing import Dict, List, Optional
 import pandas as pd
 
+_TIPOS_PATRIMONIALES = {
+    "inversión", "inversion",
+    "ahorro",
+    "transferencia",
+    "traspaso",
+    "movimiento patrimonial",
+}
+_GRUPOS_PATRIMONIALES = {
+    "ahorro e inversión",
+    "ahorro e inversion",
+}
+
+
+def marcar_movimientos_patrimoniales(df: pd.DataFrame) -> pd.DataFrame:
+    """Marca transacciones que son traspasos/ahorro/inversión y no gasto operacional."""
+    if df is None or df.empty:
+        df_out = df.copy() if isinstance(df, pd.DataFrame) else pd.DataFrame()
+        if isinstance(df_out, pd.DataFrame) and "es_movimiento_patrimonial" not in df_out.columns:
+            df_out["es_movimiento_patrimonial"] = False
+        return df_out
+
+    df_out = df.copy()
+    mask = pd.Series(False, index=df_out.index)
+
+    if "tipo_tx" in df_out.columns:
+        tipos = df_out["tipo_tx"].fillna("").astype(str).str.strip().str.lower()
+        mask = mask | tipos.isin(_TIPOS_PATRIMONIALES)
+
+    if "grupo" in df_out.columns:
+        grupos = df_out["grupo"].fillna("").astype(str).str.strip().str.lower()
+        mask = mask | grupos.isin(_GRUPOS_PATRIMONIALES)
+
+    df_out["es_movimiento_patrimonial"] = mask
+    return df_out
+
+
+def filtrar_transacciones_operativas(df: pd.DataFrame, incluir_ingresos: bool = True) -> pd.DataFrame:
+    """Excluye movimientos patrimoniales; opcionalmente excluye también ingresos."""
+    df_out = marcar_movimientos_patrimoniales(df)
+    if df_out.empty:
+        return df_out
+
+    mask = ~df_out["es_movimiento_patrimonial"]
+    if not incluir_ingresos and "tipo_tx" in df_out.columns:
+        mask = mask & (df_out["tipo_tx"] != "Ingreso")
+    return df_out[mask].copy()
+
 
 def calc_ingresos_totales(liquido: float, amipass: float = 0, otros: float = 0) -> float:
     """Suma ingresos líquidos totales del mes."""
@@ -17,7 +64,7 @@ def calc_resumen_mes(df: pd.DataFrame, mes: int) -> dict:
     {por_grupo: {grupo: total}, total: float, por_tipo: {tipo: total}, ingresos: float}
     total solo cuenta Gastos (no Ingresos) para no inflar el KPI de gastos.
     """
-    df_mes = df[df["mes"] == mes].copy()
+    df_mes = filtrar_transacciones_operativas(df[df["mes"] == mes].copy(), incluir_ingresos=True)
     if df_mes.empty:
         return {"por_grupo": {}, "total": 0.0, "por_tipo": {}, "ingresos": 0.0}
     col_tipo = "tipo_tx" if "tipo_tx" in df_mes.columns else "tipo"
@@ -48,52 +95,83 @@ def calc_tasa_ahorro(ingresos: float, gastos: float) -> dict:
     return {"tasa": round(tasa, 1), "absoluto": ahorro, "estado_semaforo": estado}
 
 
+_GRUPO_DEUDAS_RE = "financiero - deudas"
+
+
 def calc_regla_50_30_20(
     df_mes: pd.DataFrame,
     ingresos: float,
     tipos_dict: Dict[str, str],
 ) -> dict:
     """
-    Clasifica gastos según regla 50/30/20:
-    - Necesidades (Fijo): 50% ideal
-    - Deseos (Variable + Prescindible): 30% ideal
-    - Ahorro/Deudas: 20% ideal
+    Clasifica gastos según regla 50/30/20 (Elizabeth Warren):
+    - Necesidades (Fijo, excl. deudas): 50% ideal
+    - Deseos (Variable + Prescindible, excl. deudas): 30% ideal
+    - Ahorro/Deudas: 20% ideal (pagos a deuda + ahorro neto restante)
     """
-    df = df_mes.copy()
-    if "tipo" not in df.columns:
-        df["tipo"] = df["grupo"].map(tipos_dict).fillna("Variable")
-    necesidades = df[df["tipo"] == "Fijo"]["importe"].sum()
-    deseos = df[df["tipo"].isin(["Variable", "Prescindible"])]["importe"].sum()
-    total_gastos = necesidades + deseos
-    ahorro_real = max(ingresos - total_gastos, 0)
+    df = filtrar_transacciones_operativas(df_mes, incluir_ingresos=False)
     ideal_nec = ingresos * 0.50
     ideal_des = ingresos * 0.30
     ideal_aho = ingresos * 0.20
+    if df.empty:
+        ahorro_real = max(ingresos, 0)
+        return {
+            "necesidades": 0.0,
+            "deseos": 0.0,
+            "ahorro_deudas": ahorro_real,
+            "pagos_deuda": 0.0,
+            "ahorro_neto": ahorro_real,
+            "ideal_necesidades": ideal_nec,
+            "ideal_deseos": ideal_des,
+            "ideal_ahorro": ideal_aho,
+            "diferencia_ahorro": ahorro_real - ideal_aho,
+        }
+    if "tipo" not in df.columns:
+        df["tipo"] = df["grupo"].map(tipos_dict).fillna("Variable")
+    es_deuda = df["grupo"].fillna("").astype(str).str.lower().str.contains(_GRUPO_DEUDAS_RE, na=False)
+    pagos_deuda = float(df.loc[es_deuda, "importe"].sum())
+    df_no_deuda = df.loc[~es_deuda]
+    necesidades = float(df_no_deuda[df_no_deuda["tipo"] == "Fijo"]["importe"].sum())
+    deseos = float(df_no_deuda[df_no_deuda["tipo"].isin(["Variable", "Prescindible"])]["importe"].sum())
+    ahorro_neto = max(ingresos - necesidades - deseos - pagos_deuda, 0)
+    ahorro_deudas = ahorro_neto + pagos_deuda
     return {
         "necesidades": necesidades,
         "deseos": deseos,
-        "ahorro_deudas": ahorro_real,
+        "ahorro_deudas": ahorro_deudas,
+        "pagos_deuda": pagos_deuda,
+        "ahorro_neto": ahorro_neto,
         "ideal_necesidades": ideal_nec,
         "ideal_deseos": ideal_des,
         "ideal_ahorro": ideal_aho,
-        "diferencia_ahorro": ahorro_real - ideal_aho,
+        "diferencia_ahorro": ahorro_deudas - ideal_aho,
     }
 
 
-def calc_patrimonio_neto(activos_dict: dict, pasivos_dict: dict) -> dict:
+def calc_patrimonio_neto(
+    activos_dict: dict,
+    pasivos_dict: dict,
+    ingresos_anuales: float = 0.0,
+) -> dict:
     """
-    Calcula patrimonio neto.
-    activos_dict / pasivos_dict: {nombre: valor}
+    Calcula patrimonio neto y ratios de endeudamiento.
+
+    ratio_deuda_activos: pasivos/activos (Debt-to-Assets, mide solidez patrimonial)
+    ratio_deuda_ingresos: pasivos/ingresos_anuales (estándar finanzas personales,
+        sano <100%, regla común: deuda total no supera 35% del ingreso mensual = 420% anual)
     """
     total_activos = sum(v for v in activos_dict.values() if isinstance(v, (int, float)))
     total_pasivos = sum(v for v in pasivos_dict.values() if isinstance(v, (int, float)))
     neto = total_activos - total_pasivos
-    ratio = (total_pasivos / total_activos * 100) if total_activos > 0 else 0
+    ratio_da = (total_pasivos / total_activos * 100) if total_activos > 0 else 0
+    ratio_di = (total_pasivos / ingresos_anuales * 100) if ingresos_anuales > 0 else 0
     return {
         "total_activos": total_activos,
         "total_pasivos": total_pasivos,
         "neto": neto,
-        "ratio_endeudamiento": round(ratio, 1),
+        "ratio_deuda_activos": round(ratio_da, 1),
+        "ratio_deuda_ingresos": round(ratio_di, 1),
+        "ratio_endeudamiento": round(ratio_da, 1),
     }
 
 
@@ -108,14 +186,9 @@ def calc_proyeccion_afp(
     Retorna lista de saldos anuales (longitud = anos + 1).
     """
     tasa_mensual = (1 + tasa_anual / 100) ** (1 / 12) - 1
-    saldos = [saldo_actual]
-    saldo = saldo_actual
-    for _ in range(anos * 12):
-        saldo = saldo * (1 + tasa_mensual) + aporte_neto_mensual
-    # Calcular año a año
     saldos_anuales = [saldo_actual]
     saldo = saldo_actual
-    for ano in range(anos):
+    for _ano in range(anos):
         for _ in range(12):
             saldo = saldo * (1 + tasa_mensual) + aporte_neto_mensual
         saldos_anuales.append(saldo)
