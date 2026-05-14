@@ -64,18 +64,33 @@ def _auth_enabled() -> bool:
 
 
 # ── Cookie de sesión ──────────────────────────────────────────────────────────
+# El CookieManager de extra-streamlit-components renderiza un widget en su
+# constructor (getAll), así que NO se puede cachear con @st.cache_resource.
+# Debe instanciarse fresco una vez por run para que getAll re-sincronice las
+# cookies del navegador. require_login() lo crea una vez y lo deja en
+# session_state["_cm"] para que login()/logout() del mismo run lo reusen.
 
-@st.cache_resource
-def _cookie_manager() -> stx.CookieManager:
-    """Instancia única del gestor de cookies (cacheada entre reruns)."""
-    return stx.CookieManager(key="finanzas_cookie_mgr")
+def _nuevo_cm() -> stx.CookieManager:
+    """Instancia fresca del gestor de cookies. Llamar SOLO desde require_login."""
+    cm = stx.CookieManager(key="finanzas_cookie_mgr")
+    st.session_state["_cm"] = cm
+    return cm
+
+
+def _get_cm() -> stx.CookieManager:
+    """Devuelve el CookieManager del run actual (creado por require_login)."""
+    cm = st.session_state.get("_cm")
+    if cm is None:
+        # require_login no corrió este run — fallback defensivo
+        cm = _nuevo_cm()
+    return cm
 
 
 def _guardar_cookie(refresh_token: str):
     if not refresh_token:
         return
     try:
-        _cookie_manager().set(
+        _get_cm().set(
             _COOKIE_NAME,
             refresh_token,
             expires_at=datetime.now() + timedelta(days=_COOKIE_DAYS),
@@ -86,7 +101,7 @@ def _guardar_cookie(refresh_token: str):
 
 def _borrar_cookie():
     try:
-        _cookie_manager().delete(_COOKIE_NAME)
+        _get_cm().delete(_COOKIE_NAME)
     except Exception:
         pass
 
@@ -197,6 +212,10 @@ def require_login():
     if not _auth_enabled():
         return
 
+    # Instanciar el CookieManager UNA vez por run (su constructor renderiza
+    # un widget — no puede ir en función cacheada ni llamarse dos veces).
+    cm = _nuevo_cm()
+
     if is_authenticated():
         # Re-enganchar en cada rerun (los globals del módulo no persisten
         # garantizadamente entre reruns de Streamlit).
@@ -210,12 +229,12 @@ def require_login():
     # El componente de cookies es asíncrono: en el primer run de una carga
     # fresca devuelve {} aunque la cookie exista. Damos exactamente UN rerun
     # de gracia para que el componente sincronice antes de decidir.
-    cookies = _cookie_manager().get_all()
+    cookies = cm.get_all() or {}
     if not cookies and not st.session_state.get("_cookie_waited"):
         st.session_state["_cookie_waited"] = True
         st.stop()
 
-    token = cookies.get(_COOKIE_NAME) if cookies else None
+    token = cookies.get(_COOKIE_NAME)
     if token and _restaurar_desde_cookie(token):
         return
 
