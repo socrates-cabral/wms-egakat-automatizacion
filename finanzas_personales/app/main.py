@@ -329,6 +329,16 @@ hr { border-color: #1E293B !important; }
     min-height: 32px !important;
     font-size: 0.82rem !important;
 }
+.import-review-wrap [data-baseweb="select"],
+.import-review-wrap .stSelectbox,
+.import-review-wrap .stTextInput {
+    min-width: 0 !important;
+    width: 100% !important;
+}
+.import-review-wrap [data-testid="stHorizontalBlock"] > div {
+    min-width: 0 !important;
+    overflow: hidden;
+}
 .import-review-wrap input {
     padding: 4px 8px !important;
     font-size: 0.82rem !important;
@@ -2651,7 +2661,7 @@ elif pagina == "🏧 Importar Banco":
             st.markdown('<div class="import-review-wrap">', unsafe_allow_html=True)
 
             # Cabecera
-            _CW = [0.9, 3.3, 1.2, 2.2, 2.4, 1.2, 0.5]
+            _CW = [1.3, 3.2, 1.3, 2.2, 2.4, 1.2, 0.5]
             _hc = st.columns(_CW)
             for _col, _lbl in zip(_hc, ["Fecha", "Detalle (editable)", "Importe", "Grupo", "Concepto", "Tipo", "TEF"]):
                 _col.markdown(f'<div class="ir-header">{_lbl}</div>', unsafe_allow_html=True)
@@ -2721,7 +2731,11 @@ elif pagina == "🏧 Importar Banco":
                     _fecha_str = pd.to_datetime(_rrow["fecha"]).strftime("%d/%m/%y")
                 except Exception:
                     _fecha_str = str(_rrow["fecha"])[:10]
-                _rc[0].markdown(f'<div class="ir-date">{_fecha_str}</div>', unsafe_allow_html=True)
+                _rc[0].markdown(
+                    f'<div class="ir-date" style="white-space:nowrap;overflow:visible;">'
+                    f'{_fecha_str}</div>',
+                    unsafe_allow_html=True,
+                )
 
                 _rc[1].text_input("det", key=_dk, label_visibility="collapsed")
 
