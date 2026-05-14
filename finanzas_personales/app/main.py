@@ -307,6 +307,73 @@ hr { border-color: #1E293B !important; }
 .badge-table tbody tr:hover td { background:rgba(20,184,166,0.04); }
 .badge-table tbody tr:nth-child(even) td { background:rgba(255,255,255,0.015); }
 .badge-table .col-importe { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+
+/* ── Panel de revisión Importar Banco ─────────────────────────────────────── */
+.import-review-wrap [data-testid="stHorizontalBlock"] {
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 0 !important;
+    padding: 4px 0 !important;
+}
+.import-review-wrap [data-testid="stHorizontalBlock"] > div {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+}
+.import-review-wrap .stSelectbox > div > div,
+.import-review-wrap .stTextInput > div > div {
+    min-height: 34px !important;
+}
+.import-review-wrap .stSelectbox div[data-baseweb="select"] > div {
+    padding: 2px 8px !important;
+    min-height: 32px !important;
+    font-size: 0.82rem !important;
+}
+.import-review-wrap input {
+    padding: 4px 8px !important;
+    font-size: 0.82rem !important;
+}
+.import-review-wrap .stCheckbox {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex; justify-content: center;
+}
+.import-review-wrap .stCheckbox > label {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+.import-review-wrap .stCheckbox > label > div:first-child {
+    transform: scale(0.85);
+    margin: 0 !important;
+}
+.import-review-wrap [data-testid="stCaptionContainer"] {
+    font-size: 0.78rem !important;
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2 !important;
+}
+.import-review-wrap .ir-amount {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: #E2E8F0;
+    text-align: right;
+    font-size: 0.85rem;
+    padding-right: 8px;
+}
+.import-review-wrap .ir-date {
+    color: #94A3B8;
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.import-review-wrap .ir-header {
+    color: #94A3B8 !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2550,13 +2617,16 @@ elif pagina == "🏧 Importar Banco":
                f"Caché sin IA: **{_cobertura:.0f}%**")
 
     # ── Tabla resumen (todas las tx, read-only) ───────────────────────────────
-    _BADGE = {"cache": "🟢", "patron": "🔵", "auto": "⚪", "ai": "🟡", "manual": "✅"}
+    _BADGE = {"cache": "🟢", "patron": "🔵", "auto": "⚪", "ai": "🟡", "manual": "✅", "manual_tef": "🔄"}
     _df_overview = preparar_para_excel(_df_show).copy()
     _df_overview.insert(0, "", _df_show["fuente_cat"].map(_BADGE).fillna("❓").values[:len(_df_overview)])
+    # Importe en formato chileno: $1.234.567
+    _df_overview["importe"] = _df_overview["importe"].apply(
+        lambda v: f"${int(v):,}".replace(",", ".") if pd.notna(v) else ""
+    )
     st.dataframe(
-        _df_overview.rename(columns={"detalle": "Descripción banco", "importe": "Importe $"}),
+        _df_overview.rename(columns={"detalle": "Descripción banco", "importe": "Importe"}),
         use_container_width=True, hide_index=True,
-        column_config={"Importe $": st.column_config.NumberColumn(format="%d $")},
     )
 
     # ── Revisar y corregir (cascada Grupo → Concepto) ─────────────────────────
@@ -2575,14 +2645,20 @@ elif pagina == "🏧 Importar Banco":
             st.caption(
                 "Cambia **Grupo** → el desplegable de Concepto se filtra automáticamente. "
                 "Edita **Detalle** para personalizar la descripción. "
-                "Marca **🔄 TEF** si es transferencia entre tus propias cuentas (override patrimonial). "
+                "Marca **🔄 TEF** si es transferencia entre tus propias cuentas. "
                 "Guarda para que la próxima importación lo categorice solo."
             )
+            st.markdown('<div class="import-review-wrap">', unsafe_allow_html=True)
+
             # Cabecera
-            _hc = st.columns([1, 3, 1, 2, 2, 1, 1])
-            for _col, _lbl in zip(_hc, ["Fecha", "Detalle (editable)", "Importe $", "Grupo", "Concepto", "Tipo", "🔄 TEF"]):
-                _col.markdown(f"**{_lbl}**")
-            st.divider()
+            _CW = [1.1, 3.2, 1.2, 2.1, 2.3, 1.2, 0.6]
+            _hc = st.columns(_CW)
+            for _col, _lbl in zip(_hc, ["Fecha", "Detalle (editable)", "Importe", "Grupo", "Concepto", "Tipo", "TEF"]):
+                _col.markdown(f'<div class="ir-header">{_lbl}</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<hr style="margin:6px 0 4px 0; border-color:#1E293B;">',
+                unsafe_allow_html=True,
+            )
 
             for _ri, (_, _rrow) in enumerate(_df_revisar.iterrows()):
                 _gk  = f"_gi_{_import_key}_{_ri}"   # grupo widget key
@@ -2639,10 +2715,20 @@ elif pagina == "🏧 Importar Banco":
                     st.session_state[_ck] = _con_base[0]
 
                 # ── Renderizar widgets (sin index=, sin warning) ─────────────
-                _rc = st.columns([1, 3, 1, 2, 2, 1, 1])
-                _rc[0].caption(str(_rrow["fecha"])[:10])
+                _rc = st.columns(_CW)
+                # Fecha en formato DD/MM/YYYY
+                try:
+                    _fecha_str = pd.to_datetime(_rrow["fecha"]).strftime("%d/%m/%Y")
+                except Exception:
+                    _fecha_str = str(_rrow["fecha"])[:10]
+                _rc[0].markdown(f'<div class="ir-date">{_fecha_str}</div>', unsafe_allow_html=True)
+
                 _rc[1].text_input("det", key=_dk, label_visibility="collapsed")
-                _rc[2].caption(f"${_rrow['monto']:,.0f}")
+
+                # Importe en formato chileno: punto=miles, coma=decimal
+                _monto_clp = f"${int(_rrow['monto']):,}".replace(",", ".")
+                _rc[2].markdown(f'<div class="ir-amount">{_monto_clp}</div>', unsafe_allow_html=True)
+
                 _rc[3].selectbox("grp", _grupos_list, key=_gk,
                                   label_visibility="collapsed", disabled=_tef_on)
                 _rc[4].selectbox("con", _con_base, key=_ck,
@@ -2651,9 +2737,10 @@ elif pagina == "🏧 Importar Banco":
                                   label_visibility="collapsed", disabled=_tef_on)
                 _rc[6].checkbox(
                     "tef", key=_tef, label_visibility="collapsed",
-                    help="Marcar como transferencia entre tus propias cuentas (patrimonial)",
+                    help="Transferencia entre tus propias cuentas (patrimonial)",
                 )
 
+            st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("")
             if st.button("💾 Guardar correcciones → caché", type="primary", key="_btn_guardar_import"):
                 from bank_importer import cargar_reglas, guardar_reglas, _clave as _ck_fn
