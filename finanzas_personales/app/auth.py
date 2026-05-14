@@ -2,7 +2,7 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
 """
-auth.py — Login contra Supabase Auth.
+auth.py — Login contra Supabase Auth con sesión persistente.
 
 Sprint 5, paso 3. Pantalla de login antes de acceder a cualquier página.
 
@@ -15,26 +15,34 @@ Diseño:
 - El login SOLO se exige cuando DATA_SOURCE=supabase. En modo Excel la
   app sigue funcionando sin login (uso local personal).
 
+Persistencia (F5):
+- Al login se guarda el refresh_token de Supabase en una cookie de
+  navegador (7 días). Al recargar la página, require_login() restaura la
+  sesión con ese token sin pedir credenciales de nuevo.
+- Los refresh tokens rotan: cada restauración guarda el nuevo en la cookie.
+- Logout borra la cookie.
+
 Claves del .env:
     SUPABASE_FINANZAS_URL          (ya configurada)
-    SUPABASE_FINANZAS_ANON_KEY     ← nueva — la "Publishable key" del panel
-                                     Settings → API. NO la service_role.
-
-Sin "remember me" por ahora: cada sesión de navegador pide login. Para
-una app de finanzas familiar es aceptable; cookies persistentes pueden
-agregarse después si se necesita.
+    SUPABASE_FINANZAS_ANON_KEY     la "Publishable key" de Settings → API
+                                   (NO la service_role)
 """
 
 import os
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import streamlit as st
+import extra_streamlit_components as stx
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env")
 
 import supabase_repo
 import data_source
+
+_COOKIE_NAME = "finanzas_session"
+_COOKIE_DAYS = 7
 
 
 # ── Credenciales ──────────────────────────────────────────────────────────────
@@ -55,6 +63,34 @@ def _auth_enabled() -> bool:
     return data_source.USANDO_SUPABASE
 
 
+# ── Cookie de sesión ──────────────────────────────────────────────────────────
+
+@st.cache_resource
+def _cookie_manager() -> stx.CookieManager:
+    """Instancia única del gestor de cookies (cacheada entre reruns)."""
+    return stx.CookieManager(key="finanzas_cookie_mgr")
+
+
+def _guardar_cookie(refresh_token: str):
+    if not refresh_token:
+        return
+    try:
+        _cookie_manager().set(
+            _COOKIE_NAME,
+            refresh_token,
+            expires_at=datetime.now() + timedelta(days=_COOKIE_DAYS),
+        )
+    except Exception:
+        pass
+
+
+def _borrar_cookie():
+    try:
+        _cookie_manager().delete(_COOKIE_NAME)
+    except Exception:
+        pass
+
+
 # ── Sesión ────────────────────────────────────────────────────────────────────
 
 def is_authenticated() -> bool:
@@ -67,6 +103,16 @@ def current_email() -> str:
 
 def current_user_id() -> str:
     return st.session_state.get("_auth_user_id", "")
+
+
+def _aplicar_sesion(client, user, refresh_token: str):
+    """Guarda la sesión en session_state y engancha el repo al cliente JWT."""
+    st.session_state["_auth_user_id"] = user.id
+    st.session_state["_auth_email"]   = getattr(user, "email", "")
+    st.session_state["_auth_client"]  = client
+    supabase_repo.set_authenticated_client(client, user.id)
+    if refresh_token:
+        _guardar_cookie(refresh_token)
 
 
 def login(email: str, password: str) -> tuple[bool, str]:
@@ -85,22 +131,42 @@ def login(email: str, password: str) -> tuple[bool, str]:
         client = create_client(url, key)
         resp = client.auth.sign_in_with_password({"email": email, "password": password})
         user = getattr(resp, "user", None)
+        session = getattr(resp, "session", None)
         if user is None:
             return False, "Credenciales inválidas."
     except Exception:
         # No exponer detalles del backend al usuario final
         return False, "Credenciales inválidas o error de conexión."
 
-    # Sesión válida — guardar y enganchar el repo al cliente autenticado (JWT)
-    st.session_state["_auth_user_id"] = user.id
-    st.session_state["_auth_email"]   = getattr(user, "email", email)
-    st.session_state["_auth_client"]  = client
-    supabase_repo.set_authenticated_client(client, user.id)
+    refresh_token = getattr(session, "refresh_token", "") if session else ""
+    _aplicar_sesion(client, user, refresh_token)
 
     # El caché de st.cache_data no distingue usuarios — limpiarlo en cada
     # login evita que datos de una sesión previa se sirvan a otra cuenta.
     st.cache_data.clear()
     return True, ""
+
+
+def _restaurar_desde_cookie(refresh_token: str) -> bool:
+    """Restaura la sesión a partir del refresh_token guardado en la cookie."""
+    url, key = _anon_credentials()
+    if not url or not key:
+        return False
+    try:
+        from supabase import create_client
+        client = create_client(url, key)
+        resp = client.auth.refresh_session(refresh_token)
+        user = getattr(resp, "user", None)
+        session = getattr(resp, "session", None)
+        if user is None:
+            return False
+    except Exception:
+        _borrar_cookie()
+        return False
+
+    nuevo_refresh = getattr(session, "refresh_token", refresh_token) if session else refresh_token
+    _aplicar_sesion(client, user, nuevo_refresh)
+    return True
 
 
 def logout():
@@ -111,9 +177,10 @@ def logout():
             client.auth.sign_out()
         except Exception:
             pass
-    for k in ("_auth_user_id", "_auth_email", "_auth_client"):
+    for k in ("_auth_user_id", "_auth_email", "_auth_client", "_cookie_waited"):
         st.session_state.pop(k, None)
     supabase_repo.set_authenticated_client(None, None)
+    _borrar_cookie()
     st.cache_data.clear()
 
 
@@ -124,6 +191,7 @@ def require_login():
 
     - DATA_SOURCE=excel  → no exige login, retorna de inmediato.
     - DATA_SOURCE=supabase + sesión activa → re-engancha el repo y retorna.
+    - DATA_SOURCE=supabase + cookie válida → restaura sesión sin pedir login.
     - DATA_SOURCE=supabase + sin sesión → muestra el formulario y st.stop().
     """
     if not _auth_enabled():
@@ -136,6 +204,19 @@ def require_login():
         uid = st.session_state.get("_auth_user_id")
         if client is not None and uid:
             supabase_repo.set_authenticated_client(client, uid)
+        return
+
+    # Sin sesión en memoria — intentar restaurar desde la cookie.
+    # El componente de cookies es asíncrono: en el primer run de una carga
+    # fresca devuelve {} aunque la cookie exista. Damos exactamente UN rerun
+    # de gracia para que el componente sincronice antes de decidir.
+    cookies = _cookie_manager().get_all()
+    if not cookies and not st.session_state.get("_cookie_waited"):
+        st.session_state["_cookie_waited"] = True
+        st.stop()
+
+    token = cookies.get(_COOKIE_NAME) if cookies else None
+    if token and _restaurar_desde_cookie(token):
         return
 
     _render_login_form()
