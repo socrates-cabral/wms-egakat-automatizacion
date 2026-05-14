@@ -2651,7 +2651,7 @@ elif pagina == "🏧 Importar Banco":
             st.markdown('<div class="import-review-wrap">', unsafe_allow_html=True)
 
             # Cabecera
-            _CW = [1.1, 3.2, 1.2, 2.1, 2.3, 1.2, 0.6]
+            _CW = [0.9, 3.3, 1.2, 2.2, 2.4, 1.2, 0.5]
             _hc = st.columns(_CW)
             for _col, _lbl in zip(_hc, ["Fecha", "Detalle (editable)", "Importe", "Grupo", "Concepto", "Tipo", "TEF"]):
                 _col.markdown(f'<div class="ir-header">{_lbl}</div>', unsafe_allow_html=True)
@@ -2716,9 +2716,9 @@ elif pagina == "🏧 Importar Banco":
 
                 # ── Renderizar widgets (sin index=, sin warning) ─────────────
                 _rc = st.columns(_CW)
-                # Fecha en formato DD/MM/YYYY
+                # Fecha en formato DD/MM/AA (compacto, sin wrap)
                 try:
-                    _fecha_str = pd.to_datetime(_rrow["fecha"]).strftime("%d/%m/%Y")
+                    _fecha_str = pd.to_datetime(_rrow["fecha"]).strftime("%d/%m/%y")
                 except Exception:
                     _fecha_str = str(_rrow["fecha"])[:10]
                 _rc[0].markdown(f'<div class="ir-date">{_fecha_str}</div>', unsafe_allow_html=True)
