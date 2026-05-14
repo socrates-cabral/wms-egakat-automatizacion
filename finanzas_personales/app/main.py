@@ -2591,10 +2591,12 @@ elif pagina == "🏧 Importar Banco":
                 _tk  = f"_ti_{_import_key}_{_ri}"   # tipo widget key
                 _tef = f"_tef_{_import_key}_{_ri}"  # TEF propia toggle
 
-                # Inicializar estado si primera vez
+                # ── Defaults desde la fila (IA / patrón) ──────────────────────
                 _grp_def = _rrow.get("grupo", _grupos_list[0])
                 if _grp_def not in _grupos_list:
                     _grp_def = _grupos_list[0]
+
+                # Inicializar session_state ANTES de crear widgets (sin index=)
                 if _gk not in st.session_state:
                     st.session_state[_gk] = _grp_def
                 if _dk not in st.session_state:
@@ -2603,55 +2605,50 @@ elif pagina == "🏧 Importar Banco":
                     _t0 = _rrow.get("tipo_tx", "Gasto")
                     st.session_state[_tk] = _t0 if _t0 in _tipo_opts else "Gasto"
 
-                # TEF toggle → fuerza grupo+concepto+tipo a patrimonial
+                # TEF toggle → fuerza grupo + tipo a patrimonial
                 _tef_on = st.session_state.get(_tef, False)
                 if _tef_on:
                     if "Ahorro e Inversión" in _grupos_list:
                         st.session_state[_gk] = "Ahorro e Inversión"
                     st.session_state[_tk] = "Transferencia"
 
-                # Conceptos filtrados por grupo actual
-                _grp_now    = st.session_state[_gk]
-                _con_lista  = _taxonomia.get(_grp_now, ["Varios"])
-                if _tef_on and "Transferencia propia" not in _con_lista:
-                    _con_lista = ["Transferencia propia"] + _con_lista
-                _con_actual = st.session_state.get(_ck, _con_lista[0])
-                if _tef_on:
-                    _con_actual = "Transferencia propia"
-                    st.session_state[_ck] = _con_actual
-                elif _con_actual not in _con_lista:
-                    _con_actual = _con_lista[0]
-                    st.session_state[_ck] = _con_actual
+                # ── Lista de conceptos según grupo actual ─────────────────────
+                _grp_now  = st.session_state[_gk]
+                _con_base = list(_taxonomia.get(_grp_now, []))
 
+                # Si la IA sugirió un concepto que NO está en la taxonomía del
+                # usuario (típicamente "Sin categorizar"), lo agregamos al
+                # principio para que se vea como pendiente — no como un
+                # concepto válido al azar (ej. "Correos y Envíos").
+                _ai_con = str(_rrow.get("concepto", "")).strip()
+                if _ai_con and _ai_con not in _con_base:
+                    _con_base = [_ai_con] + _con_base
+
+                if _tef_on and "Transferencia propia" not in _con_base:
+                    _con_base = ["Transferencia propia"] + _con_base
+                if not _con_base:
+                    _con_base = ["Varios"]
+
+                # Setear concepto en session_state ANTES del widget
+                if _tef_on:
+                    st.session_state[_ck] = "Transferencia propia"
+                elif _ck not in st.session_state:
+                    st.session_state[_ck] = _ai_con if _ai_con in _con_base else _con_base[0]
+                elif st.session_state[_ck] not in _con_base:
+                    # El grupo cambió y el concepto previo no es válido para el nuevo
+                    st.session_state[_ck] = _con_base[0]
+
+                # ── Renderizar widgets (sin index=, sin warning) ─────────────
                 _rc = st.columns([1, 3, 1, 2, 2, 1, 1])
                 _rc[0].caption(str(_rrow["fecha"])[:10])
                 _rc[1].text_input("det", key=_dk, label_visibility="collapsed")
-
-                _monto_fmt = f"${_rrow['monto']:,.0f}"
-                _rc[2].caption(_monto_fmt)
-
-                _grp_idx = _grupos_list.index(_grp_now) if _grp_now in _grupos_list else 0
-                _rc[3].selectbox("grp", _grupos_list, index=_grp_idx,
-                                  key=_gk, label_visibility="collapsed",
-                                  disabled=_tef_on)
-
-                # Si el grupo cambió en este rerun, re-derivar lista de conceptos
-                _grp_now2 = st.session_state[_gk]
-                if _grp_now2 != _grp_now and not _tef_on:
-                    _con_lista = _taxonomia.get(_grp_now2, ["Varios"])
-                    st.session_state[_ck] = _con_lista[0]
-                    _con_actual = _con_lista[0]
-
-                _con_idx = _con_lista.index(_con_actual) if _con_actual in _con_lista else 0
-                _rc[4].selectbox("con", _con_lista, index=_con_idx,
-                                  key=_ck, label_visibility="collapsed",
-                                  disabled=_tef_on)
-
-                _tip_idx = _tipo_opts.index(st.session_state[_tk]) if st.session_state[_tk] in _tipo_opts else 0
-                _rc[5].selectbox("tip", _tipo_opts, index=_tip_idx,
-                                  key=_tk, label_visibility="collapsed",
-                                  disabled=_tef_on)
-
+                _rc[2].caption(f"${_rrow['monto']:,.0f}")
+                _rc[3].selectbox("grp", _grupos_list, key=_gk,
+                                  label_visibility="collapsed", disabled=_tef_on)
+                _rc[4].selectbox("con", _con_base, key=_ck,
+                                  label_visibility="collapsed", disabled=_tef_on)
+                _rc[5].selectbox("tip", _tipo_opts, key=_tk,
+                                  label_visibility="collapsed", disabled=_tef_on)
                 _rc[6].checkbox(
                     "tef", key=_tef, label_visibility="collapsed",
                     help="Marcar como transferencia entre tus propias cuentas (patrimonial)",
