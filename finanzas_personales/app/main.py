@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env")
 
-from data_loader import (
+from data_source import (
     cargar_transacciones,
     cargar_saldos_mensuales,
     cargar_categorias,
@@ -24,6 +24,7 @@ from data_loader import (
     cargar_gastos_compartidos,
     cargar_liquidaciones_carpeta,
     NOMBRES_MESES,
+    fuente_activa,
 )
 from calculators import (
     calc_ingresos_totales,
@@ -819,7 +820,9 @@ with st.sidebar:
         st.cache_data.clear()
         st.rerun()
     _puerto = st.get_option("server.port") or 8501
-    st.caption(f"v1.0 | Puerto {_puerto}")
+    _fuente = fuente_activa()
+    _fuente_icon = "☁️" if _fuente == "Supabase" else "📄"
+    st.caption(f"v1.0 | Puerto {_puerto} | {_fuente_icon} {_fuente}")
 
 
 # ── Carga de datos (cacheada) ─────────────────────────────────────────────────
