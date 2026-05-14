@@ -20,7 +20,7 @@
 - [[proyectos/agente-apuestas-fixes-2026-04-29]] — Fixes críticos sesgo Under (83%→target <60%), lambda floor bug, re-entrenamiento XGBoost. Grid ROI: umbral 0.60 = +9.82%. Parámetros: MIN_CONFIDENCE=60, umbrales=0.65.
 - [[proyectos/fillrate-automatizacion]] — Módulo independiente Fill Rate: 13 clientes, Graph API SharePoint, lock file, 3 reintentos Graph API. Corrió OK 10/04 en 47 min.
 - [[proyectos/agente-apuestas-orquestador]] — run_agent.py: flujo 7 pasos, control riesgo stop-loss 15%/25%, MAX_FIXTURES=6, módulos opcionales graceful import.
-- [[proyecto-finanzas-personales]] — App Streamlit 9 páginas sobre Excel .xlsm. Puerto 8503. Sprint 2 pendiente.
+- [[proyectos/finanzas-personales]] — App Streamlit finanzas chilenas. **Sprint 5 completo 2026-05-14**: migración Supabase + RLS multi-usuario + login Supabase Auth + deploy Streamlit Cloud (finanzas-socrates.streamlit.app). Repo dedicado, coexistencia Excel↔Supabase con toggle DATA_SOURCE.
 - [[proyecto-chiquito-financiero]] — App diagnóstico financiero negocio muebles. Puerto 8502. Streamlit Community Cloud.
 - [[proyecto-hackea-metabolismo]] — App pérdida de peso bilingual. Puerto 8504/8505. 14 sprints completos.
 - [[proyectos/nutrimetab-bi]] — Herramienta clínica nutricional/metabólica. SQLite, RandomForest 92%, 18/18 tests. S1–S8b completos, sin roadmap pendiente.

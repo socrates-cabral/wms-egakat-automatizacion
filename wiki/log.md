@@ -422,3 +422,11 @@ Páginas actualizadas:
 - wiki/proyectos/agente-apuestas-orquestador.md
 - wiki/index.md (+1 entrada decisiones)
 Notas: La key antigua de Google Cloud quedó revocada fuera de Git. Se validó `GOOGLE_API_KEY` desde `C:\ClaudeWork\.env`, se eliminó `agente_apuestas/.footystats_profile/` del tracking y de todo el historial, y la historia limpia quedó publicada en `idx/main` con `PATH_COUNT=0` y `MATCH_COUNT=0`.
+
+## [2026-05-14] ingest | Finanzas Personales — Sprint 5 (Supabase + login + deploy)
+Fuente: finanzas_personales/ (repo dedicado github.com/socrates-cabral/finanzas-personales)
+Páginas creadas:
+- wiki/proyectos/finanzas-personales.md
+Páginas actualizadas:
+- wiki/index.md (link corregido proyecto-finanzas-personales → proyectos/finanzas-personales, estado Sprint 5)
+Notas: Sprint 5 completo — migración Excel→Supabase con coexistencia (toggle DATA_SOURCE), RLS multi-usuario, login Supabase Auth con sesión persistente por cookie, deploy en Streamlit Cloud (finanzas-socrates.streamlit.app). finanzas_personales/ extraído del monorepo a repo git propio (patrón HackeaMetabolismo); el monorepo lo ignora. Migración validada en paridad: 348 transacciones + 69 categorías + 22 config. Causa raíz F5: cookie SameSite=Strict se pierde en iframe cross-site de Streamlit Cloud → fix secure=True/same_site=none. Follow-up media-baja: portar persistencia de cookie a HackeaMetabolismo.
