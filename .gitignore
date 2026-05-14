@@ -127,3 +127,9 @@ venv/
 **/Service Worker/
 playwright-report/
 test-results/
+
+# finanzas_personales — datos personales locales
+finanzas_personales/data/categorizacion_rules.json
+finanzas_personales/Info Bancos/
+finanzas_personales/Documentos/
+finanzas_personales/Liquidaciones/

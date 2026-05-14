@@ -27,12 +27,131 @@ from datetime import datetime
 import pandas as pd
 from dotenv import load_dotenv
 
+try:
+    import pdfplumber as _pdfplumber
+    _PDF_OK = True
+except ImportError:
+    _PDF_OK = False
+
 load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env")
 
 _DATA_DIR   = Path(__file__).parent.parent / "data"
 _RULES_FILE = _DATA_DIR / "categorizacion_rules.json"
 
 _COLS_OUT = ["fecha", "descripcion", "monto", "tipo_mov", "moneda", "banco", "cuenta", "archivo"]
+
+# ── Patrones lógicos para comercios chilenos comunes ──────────────────────────
+# (compiled_regex, tipo_tx, grupo, concepto)
+# Orden importa: el primero que haga match gana.
+_PATRONES_LOGICOS: list[tuple] = [
+    # ── Alimentación: supermercados ───────────────────────────────────────────
+    (re.compile(r"\blider\b|hip\s+lider|walmart", re.I), "Gasto", "Alimentación", "Supermercado"),
+    (re.compile(r"\bjumbo\b", re.I),                      "Gasto", "Alimentación", "Supermercado"),
+    (re.compile(r"unimarc", re.I),                        "Gasto", "Alimentación", "Supermercado"),
+    (re.compile(r"santa\s+isabel", re.I),                 "Gasto", "Alimentación", "Supermercado"),
+    (re.compile(r"tottus", re.I),                         "Gasto", "Alimentación", "Supermercado"),
+    (re.compile(r"\bacuenta\b", re.I),                    "Gasto", "Alimentación", "Supermercado"),
+    (re.compile(r"\bekono\b", re.I),                      "Gasto", "Alimentación", "Supermercado"),
+    # ── Ocio y Vida Social: delivery + restaurantes ───────────────────────────
+    (re.compile(r"uber\s+eats|ubereats", re.I),           "Gasto", "Ocio y Vida Social", "Comida Delivery"),
+    (re.compile(r"pedidos\s*ya", re.I),                   "Gasto", "Ocio y Vida Social", "Comida Delivery"),
+    (re.compile(r"\brappi\b", re.I),                      "Gasto", "Ocio y Vida Social", "Comida Delivery"),
+    (re.compile(r"mc\s*donald|burger\s*king|pizza\s*hut|dominos|subway", re.I), "Gasto", "Ocio y Vida Social", "Restaurantes y Bares"),
+    # ── Transporte ────────────────────────────────────────────────────────────
+    (re.compile(r"\buber\b(?!\s*eats)", re.I),            "Gasto", "Transporte", "Apps Transporte (Uber/Cabify/Didi)"),
+    (re.compile(r"\bcabify\b|\bdidi\b", re.I),            "Gasto", "Transporte", "Apps Transporte (Uber/Cabify/Didi)"),
+    (re.compile(r"\bcopec\b", re.I),                      "Gasto", "Transporte", "Combustible"),
+    (re.compile(r"\bpetrobras\b", re.I),                  "Gasto", "Transporte", "Combustible"),
+    (re.compile(r"\bshell\b", re.I),                      "Gasto", "Transporte", "Combustible"),
+    (re.compile(r"autopass|tag\s+express|autopista", re.I), "Gasto", "Transporte", "Tag y Peajes"),
+    (re.compile(r"\bbip\b|tarjeta\s+bip|medio\s+de\s+pago\s+bip|medio\s+de\s+pago\s+fintoc|\bfintoc\b|\bmetro\s+s\.?\s*a\.?\b", re.I), "Gasto", "Transporte", "Transporte Público (Bip/Metro)"),
+    # ── Salud y Cuidado Personal ──────────────────────────────────────────────
+    (re.compile(r"smart\s*fit", re.I),                    "Gasto", "Salud y Cuidado Personal", "Gimnasio y Deportes"),
+    (re.compile(r"salcobrand", re.I),                     "Gasto", "Salud y Cuidado Personal", "Farmacia y Medicamentos"),
+    (re.compile(r"cruz\s+verde", re.I),                   "Gasto", "Salud y Cuidado Personal", "Farmacia y Medicamentos"),
+    (re.compile(r"dr\.?\s*ahumada|farmacia\s+ahumada", re.I), "Gasto", "Salud y Cuidado Personal", "Farmacia y Medicamentos"),
+    (re.compile(r"\bripley\b", re.I),                     "Gasto", "Salud y Cuidado Personal", "Ropa y Calzado (Adultos)"),
+    (re.compile(r"\bparis\b", re.I),                      "Gasto", "Salud y Cuidado Personal", "Ropa y Calzado (Adultos)"),
+    # ── Suscripciones Digitales ───────────────────────────────────────────────
+    (re.compile(r"\bnetflix\b", re.I),                    "Gasto", "Suscripciones Digitales", "Streaming"),
+    (re.compile(r"\bspotify\b", re.I),                    "Gasto", "Suscripciones Digitales", "Streaming"),
+    (re.compile(r"amazon\s+prime|prime\s+video", re.I),   "Gasto", "Suscripciones Digitales", "Streaming"),
+    (re.compile(r"disney\+?|hbo\s*max", re.I),            "Gasto", "Suscripciones Digitales", "Streaming"),
+    (re.compile(r"anthropic|claude\.ai", re.I),           "Gasto", "Suscripciones Digitales", "IA y Productividad"),
+    (re.compile(r"\bopenai\b|chatgpt", re.I),             "Gasto", "Suscripciones Digitales", "IA y Productividad"),
+    # ── Servicios Básicos ─────────────────────────────────────────────────────
+    (re.compile(r"\bgtd\b", re.I),                        "Gasto", "Servicios Básicos", "Internet Hogar / Cable"),
+    (re.compile(r"\bentel\b", re.I),                      "Gasto", "Servicios Básicos", "Celular / Plan Móvil"),
+    (re.compile(r"\bmovistar\b", re.I),                   "Gasto", "Servicios Básicos", "Celular / Plan Móvil"),
+    (re.compile(r"\bclaro\b", re.I),                      "Gasto", "Servicios Básicos", "Celular / Plan Móvil"),
+    (re.compile(r"\bwom\b", re.I),                        "Gasto", "Servicios Básicos", "Celular / Plan Móvil"),
+    # ── Hogar y Vivienda ─────────────────────────────────────────────────────
+    (re.compile(r"\bsodimac\b", re.I),                    "Gasto", "Hogar y Vivienda", "Muebles y Decoración"),
+    (re.compile(r"\beasy\b", re.I),                       "Gasto", "Hogar y Vivienda", "Muebles y Decoración"),
+]
+
+
+_RE_PREFIJO_BCI = re.compile(
+    r"^compra\s+con\s+tarjeta\s+de\s+d[eé]bito\s+en\s+"
+    r"|^compra\s+tarjeta\s+d[eé]bito\s+en\s+"
+    r"|^pago\s+en\s+l[íi]nea\s+",
+    re.I,
+)
+_RE_PREFIJO_BE = re.compile(
+    r"^compra\s+",
+    re.I,
+)
+_RE_MERCADOPAGO = re.compile(r"(?:mercadopago|sumup|webpay|flow)\*([A-Z0-9][A-Z0-9 \-\*\.]+)", re.I)
+_RE_SUFIJO_CL   = re.compile(r"\s+(CHL?|CHILE)\s*$", re.I)
+
+
+def _extraer_comercio(desc: str) -> str:
+    """
+    Extrae el nombre del comercio real de descripciones bancarias con prefijos largos.
+
+    BCI:  "Compra con Tarjeta de Débito en GTD M." → "GTD M."
+    BE:   "COMPRA HIP LIDER MA CL"               → "HIP LIDER MA"
+    MP:   "Compra ... en MERCADOPAGO*ALLFOO ..."  → "ALLFOO"  (sub-comercio)
+    Otros: descripción original sin cambio
+    """
+    # MercadoPago: extraer sub-comercio
+    m = _RE_MERCADOPAGO.search(desc)
+    if m:
+        return m.group(1).strip()
+
+    # BCI: quitar prefijo "Compra con Tarjeta de Débito en "
+    s = _RE_PREFIJO_BCI.sub("", desc).strip()
+    if s != desc:
+        return _RE_SUFIJO_CL.sub("", s).strip()
+
+    # BancoEstado: quitar "COMPRA " inicial
+    s = _RE_PREFIJO_BE.sub("", desc).strip()
+    if s != desc:
+        return _RE_SUFIJO_CL.sub("", s).strip()
+
+    return desc
+
+
+def _buscar_patron_logico(desc: str) -> dict | None:
+    """
+    Busca patrón lógico usando tanto la descripción original como el comercio extraído.
+    Esto permite que 'Compra con Tarjeta de Débito en GTD M.' matchee el patrón GTD.
+    """
+    comercio = _extraer_comercio(desc)
+    for texto in (comercio, desc) if comercio != desc else (desc,):
+        for pattern, tipo_tx, grupo, concepto in _PATRONES_LOGICOS:
+            if pattern.search(texto):
+                return {"tipo_tx": tipo_tx, "grupo": grupo, "concepto": concepto}
+    return None
+
+
+def _infer_tipo_tx_desde_grupo(grupo: str) -> str:
+    g = grupo.lower()
+    if any(k in g for k in ("ingreso", "sueldo", "honorario", "remuneraci")):
+        return "Ingreso"
+    if any(k in g for k in ("ahorro", "inversión", "inversion", "financiero", "deuda")):
+        return "Transferencia"
+    return "Gasto"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -144,7 +263,31 @@ def detectar_banco_formato(path: str | Path) -> dict:
     Retorna {banco, cuenta, moneda}.
     """
     path = Path(path)
-    if path.suffix.lower() not in (".xls", ".xlsx"):
+    ext = path.suffix.lower()
+
+    # PDF: BancoEstado TDC (Estado de Cuenta) y Facturado
+    if ext == ".pdf":
+        if not _PDF_OK:
+            return {"banco": "desconocido", "cuenta": "desconocido", "moneda": "CLP"}
+        try:
+            with _pdfplumber.open(path) as pdf:
+                txt = " ".join(
+                    (page.extract_text() or "") for page in pdf.pages[:3]
+                ).lower()
+        except Exception:
+            return {"banco": "desconocido", "cuenta": "desconocido", "moneda": "CLP"}
+        # Recibo individual: "Facturado nacional" o "Facturado internacional"
+        if "facturado nacional" in txt:
+            return {"banco": "bancoestado", "cuenta": "tdc_facturado", "moneda": "CLP"}
+        if "facturado internacional" in txt:
+            moneda = "USD" if "us$" in txt else "CLP"
+            return {"banco": "bancoestado", "cuenta": "tdc_facturado", "moneda": moneda}
+        # Estado de cuenta mensual
+        if any(k in txt for k in ("estado de cuenta", "tarjeta de crédito", "tarjeta de credito", "bancoestado")):
+            return {"banco": "bancoestado", "cuenta": "tdc", "moneda": "CLP"}
+        return {"banco": "desconocido", "cuenta": "desconocido", "moneda": "CLP"}
+
+    if ext not in (".xls", ".xlsx"):
         return {"banco": "desconocido", "cuenta": "desconocido", "moneda": "CLP"}
 
     raw = _leer_excel(path)
@@ -562,6 +705,157 @@ def _parsear_consorcio(path: Path, cuenta: str = "cc") -> pd.DataFrame:
     return df[_COLS_OUT]
 
 
+_RE_USD_PREFIX = re.compile(r"US\$\s*", re.I)
+
+_RE_FECHA_PDF  = re.compile(r"^\d{2}/\d{2}/\d{4}$")
+_RE_FOLIO_PDF  = re.compile(r"^\d{6,12}$")
+_RE_MONTO_PDF  = re.compile(r"^-?\$[\d.,]+$")
+_SKIP_DESC_PDF = re.compile(
+    r"^(total\s+operaci|total\s+pago|saldo\s+anterior|total|n[°º]?\s+cuotas)",
+    re.I,
+)
+
+
+def _parsear_bancoestado_tdc_facturado_pdf(path: Path, moneda: str = "CLP") -> pd.DataFrame:
+    """
+    Parsea recibos individuales de BancoEstado TDC ('Movimiento Facturado').
+    Formato: tabla clave-valor con Monto, Descripción, Fecha (1 transacción por PDF).
+    """
+    if not _PDF_OK:
+        return _df_vacio()
+    kv: dict[str, str] = {}
+    try:
+        with _pdfplumber.open(path) as pdf:
+            for page in pdf.pages:
+                for tabla in page.extract_tables():
+                    for row in tabla:
+                        if row and len(row) >= 2 and row[0] and row[1]:
+                            kv[str(row[0]).strip()] = str(row[1]).strip()
+    except Exception:
+        return _df_vacio()
+
+    fecha_str = kv.get("Fecha", "")
+    desc      = kv.get("Descripción", "Sin descripción").strip()
+    monto_str = kv.get("Monto", "0")
+
+    # Detectar USD en el campo Monto
+    if _RE_USD_PREFIX.search(monto_str):
+        moneda = "USD"
+    monto_str_clean = _RE_USD_PREFIX.sub("", monto_str).strip()
+    monto = _parse_monto(monto_str_clean)
+    if monto == 0:
+        return _df_vacio()
+
+    try:
+        fecha = pd.Timestamp(datetime.strptime(fecha_str, "%d/%m/%Y"))
+    except ValueError:
+        return _df_vacio()
+
+    tipo_mov = "abono" if any(k in desc.lower() for k in ("cancelado", "pago deuda", "abono")) else "cargo"
+
+    df = pd.DataFrame([{"fecha": fecha, "descripcion": desc, "monto": monto, "tipo_mov": tipo_mov}])
+    df["moneda"]  = moneda
+    df["banco"]   = "bancoestado"
+    df["cuenta"]  = "tdc"
+    df["archivo"] = path.name
+    return df[_COLS_OUT]
+
+
+def _parsear_bancoestado_tdc_pdf(path: Path) -> pd.DataFrame:
+    """
+    Parsea el "Estado de Cuenta" TDC de BancoEstado (PDF descargado del banco).
+
+    Estructura de tabla por página:
+      Col 0: Ciudad (puede estar vacío)
+      Col 1: fecha DD/MM/YYYY
+      Col 2: folio (≥6 dígitos)
+      Col 3: descripción
+      Col 4: monto total cuota
+      Col 5: monto cuota
+      Col 6: "X/Y" cuotas
+      Col 7: monto a pagar  ← columna de importe efectivo
+
+    Negativo → abono (pago de tarjeta).  Positivo → cargo (compra/comisión).
+    """
+    if not _PDF_OK:
+        return _df_vacio()
+
+    filas = []
+    try:
+        with _pdfplumber.open(path) as pdf:
+            for page in pdf.pages:
+                tablas = page.extract_tables()
+                for tabla in tablas:
+                    for row in tabla:
+                        if not row or len(row) < 5:
+                            continue
+                        # Encontrar columna de fecha (DD/MM/YYYY)
+                        # La tabla puede tener ciudad en col 0 (a veces None)
+                        # Detectamos posición dinámica de la fecha
+                        fecha_col = None
+                        for ci, cell in enumerate(row):
+                            if cell and _RE_FECHA_PDF.match(str(cell).strip()):
+                                fecha_col = ci
+                                break
+                        if fecha_col is None:
+                            continue
+
+                        fecha_str = str(row[fecha_col]).strip()
+                        try:
+                            fecha = pd.Timestamp(datetime.strptime(fecha_str, "%d/%m/%Y"))
+                        except ValueError:
+                            continue
+
+                        # descripción está justo después del folio (fecha+1 o fecha+2)
+                        desc_col = fecha_col + 2  # col fecha+1 = folio, fecha+2 = desc
+                        if desc_col >= len(row):
+                            continue
+
+                        desc = str(row[desc_col] or "").strip()
+                        if not desc or desc in ("nan", "None"):
+                            continue
+                        if _SKIP_DESC_PDF.match(desc):
+                            continue
+
+                        # Monto a pagar = última columna con valor de monto
+                        monto_raw = None
+                        for cell in reversed(row):
+                            if cell and _RE_MONTO_PDF.match(str(cell).strip()):
+                                monto_raw = str(cell).strip()
+                                break
+                        if monto_raw is None:
+                            continue
+
+                        negativo = monto_raw.startswith("-")
+                        monto = _parse_monto(monto_raw)
+                        if monto == 0:
+                            continue
+
+                        # Pagos de tarjeta (MONTO CANCELADO) → patrimonial / abono
+                        if "monto cancelado" in desc.lower():
+                            tipo_mov = "abono"
+                        else:
+                            tipo_mov = "abono" if negativo else "cargo"
+
+                        filas.append({
+                            "fecha": fecha,
+                            "descripcion": desc,
+                            "monto": monto,
+                            "tipo_mov": tipo_mov,
+                        })
+    except Exception as e:
+        return _df_vacio()
+
+    if not filas:
+        return _df_vacio()
+    df = pd.DataFrame(filas)
+    df["moneda"]  = "CLP"
+    df["banco"]   = "bancoestado"
+    df["cuenta"]  = "tdc"
+    df["archivo"] = path.name
+    return df[_COLS_OUT]
+
+
 # ── Entry point de parseo ─────────────────────────────────────────────────────
 
 def parsear_archivo_banco(path: str | Path) -> tuple[pd.DataFrame, dict]:
@@ -582,7 +876,13 @@ def parsear_archivo_banco(path: str | Path) -> tuple[pd.DataFrame, dict]:
             else:
                 df = _parsear_bci_tdc(path, moneda)
         elif banco == "bancoestado":
-            df = _parsear_bancoestado_cc(path, cuenta)
+            if path.suffix.lower() == ".pdf":
+                if cuenta == "tdc_facturado":
+                    df = _parsear_bancoestado_tdc_facturado_pdf(path, moneda)
+                else:
+                    df = _parsear_bancoestado_tdc_pdf(path)
+            else:
+                df = _parsear_bancoestado_cc(path, cuenta)
         elif banco == "itau":
             if cuenta == "cc":
                 df = _parsear_itau_cc(path)
@@ -618,6 +918,82 @@ def parsear_multiples_archivos(paths: list[str | Path]) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True) if frames else _df_vacio()
 
 
+def deduplicar_transacciones(
+    df: pd.DataFrame,
+) -> tuple[pd.DataFrame, int, list[str]]:
+    """
+    Elimina duplicados cross-file: cuando el mismo banco+cuenta aparece en más de
+    un archivo, transacciones con idéntico (banco, cuenta, fecha, monto, tipo_mov)
+    se consolidan en una sola, conservando la descripción más larga.
+
+    Transacciones dentro de un mismo archivo nunca se tocan — dos recargas Bip de
+    $5.000 el mismo día en el mismo archivo son dos movimientos legítimos.
+
+    Retorna:
+        df_dedup       DataFrame sin duplicados cross-file
+        n_removidos    Número de filas eliminadas
+        conflictos     Lista de strings describiendo qué archivos solapaban
+    """
+    if df.empty:
+        return df, 0, []
+
+    df = df.copy()
+    df["_dl"] = df["descripcion"].str.len()
+
+    # Detectar banco+cuenta que aparecen en múltiples archivos
+    multi = (
+        df.groupby(["banco", "cuenta"])["archivo"]
+        .nunique()
+    )
+    multi_pares = multi[multi > 1].index.tolist()
+
+    conflictos: list[str] = []
+    for banco, cuenta in multi_pares:
+        archs = df[
+            (df["banco"] == banco) & (df["cuenta"] == cuenta)
+        ]["archivo"].unique().tolist()
+        conflictos.append(f"{banco.upper()} {cuenta}: {' + '.join(archs)}")
+
+    n_antes = len(df)
+
+    if not multi_pares:
+        return df.drop(columns=["_dl"]), 0, []
+
+    # Separar filas de cuentas con solapamiento vs sin solapamiento
+    multi_set = set(multi_pares)
+    mask_multi = df.apply(lambda r: (r["banco"], r["cuenta"]) in multi_set, axis=1)
+    df_ok    = df[~mask_multi].drop(columns=["_dl"])
+    df_multi = df[mask_multi].copy()
+
+    _KEY = ["banco", "cuenta", "fecha", "monto", "tipo_mov"]
+
+    # Para cada grupo de clave, conservar max(ocurrencias en cualquier archivo)
+    # filas, tomándolas del archivo con descripciones más largas.
+    kept = []
+    for _, grp in df_multi.groupby(_KEY, sort=False):
+        per_file = grp.groupby("archivo")
+        max_count = per_file.size().max()          # máx legítimos en un solo archivo
+        best_arch = per_file["_dl"].sum().idxmax() # archivo con descripciones más ricas
+        best_rows = (
+            grp[grp["archivo"] == best_arch]
+            .sort_values("_dl", ascending=False)
+            .head(max_count)
+        )
+        kept.append(best_rows)
+
+    df_multi_dedup = (
+        pd.concat(kept).drop(columns=["_dl"]) if kept
+        else df_multi.drop(columns=["_dl"]).iloc[:0]
+    )
+
+    df_out = (
+        pd.concat([df_ok, df_multi_dedup], ignore_index=True)
+        .sort_values(["fecha", "banco"])
+        .reset_index(drop=True)
+    )
+    return df_out, n_antes - len(df_out), conflictos
+
+
 # ── Conversión USD → CLP ──────────────────────────────────────────────────────
 
 def convertir_usd_clp(monto_usd: float) -> float:
@@ -651,6 +1027,7 @@ _RE_PATRIMONIAL = re.compile(
     r"|transferencia\s+(enviada|recibida)\s+a\s+s[oó]crates"
     r"|pago\s+automat\.\s+tarjeta"
     r"|pago\s+deuda\s+tarjeta"
+    r"|transferencia\s+enviada\s+a\s+tarjeta\s+cmr"  # pago Falabella CMR
     r"|abono\s+desde\s+linea\s+de\s+credito"
     r"|liquid\s+intereses\s+pactados"
     r"|monto\s+cancelado"
@@ -785,18 +1162,35 @@ def categorizar_lote(
             resultados.append({"tipo_tx": "Transferencia", "grupo": "Ahorro e Inversión", "concepto": "Transferencia propia", "fuente_cat": "auto"})
             continue
 
-        # 3. Caché de reglas
-        clave = _clave(desc)
-        if clave in reglas:
-            r = dict(reglas[clave])
+        # 3. Caché de reglas — buscar por descripción original Y por comercio extraído
+        clave          = _clave(desc)
+        comercio       = _extraer_comercio(desc)
+        clave_comercio = _clave(comercio) if comercio != desc else None
+
+        hit = reglas.get(clave) or (reglas.get(clave_comercio) if clave_comercio else None)
+        if hit:
+            r = dict(hit)
             r["fuente_cat"] = "cache"
             resultados.append(r)
             continue
 
-        # 4. Claude Haiku
-        cat = _categorizar_con_ia(desc, tipo_mov, moneda, taxonomia)
+        # 4. Patrones lógicos (busca en comercio extraído + descripción completa)
+        cat_patron = _buscar_patron_logico(desc)
+        if cat_patron:
+            nuevas[clave] = cat_patron
+            cat_patron = dict(cat_patron)
+            cat_patron["fuente_cat"] = "patron"
+            resultados.append(cat_patron)
+            continue
+
+        # 5. Claude Haiku — último recurso; pasa comercio limpio para mejor contexto
+        desc_ia = comercio if comercio != desc else desc
+        cat = _categorizar_con_ia(desc_ia, tipo_mov, moneda, taxonomia)
         cat["fuente_cat"] = "ai"
-        nuevas[clave] = {k: v for k, v in cat.items() if k != "fuente_cat"}
+        # Solo guardar en caché si la IA dio una categorización específica
+        # (no guardar respuestas genéricas que envenenen futuras importaciones)
+        if cat.get("concepto") != "Sin categorizar" and cat.get("grupo") != "Varios y Otros":
+            nuevas[clave] = {k: v for k, v in cat.items() if k != "fuente_cat"}
         resultados.append(cat)
 
     if nuevas:
@@ -809,6 +1203,99 @@ def categorizar_lote(
     df_out["concepto"]   = [r.get("concepto", "")              for r in resultados]
     df_out["fuente_cat"] = [r.get("fuente_cat", "?")           for r in resultados]
     return df_out
+
+
+# ── Pre-populación de caché desde historial Excel del usuario ─────────────────
+
+def construir_cache_desde_excel(
+    excel_path: str | Path,
+    sobrescribir: bool = False,
+) -> dict:
+    """
+    Lee todas las hojas mensuales del Excel del usuario y extrae pares
+    DETALLE → {tipo_tx, grupo, concepto} para pre-poblar la caché de reglas.
+
+    El historial real del usuario tiene prioridad sobre los patrones lógicos:
+    si el usuario ya clasificó "HIP LIDER" como Supermercado, eso queda en caché.
+
+    Parámetros:
+        sobrescribir: si True, descarta la caché existente y reconstruye desde cero.
+
+    Retorna: {"leidas": int, "nuevas": int, "total": int}
+    """
+    excel_path = Path(excel_path)
+    if not excel_path.exists():
+        return {"leidas": 0, "nuevas": 0, "total": 0, "error": "Archivo no encontrado"}
+
+    reglas = {} if sobrescribir else cargar_reglas()
+    stats = {"leidas": 0, "nuevas": 0, "total": 0}
+
+    try:
+        xl = pd.ExcelFile(excel_path)
+    except Exception as e:
+        return {"leidas": 0, "nuevas": 0, "total": 0, "error": str(e)}
+
+    _MESES = {
+        "enero", "febrero", "marzo", "abril", "mayo", "junio",
+        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+    }
+    hojas_mensuales = [h for h in xl.sheet_names if any(m in h.lower() for m in _MESES)]
+
+    for hoja in hojas_mensuales:
+        try:
+            raw = pd.read_excel(excel_path, sheet_name=hoja, header=None, dtype=str)
+        except Exception:
+            continue
+
+        # Encontrar fila de encabezado (contiene GRUPO y DETALLE)
+        hrow = None
+        for i, row in raw.iterrows():
+            vals = " ".join(str(v).lower() for v in row if str(v) not in ("nan", "None"))
+            if "grupo" in vals and "detalle" in vals:
+                hrow = i
+                break
+        if hrow is None:
+            continue
+
+        headers = [str(v).lower().strip() for v in raw.iloc[hrow]]
+        idx_g = _find_col(headers, ["grupo"])
+        idx_c = _find_col(headers, ["concepto"])
+        idx_d = _find_col(headers, ["detalle"])
+
+        if idx_g is None or idx_d is None:
+            continue
+
+        for _, row in raw.iloc[hrow + 1:].iterrows():
+            grupo    = str(row.iloc[idx_g]).strip()
+            concepto = str(row.iloc[idx_c]).strip() if idx_c is not None else ""
+            detalle  = str(row.iloc[idx_d]).strip()
+
+            # Saltar filas vacías o de totales
+            if not detalle or detalle in ("nan", "None", ""):
+                continue
+            if not grupo or grupo in ("nan", "None", ""):
+                continue
+
+            stats["leidas"] += 1
+            clave = _clave(detalle)
+            if not clave:
+                continue
+
+            # Historial del usuario tiene precedencia; no sobrescribir si ya existe
+            if not sobrescribir and clave in reglas:
+                continue
+
+            tipo_tx = _infer_tipo_tx_desde_grupo(grupo)
+            reglas[clave] = {
+                "tipo_tx":  tipo_tx,
+                "grupo":    grupo,
+                "concepto": concepto if concepto not in ("nan", "None", "") else "Varios",
+            }
+            stats["nuevas"] += 1
+
+    guardar_reglas(reglas)
+    stats["total"] = len(reglas)
+    return stats
 
 
 # ── Export al formato del Excel del usuario ───────────────────────────────────

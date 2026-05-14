@@ -684,6 +684,7 @@ _OPT_MAP = {
     "Deudas":          "🏦 Deudas",
     "Inversiones":     "₿ Inversiones",
     "AFP y Previsión": "🏛️ AFP y Previsión",
+    "Importar Banco":  "🏧 Importar Banco",
     "Liquidaciones":   "📄 Liquidaciones",
     "Simulador":       "🎯 Simulador",
     "Ajustes":         "⚙️ Ajustes",
@@ -696,7 +697,7 @@ with st.sidebar:
         icons=[
             "bar-chart-fill", "cash-coin", "calendar3", "graph-up-arrow",
             "gem", "credit-card-2-front", "currency-bitcoin", "bank",
-            "file-text", "bullseye", "gear",
+            "upload", "file-text", "bullseye", "gear",
         ],
         menu_icon="wallet2",
         default_index=0,
@@ -2394,6 +2395,396 @@ elif pagina == "🏛️ AFP y Previsión":
         saldo_afc_final = saldo_afc_proy[-1]
         st.metric(f"Saldo estimado en {anos_afc} años (rentab. 4% anual)", fmt_clp(int(saldo_afc_final)))
         st.caption("Proyección referencial con rentabilidad histórica AFC ~4% anual. Los fondos AFP y AFC son complementarios — la pensión proviene solo de AFP.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PÁGINA: IMPORTAR BANCO
+# ═══════════════════════════════════════════════════════════════════════════════
+elif pagina == "🏧 Importar Banco":
+    import tempfile
+    from bank_importer import (
+        parsear_archivo_banco,
+        categorizar_lote,
+        normalizar_a_clp,
+        preparar_para_excel,
+        construir_cache_desde_excel,
+        extraer_taxonomia,
+        cargar_reglas,
+        deduplicar_transacciones,
+    )
+
+    st.title("🏧 Importar Archivo de Banco")
+    st.caption("Sube cartolas o estados de cuenta → el sistema categoriza usando tu historial Excel + patrones inteligentes")
+
+    _excel_path = Path(get_cfg("excel_path"))
+    _reglas_actuales = cargar_reglas()
+
+    # ── Métricas de caché ────────────────────────────────────────────────────
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Reglas en caché", len(_reglas_actuales), help="Transacciones ya categorizadas (historial + IA)")
+    c2.metric("Bancos soportados", "5", help="BCI, BancoEstado, Itaú, Falabella, Consorcio")
+    c3.metric("Excel configurado", "✅" if _excel_path.exists() else "⚠️ No encontrado")
+
+    if st.button("🔄 Reconstruir caché desde Excel", help="Lee tus 5+ meses de historial y regenera las reglas"):
+        if not _excel_path.exists():
+            st.error(f"Excel no encontrado: {_excel_path}")
+        else:
+            with st.spinner("Leyendo historial..."):
+                _stats = construir_cache_desde_excel(_excel_path, sobrescribir=True)
+            st.success(f"Caché reconstruida: {_stats['leidas']} filas leídas → {_stats['nuevas']} reglas nuevas | Total: {_stats['total']}")
+            st.rerun()
+
+    st.markdown("---")
+
+    # ── Upload ───────────────────────────────────────────────────────────────
+    _uploaded = st.file_uploader(
+        "Selecciona uno o más archivos bancarios (.xls / .xlsx / .pdf)",
+        type=["xls", "xlsx", "pdf"],
+        accept_multiple_files=True,
+        help="BCI, BancoEstado (incl. TDC PDF), Itaú (TDC + CC), Falabella, Consorcio",
+    )
+    _col_a, _col_b = st.columns(2)
+    _norm_usd    = _col_a.checkbox("Convertir USD → CLP automáticamente", value=True)
+    _incl_patrim = _col_b.checkbox("Incluir movimientos patrimoniales (TEF propias)", value=False)
+
+    if not _uploaded:
+        st.info("Sube uno o más archivos de tus bancos para comenzar.")
+        st.stop()
+
+    # ── Parsear archivos ─────────────────────────────────────────────────────
+    _dfs_raw = []
+    _det_rows = []
+    for _uf in _uploaded:
+        _suffix = Path(_uf.name).suffix
+        with tempfile.NamedTemporaryFile(delete=False, suffix=_suffix) as _tmp:
+            _tmp.write(_uf.read())
+            _tmp_path = Path(_tmp.name)
+        _df_raw, _info = parsear_archivo_banco(_tmp_path)
+        _info["archivo"] = _uf.name
+        _tmp_path.unlink(missing_ok=True)
+        if not _df_raw.empty:
+            _df_raw["archivo"] = _uf.name
+            _dfs_raw.append(_df_raw)
+        _det_rows.append({
+            "Archivo":      _uf.name,
+            "Banco":        _info.get("banco", "?").upper(),
+            "Cuenta":       _info.get("cuenta", "?"),
+            "Moneda":       _info.get("moneda", "?"),
+            "Movimientos":  _info.get("n_filas", len(_df_raw)),
+            "Estado":       "⚠️ Vacío" if _df_raw.empty else ("❌ " + _info["error"][:25] if "error" in _info else "✅ OK"),
+        })
+
+    with st.expander("Detección de archivos", expanded=True):
+        st.dataframe(pd.DataFrame(_det_rows), use_container_width=True, hide_index=True)
+
+    if not _dfs_raw:
+        st.error("No se pudo parsear ningún archivo válido.")
+        st.stop()
+
+    _df_all = pd.concat(_dfs_raw, ignore_index=True)
+    if _norm_usd:
+        _df_all = normalizar_a_clp(_df_all)
+
+    # ── Deduplicación cross-file ──────────────────────────────────────────────
+    _df_all, _n_dupes, _conflictos = deduplicar_transacciones(_df_all)
+    if _conflictos:
+        if _n_dupes > 0:
+            st.warning(
+                f"⚠️ **{_n_dupes} transacciones duplicadas eliminadas** — "
+                f"archivos del mismo banco/cuenta solapados:\n\n"
+                + "\n".join(f"- {c}" for c in _conflictos)
+            )
+        else:
+            st.info(
+                "ℹ️ Archivos del mismo banco/cuenta detectados, sin duplicados exactos:\n\n"
+                + "\n".join(f"- {c}" for c in _conflictos)
+            )
+
+    # ── Categorizar ──────────────────────────────────────────────────────────
+    st.markdown("---")
+    if st.button("▶ Categorizar transacciones", type="primary"):
+        # Asegurar caché actualizada desde Excel
+        if _excel_path.exists():
+            _stats = construir_cache_desde_excel(_excel_path)
+            if _stats["nuevas"] > 0:
+                st.caption(f"Caché actualizada: +{_stats['nuevas']} reglas nuevas")
+
+        _taxonomia = extraer_taxonomia(_excel_path) if _excel_path.exists() else {}
+        _n = len(_df_all)
+        _bar = st.progress(0, text="Categorizando...")
+        _CHUNK = 20
+        _chunks = [_df_all.iloc[i:i + _CHUNK] for i in range(0, _n, _CHUNK)]
+        _results = []
+        for _i, _chunk in enumerate(_chunks):
+            _results.append(categorizar_lote(_chunk, taxonomia=_taxonomia))
+            _bar.progress((_i + 1) / len(_chunks), text=f"Categorizando... {min((_i+1)*_CHUNK, _n)}/{_n}")
+        _bar.empty()
+        _df_cat = pd.concat(_results, ignore_index=True)
+        st.session_state["_import_df_cat"] = _df_cat
+        st.session_state["_import_taxonomia"] = _taxonomia
+        st.rerun()
+
+    if "_import_df_cat" not in st.session_state:
+        st.stop()
+
+    _df_cat      = st.session_state["_import_df_cat"]
+    _taxonomia   = st.session_state.get("_import_taxonomia", {})
+
+    # Filtrar patrimoniales si corresponde
+    if not _incl_patrim:
+        _df_show = _df_cat[_df_cat["fuente_cat"] != "auto"].copy()
+    else:
+        _df_show = _df_cat.copy()
+
+    # ── Estadísticas ─────────────────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("Resultado de categorización")
+    _fuentes = _df_show["fuente_cat"].value_counts().to_dict()
+    _m1, _m2, _m3, _m4 = st.columns(4)
+    _m1.metric("Total tx",        len(_df_show))
+    _m2.metric("Caché historial", _fuentes.get("cache",   0))
+    _m3.metric("Patrón lógico",   _fuentes.get("patron",  0))
+    _m4.metric("IA / Revisar",    _fuentes.get("ai",      0) + _fuentes.get("patron", 0))
+    _cobertura = _fuentes.get("cache", 0) / max(len(_df_show), 1) * 100
+    st.caption(f"🟢 Caché Excel  🔵 Patrón  🟡 Requiere revisión  ⚪ Auto-patrimonial — "
+               f"Caché sin IA: **{_cobertura:.0f}%**")
+
+    # ── Tabla resumen (todas las tx, read-only) ───────────────────────────────
+    _BADGE = {"cache": "🟢", "patron": "🔵", "auto": "⚪", "ai": "🟡", "manual": "✅"}
+    _df_overview = preparar_para_excel(_df_show).copy()
+    _df_overview.insert(0, "", _df_show["fuente_cat"].map(_BADGE).fillna("❓").values[:len(_df_overview)])
+    st.dataframe(
+        _df_overview.rename(columns={"detalle": "Descripción banco", "importe": "Importe $"}),
+        use_container_width=True, hide_index=True,
+        column_config={"Importe $": st.column_config.NumberColumn(format="%d $")},
+    )
+
+    # ── Revisar y corregir (cascada Grupo → Concepto) ─────────────────────────
+    _df_revisar = _df_show[_df_show["fuente_cat"].isin(["ai", "patron"])].copy().reset_index(drop=True)
+
+    if not _df_revisar.empty:
+        st.markdown("---")
+        _grupos_list   = sorted(_taxonomia.keys()) if _taxonomia else ["Varios y Otros"]
+        _import_key    = str(abs(hash("".join(u.name for u in _uploaded))))[:10] if _uploaded else "x"
+        _tipo_opts     = ["Gasto", "Ingreso", "Transferencia", "Ahorro", "Inversión"]
+
+        with st.expander(
+            f"✏️ Revisar y corregir categorías — {len(_df_revisar)} transacciones pendientes",
+            expanded=True,
+        ):
+            st.caption(
+                "Cambia **Grupo** → el desplegable de Concepto se filtra automáticamente. "
+                "Edita **Detalle** para personalizar la descripción. "
+                "Marca **🔄 TEF** si es transferencia entre tus propias cuentas (override patrimonial). "
+                "Guarda para que la próxima importación lo categorice solo."
+            )
+            # Cabecera
+            _hc = st.columns([1, 3, 1, 2, 2, 1, 1])
+            for _col, _lbl in zip(_hc, ["Fecha", "Detalle (editable)", "Importe $", "Grupo", "Concepto", "Tipo", "🔄 TEF"]):
+                _col.markdown(f"**{_lbl}**")
+            st.divider()
+
+            for _ri, (_, _rrow) in enumerate(_df_revisar.iterrows()):
+                _gk  = f"_gi_{_import_key}_{_ri}"   # grupo widget key
+                _ck  = f"_ci_{_import_key}_{_ri}"   # concepto widget key
+                _dk  = f"_di_{_import_key}_{_ri}"   # detalle widget key
+                _tk  = f"_ti_{_import_key}_{_ri}"   # tipo widget key
+                _tef = f"_tef_{_import_key}_{_ri}"  # TEF propia toggle
+
+                # Inicializar estado si primera vez
+                _grp_def = _rrow.get("grupo", _grupos_list[0])
+                if _grp_def not in _grupos_list:
+                    _grp_def = _grupos_list[0]
+                if _gk not in st.session_state:
+                    st.session_state[_gk] = _grp_def
+                if _dk not in st.session_state:
+                    st.session_state[_dk] = str(_rrow["descripcion"])
+                if _tk not in st.session_state:
+                    _t0 = _rrow.get("tipo_tx", "Gasto")
+                    st.session_state[_tk] = _t0 if _t0 in _tipo_opts else "Gasto"
+
+                # TEF toggle → fuerza grupo+concepto+tipo a patrimonial
+                _tef_on = st.session_state.get(_tef, False)
+                if _tef_on:
+                    if "Ahorro e Inversión" in _grupos_list:
+                        st.session_state[_gk] = "Ahorro e Inversión"
+                    st.session_state[_tk] = "Transferencia"
+
+                # Conceptos filtrados por grupo actual
+                _grp_now    = st.session_state[_gk]
+                _con_lista  = _taxonomia.get(_grp_now, ["Varios"])
+                if _tef_on and "Transferencia propia" not in _con_lista:
+                    _con_lista = ["Transferencia propia"] + _con_lista
+                _con_actual = st.session_state.get(_ck, _con_lista[0])
+                if _tef_on:
+                    _con_actual = "Transferencia propia"
+                    st.session_state[_ck] = _con_actual
+                elif _con_actual not in _con_lista:
+                    _con_actual = _con_lista[0]
+                    st.session_state[_ck] = _con_actual
+
+                _rc = st.columns([1, 3, 1, 2, 2, 1, 1])
+                _rc[0].caption(str(_rrow["fecha"])[:10])
+                _rc[1].text_input("det", key=_dk, label_visibility="collapsed")
+
+                _monto_fmt = f"${_rrow['monto']:,.0f}"
+                _rc[2].caption(_monto_fmt)
+
+                _grp_idx = _grupos_list.index(_grp_now) if _grp_now in _grupos_list else 0
+                _rc[3].selectbox("grp", _grupos_list, index=_grp_idx,
+                                  key=_gk, label_visibility="collapsed",
+                                  disabled=_tef_on)
+
+                # Si el grupo cambió en este rerun, re-derivar lista de conceptos
+                _grp_now2 = st.session_state[_gk]
+                if _grp_now2 != _grp_now and not _tef_on:
+                    _con_lista = _taxonomia.get(_grp_now2, ["Varios"])
+                    st.session_state[_ck] = _con_lista[0]
+                    _con_actual = _con_lista[0]
+
+                _con_idx = _con_lista.index(_con_actual) if _con_actual in _con_lista else 0
+                _rc[4].selectbox("con", _con_lista, index=_con_idx,
+                                  key=_ck, label_visibility="collapsed",
+                                  disabled=_tef_on)
+
+                _tip_idx = _tipo_opts.index(st.session_state[_tk]) if st.session_state[_tk] in _tipo_opts else 0
+                _rc[5].selectbox("tip", _tipo_opts, index=_tip_idx,
+                                  key=_tk, label_visibility="collapsed",
+                                  disabled=_tef_on)
+
+                _rc[6].checkbox(
+                    "tef", key=_tef, label_visibility="collapsed",
+                    help="Marcar como transferencia entre tus propias cuentas (patrimonial)",
+                )
+
+            st.markdown("")
+            if st.button("💾 Guardar correcciones → caché", type="primary", key="_btn_guardar_import"):
+                from bank_importer import cargar_reglas, guardar_reglas, _clave as _ck_fn
+                _reglas_upd = cargar_reglas()
+                _df_upd     = st.session_state["_import_df_cat"].copy()
+
+                for _ri, (_, _rrow) in enumerate(_df_revisar.iterrows()):
+                    _gk  = f"_gi_{_import_key}_{_ri}"
+                    _ck  = f"_ci_{_import_key}_{_ri}"
+                    _dk  = f"_di_{_import_key}_{_ri}"
+                    _tk  = f"_ti_{_import_key}_{_ri}"
+                    _tef = f"_tef_{_import_key}_{_ri}"
+
+                    # Si TEF está marcado, override absoluto a patrimonial
+                    if st.session_state.get(_tef, False):
+                        _grp_s = "Ahorro e Inversión"
+                        _con_s = "Transferencia propia"
+                        _tip_s = "Transferencia"
+                        _fuente_s = "manual_tef"
+                    else:
+                        _grp_s = st.session_state.get(_gk, "Varios y Otros")
+                        _con_s = st.session_state.get(_ck, "Varios")
+                        _tip_s = st.session_state.get(_tk, "Gasto")
+                        _fuente_s = "manual"
+                    _det_s = st.session_state.get(_dk, str(_rrow["descripcion"]))
+
+                    _orig_mask = _df_upd["descripcion"] == _rrow["descripcion"]
+                    _df_upd.loc[_orig_mask, "grupo"]      = _grp_s
+                    _df_upd.loc[_orig_mask, "concepto"]   = _con_s
+                    _df_upd.loc[_orig_mask, "tipo_tx"]    = _tip_s
+                    _df_upd.loc[_orig_mask, "fuente_cat"] = _fuente_s
+
+                    _k = _ck_fn(str(_rrow["descripcion"]))
+                    if _k:
+                        _reglas_upd[_k] = {"tipo_tx": _tip_s, "grupo": _grp_s, "concepto": _con_s}
+
+                guardar_reglas(_reglas_upd)
+                st.session_state["_import_df_cat"]  = _df_upd
+                st.session_state["_import_taxonomia"] = _taxonomia
+                st.success(f"✅ {len(_df_revisar)} correcciones guardadas. Próxima importación: caché directa.")
+                st.rerun()
+
+    # ── Comparar con Excel ────────────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("Comparar con mi Excel")
+    st.caption("Cruza las transacciones contra tu historial Excel — match por mes + monto (±1 CLP)")
+
+    if st.button("🔍 Comparar con Excel", key="_btn_comparar"):
+        if not _excel_path.exists():
+            st.error(f"Excel no encontrado: {_excel_path}")
+        else:
+            from data_loader import cargar_transacciones
+            _df_xl = cargar_transacciones(str(_excel_path))
+            if _df_xl.empty:
+                st.warning("No se encontraron transacciones en el Excel.")
+            else:
+                _df_xl["_imp"] = _df_xl["importe"].abs().round(0)
+                _df_xl["_mes"] = pd.to_datetime(_df_xl["fecha"], errors="coerce").dt.to_period("M")
+                _df_sc = _df_show.copy()
+                _df_sc["_imp"] = _df_sc["monto"].round(0)
+                _df_sc["_mes"] = pd.to_datetime(_df_sc["fecha"], errors="coerce").dt.to_period("M")
+                _rows_cmp = []
+                for _, _rb in _df_sc.iterrows():
+                    _mk = (_df_xl["_mes"] == _rb["_mes"]) & ((_df_xl["_imp"] - _rb["_imp"]).abs() <= 1)
+                    _hits = _df_xl[_mk]
+                    if _hits.empty:
+                        _rows_cmp.append({"": "❓", "Monto": int(_rb["_imp"]),
+                            "Desc banco": str(_rb["descripcion"])[:38],
+                            "Grupo banco": _rb.get("grupo",""), "Concepto banco": _rb.get("concepto",""),
+                            "DETALLE Excel": "—", "Grupo Excel": "—", "Concepto Excel": "—"})
+                    else:
+                        for _, _re in _hits.iterrows():
+                            _gb, _ge = str(_rb.get("grupo","")), str(_re.get("grupo",""))
+                            _m = "✅" if _gb.lower() == _ge.lower() else "⚠️"
+                            _rows_cmp.append({"": _m, "Monto": int(_rb["_imp"]),
+                                "Desc banco": str(_rb["descripcion"])[:38],
+                                "Grupo banco": _gb, "Concepto banco": _rb.get("concepto",""),
+                                "DETALLE Excel": str(_re.get("detalle",""))[:32],
+                                "Grupo Excel": _ge, "Concepto Excel": str(_re.get("concepto",""))})
+                st.session_state["_import_cmp"] = pd.DataFrame(_rows_cmp)
+                st.rerun()
+
+    if "_import_cmp" in st.session_state:
+        _dc = st.session_state["_import_cmp"]
+        _bok = (_dc[""] == "✅").sum(); _bdif = (_dc[""] == "⚠️").sum(); _bno = (_dc[""] == "❓").sum()
+        _cx1, _cx2, _cx3 = st.columns(3)
+        _cx1.metric("Grupo idéntico ✅", _bok)
+        _cx2.metric("Monto OK / grupo ≠ ⚠️", _bdif, help="Mismo monto, distinto grupo — revisar")
+        _cx3.metric("Sin match en Excel ❓", _bno)
+        st.dataframe(_dc, use_container_width=True, hide_index=True,
+                     column_config={"": st.column_config.TextColumn("", width=30)})
+
+    # ── Descarga ──────────────────────────────────────────────────────────────
+    st.markdown("---")
+    _df_final = preparar_para_excel(_df_show)
+    _csv_out  = _df_final.to_csv(index=False, encoding="utf-8-sig")
+    st.download_button(
+        "⬇ Descargar CSV (listo para pegar en Excel)",
+        _csv_out,
+        file_name=f"movimientos_bancos_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+        mime="text/csv",
+    )
+
+    # ── Guía: qué archivo bajar por banco ─────────────────────────────────────
+    st.markdown("---")
+    with st.expander("📋 Guía — qué archivo descargar de cada banco"):
+        st.markdown("""
+| Banco | Cuenta | Archivo a descargar | Formato | Notas |
+|-------|--------|---------------------|---------|-------|
+| **BCI** | CC | **Últimos movimientos** | `.xlsx` | ✅ Usar este — descripciones completas |
+| **BCI** | CC | Cartola actual | `.xls` | ⚠️ Evitar — dice solo "Compra Tarjeta Débito" |
+| **BCI** | TDC | Facturado Nacional + No Facturado Nacional | `.xls` | ✅ Ambos |
+| **BCI** | TDC | No Facturado Internacional | `.xls` | ✅ Si tienes compras en USD |
+| **BancoEstado** | CC | Últimos movimientos | `.xlsx` | ✅ |
+| **BancoEstado** | CC | Cartola | `.xlsx` | ✅ Soporta fechas "02/Ene" |
+| **BancoEstado** | CuentaRUT | Últimos movimientos | `.xlsx` | ✅ |
+| **BancoEstado** | Línea Crédito | Últimos movimientos | `.xlsx` | ✅ |
+| **BancoEstado** | TDC | **Estado de Cuenta** | `.pdf` | ✅ PDF descargado del banco |
+| **Itaú** | CC | `CuentaCorriente_*.xls` | `.xls` | ✅ Solo transferencias propias |
+| **Itaú** | TDC | Últimas compras pesos | `.xls` | ✅ |
+| **Itaú** | TDC | Últimas compras dólares | `.xls` | ✅ Se convierte a CLP |
+| **Itaú** | TDC | Estado cuenta nacional | `.xls` | ✅ Alternativa |
+| **Falabella** | TDC | Movimientos facturados / últimos | `.xlsx` | ✅ Nombre GUID |
+| **Consorcio** | CC + Cuenta Más | `Movimientos *.xlsx` | `.xlsx` | ✅ Auto-patrimonial |
+
+> **Tip:** Puedes subir todos los archivos de todos los bancos a la vez — el sistema detecta el banco automáticamente.
+        """)
+        st.caption("BancoEstado TDC: sube el PDF 'Estado de Cuenta' descargado desde bancoestado.cl. El resto de los bancos usa Excel.")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
