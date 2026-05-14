@@ -128,8 +128,7 @@ venv/
 playwright-report/
 test-results/
 
-# finanzas_personales — datos personales locales
-finanzas_personales/data/categorizacion_rules.json
-finanzas_personales/Info Bancos/
-finanzas_personales/Documentos/
-finanzas_personales/Liquidaciones/
+# finanzas_personales — repo dedicado propio (deploy a Streamlit Cloud)
+# Tiene su propio .git y remoto github.com/socrates-cabral/finanzas-personales.
+# El monorepo ya no lo trackea — se desarrolla in-place pero versiona aparte.
+finanzas_personales/
