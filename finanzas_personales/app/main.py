@@ -54,6 +54,7 @@ from charts import (
     _LAYOUT_BASE,
 )
 from config_manager import init_config, get_cfg, set_cfg
+import auth
 from market_data import obtener_indicadores_cached, render_widget_indicadores, precio_usdt_estimado
 from ai_insights import (
     analizar_resumen_mes, analizar_historial_ingresos, analizar_presupuesto_vs_real,
@@ -390,6 +391,11 @@ hr { border-color: #1E293B !important; }
 
 # ── Inicialización ───────────────────────────────────────────────────────────
 init_config()
+
+# ── Gate de autenticación ────────────────────────────────────────────────────
+# Si DATA_SOURCE=supabase y no hay sesión → muestra login y detiene la app.
+# En modo Excel (default) no exige login y retorna de inmediato.
+auth.require_login()
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 # ── Helper tablas BI ─────────────────────────────────────────────────────────
@@ -816,9 +822,13 @@ with st.sidebar:
     pagina = _OPT_MAP.get(_sel, "📊 Dashboard")
 
     st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
-    if st.button("🔄 Recargar Excel", use_container_width=True):
+    if st.button("🔄 Recargar datos", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
+
+    # Sesión + logout (solo visible en modo Supabase con sesión activa)
+    auth.render_logout_sidebar()
+
     _puerto = st.get_option("server.port") or 8501
     _fuente = fuente_activa()
     _fuente_icon = "☁️" if _fuente == "Supabase" else "📄"

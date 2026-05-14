@@ -39,18 +39,27 @@ NOMBRES_MESES = {
 _TX_COLS = ["mes", "mes_nombre", "tipo_tx", "grupo", "concepto",
             "fecha", "detalle", "importe", "cuenta"]
 
-_client = None
+_client = None              # cliente service_role (migración / pre-login)
+_auth_client = None         # cliente con JWT del usuario (post-login, RLS real)
 _active_user_id: str | None = os.getenv("FINANZAS_USER_ID") or None
 
 
 # ── Cliente ───────────────────────────────────────────────────────────────────
 
 def _get_client():
+    """Devuelve el cliente Supabase activo.
+
+    - Si hay un cliente autenticado (post-login) → ese, con el JWT del
+      usuario, RLS aplica de verdad.
+    - Si no → el cliente service_role, para scripts backend (migración).
+      Bypassa RLS, por eso las queries filtran por user_id explícito.
+    """
     global _client
+    if _auth_client is not None:
+        return _auth_client
     if _client is not None:
         return _client
     url = os.getenv("SUPABASE_FINANZAS_URL") or os.getenv("SUPABASE_URL", "")
-    # service_role primero (pre-login / migración); anon como fallback
     key = (
         os.getenv("SUPABASE_FINANZAS_SERVICE_ROLE_KEY")
         or os.getenv("SUPABASE_FINANZAS_KEY")
@@ -65,8 +74,24 @@ def _get_client():
 
 
 def set_active_user(user_id: str | None):
-    """Define el usuario cuyas filas se leen/escriben. Lo llama el login."""
+    """Define el usuario cuyas filas se leen/escriben.
+
+    Lo usan los scripts backend (migración) que corren con service_role.
+    El login de la app usa set_authenticated_client() en su lugar.
+    """
     global _active_user_id
+    _active_user_id = user_id
+
+
+def set_authenticated_client(client, user_id: str | None):
+    """Enchufa el cliente Supabase autenticado tras el login.
+
+    A partir de aquí _get_client() devuelve este cliente (con el JWT del
+    usuario) y RLS es la barrera real. Pasar (None, None) lo desconecta
+    — vuelve al cliente service_role.
+    """
+    global _auth_client, _active_user_id
+    _auth_client = client
     _active_user_id = user_id
 
 
