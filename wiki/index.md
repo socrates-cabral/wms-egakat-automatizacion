@@ -29,6 +29,7 @@
 - [[proyectos/wms-despacho-automatico]] — OPERATIVO 2026-04-22. Pipeline RF+WEB: despacho PLTs + confirmación salida viajes. SCABRAL2 principal. Email combinado Graph API. Task Scheduler 08:00/13:00/17:00.
 - [[proyectos/softnet-ventas]] — OPERATIVO 2026-04-24. Libro de Ventas Softnet → SharePoint vía Graph API. Correo diario con CxC, vencidas, alto monto, pagos del día. L-V 16:00.
 - [[proyectos/kpi-ops]] — DESARROLLO 2026-04-29. generar_resumen_kpi_ops.py (4524 líneas, Codex): JSON KPIs operativos (NNSS, Productividad, Inventario). 9 carpetas OneDrive compartidas. Alimenta @EgakatOpsBot vía n8n. Pendiente integración workflow.
+- [[proyectos/canal-derco-auto]] — OPERATIVO 2026-05-14. canal_derco_auto.py: recalcula columna Canal de data Derco.xlsx desde MovDerco (cruce por OP). AP_R/AP_E por predominio líneas, separa CES (concesionarios) de MY. Cableado en run_fillrate.bat. Fase 2: bot WMS alineado vía canal_derco_utils.py compartido.
 - [[proyectos/servidor_egakat_24x7]] — PLANIFICACIÓN 2026-04-29. Migración todas las automatizaciones Egakat a servidor dedicado 24/7. Mini PC Lenovo M75q Gen 2 recomendado. 9 fases, 6 días estimado, USD 720 inversión + $30.50/mes (M365 + Power BI Pro + electricidad).
 
 ## Mantenimiento & Infraestructura

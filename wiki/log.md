@@ -430,3 +430,16 @@ Páginas creadas:
 Páginas actualizadas:
 - wiki/index.md (link corregido proyecto-finanzas-personales → proyectos/finanzas-personales, estado Sprint 5)
 Notas: Sprint 5 completo — migración Excel→Supabase con coexistencia (toggle DATA_SOURCE), RLS multi-usuario, login Supabase Auth con sesión persistente por cookie, deploy en Streamlit Cloud (finanzas-socrates.streamlit.app). finanzas_personales/ extraído del monorepo a repo git propio (patrón HackeaMetabolismo); el monorepo lo ignora. Migración validada en paridad: 348 transacciones + 69 categorías + 22 config. Causa raíz F5: cookie SameSite=Strict se pierde en iframe cross-site de Streamlit Cloud → fix secure=True/same_site=none. Follow-up media-baja: portar persistencia de cookie a HackeaMetabolismo.
+
+## [2026-05-14] ingest | Canal Derco Auto — automatización columna Canal de data Derco.xlsx
+Fuente: WMS_Automatizacion/canal_derco_auto.py + canal_derco_utils.py
+Páginas creadas:
+- wiki/proyectos/canal-derco-auto.md
+Páginas actualizadas:
+- wiki/index.md (+1 entrada bajo proyectos)
+Cambios en producción:
+- canal_derco_auto.py cableado como paso 2 en FillRate_Automatizacion/run_fillrate.bat (entre fillrate_descarga y generar_resumen_kpi_ops)
+- 1ra corrida real ejecutada 2026-05-14: 8.205 filas salieron de MY hacia su canal correcto, 553 "AP" sin clasificar bajaron a 1, 2.094 CES separados de MY
+- Confirmación visual del usuario 2026-05-15: todos los canales identificados correctamente
+Fase 2 (2026-05-15): clasificación Rack/Est unificada vía canal_derco_utils.py compartido entre canal_derco_auto.py y generar_resumen_kpi_ops.py. Antes: bot usaba tabla DimUbicaciones; ahora: regla de prefijos compartida. Delta verificado en abril 2026: solo 9 líneas (0,008%) cambian Rack→Est, total AP conservado.
+Notas: llave de cruce es Nro Aplica (OP) ↔ MovDerco Comprobante (100% match), no Nro Pedido (corrupto en notación científica para 18% de filas). Recálculo completo cada corrida (auto-sanador, idempotente). Backup en _backups_data_derco/ (local, no SP). Logs + CSV de métricas en C:\ClaudeWork\logs\ para seguir tendencia de tiempos. Cuello de botella: lectura MovDerco (~80% del runtime).

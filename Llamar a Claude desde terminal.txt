@@ -23,6 +23,29 @@ Ingest raw/[archivo] y el agente sabe exactamente el flujo completo: leer fuente
   index → agregar entrada en log.
 
 
+
+Alta prioridad (conocimiento no obvio):
+
+  ┌────────────────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────┐
+  │                  Archivo                   │                                Por qué vale                                 │
+  ├────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+  │ agente_apuestas/config.py                  │ Todos los umbrales, thresholds, IDs de ligas — la "constitución" del agente │
+  ├────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+  │ agente_apuestas/predictor_tiempo_real.py   │ Features del modelo XGBoost, lógica de predicción                           │
+  ├────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+  │ WMS_Automatizacion/staging_descarga.py     │ SCABRAL detection, 16 clientes, patrón retry v2.5                           │
+  ├────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+  │ WMS_Automatizacion/validator_estructura.py │ Reglas de validación de negocio (no obvias)                                 │
+  ├────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+  │ agente_apuestas/backtesting/simulador.py   │ Lógica Kelly, bankroll, registro histórico                                  │
+  └────────────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────┘
+
+  Media prioridad (útil pero MEMORY.md ya cubre el resumen):
+
+  - azure_graph.py — ya la leímos hoy, poca sorpresa
+  - maestro_articulos_derco.py — ya la analizamos en detalle hoy
+
+
 aso │                Qué hacer                 │                        Comando / Texto                        │
   ├──────┼──────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
   │ 1️⃣   │ Abrir pi en el proyecto                  │ cd /d "C:\Users\Socrates Cabral\pi-autoresearch"pi            │
