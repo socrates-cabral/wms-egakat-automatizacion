@@ -1613,7 +1613,10 @@ def cargar_dataframe_productividad_historico(
         "Canal_Detalle_Metodo",
     ]
     df = pd.concat([df, canales], axis=1)
-    df["Canal_Agrupado"] = df["Canal_Principal"].map(lambda c: "CAP-MY-SG" if c in {"CAP", "MY", "SG"} else c)
+    # Canal mayorista = CAP + MY + SG + CES (CES son concesionarios, parte del mayorista
+    # según regla de negocio confirmada por usuario 2026-05-15). En canales_originales CES
+    # sigue apareciendo separado.
+    df["Canal_Agrupado"] = df["Canal_Principal"].map(lambda c: "CAP-MY-SG-CES" if c in {"CAP", "MY", "SG", "CES"} else c)
     df["Cliente_Norm"] = df["Cliente"].map(normalizar_texto_seguro)
     df["Centro_Norm"] = df["Centro"].map(normalizar_texto_seguro)
     df.loc[df["Centro_Norm"] == "", "Centro_Norm"] = df.loc[df["Centro_Norm"] == "", "__archivo_fuente"].map(
@@ -2750,7 +2753,10 @@ def calcular_productividad(
         "Canal_Detalle_Metodo",
     ]
     df = pd.concat([df, canales], axis=1)
-    df["Canal_Agrupado"] = df["Canal_Principal"].map(lambda c: "CAP-MY-SG" if c in {"CAP", "MY", "SG"} else c)
+    # Canal mayorista = CAP + MY + SG + CES (CES son concesionarios, parte del mayorista
+    # según regla de negocio confirmada por usuario 2026-05-15). En canales_originales CES
+    # sigue apareciendo separado.
+    df["Canal_Agrupado"] = df["Canal_Principal"].map(lambda c: "CAP-MY-SG-CES" if c in {"CAP", "MY", "SG", "CES"} else c)
 
     total_lineas = int(len(df))
     total_unidades = float(df["Salida"].sum())

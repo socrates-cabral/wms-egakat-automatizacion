@@ -709,7 +709,8 @@ Para DERCO, distinguir:
 - AP Rack
 - AP Estantería
 - GT
-- CAP-MY-SG
+- CAP-MY-SG-CES (canal mayorista agrupado: CAP + MY + SG + CES)
+- CES por separado si aparece en canales_originales
 - canales originales si aparecen
 - por fecha si se pregunta por un día específico
 - por canal si se pregunta por canal

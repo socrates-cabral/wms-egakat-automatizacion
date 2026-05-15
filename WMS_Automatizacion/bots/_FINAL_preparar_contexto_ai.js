@@ -1016,7 +1016,7 @@
         canales_originales: Array.isArray(prod?.derco?.canales_originales) ? prod.derco.canales_originales : [],
         top_canal_por_lineas: prod?.derco?.top_canal_por_lineas || null,
         top_canal_por_unidades: prod?.derco?.top_canal_por_unidades || null,
-        nota: 'canales agrupa AP_R+AP_E como AP y CAP+MY+SG en CAP-MY-SG. canales_originales separa: AP, MY, CAP, SG, GT, CES (CES = MY con destino concesionario, mismo criterio que FillRate). Si CES aparece, reportarlo; si no aparece para el período, mencionar que no hubo pedidos CES en ese rango.'
+        nota: 'canales agrupa AP_R+AP_E como AP y CAP+MY+SG+CES en CAP-MY-SG-CES (canal mayorista). canales_originales separa: AP, MY, CAP, SG, GT, CES (CES = MY con destino concesionario, parte del mayorista). Si CES aparece, reportarlo; si no aparece para el período, mencionar que no hubo pedidos CES en ese rango. La suma de los 4 individuales (CAP+MY+SG+CES) debe igualar el grupo CAP-MY-SG-CES.'
       };
       prodCompacta.consulta_resuelta = {
         tipo: 'derco_canales_totales',
