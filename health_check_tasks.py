@@ -8,7 +8,7 @@ Corre cada hora vía Task Scheduler. Para cada tarea crítica:
   3. Si tarea silenciada (> max_silencio_hs desde última ejecución) → alerta Telegram
   4. Anti-spam: no repetir alerta de la misma tarea dentro de ANTISPAM_HS horas
 
-Alertas van al grupo Egakat Intel (TELEGRAM_TOKEN_INTERNO + TELEGRAM_GRUPO_INTERNO_ID).
+Alertas van al grupo Egakat Ops vía @EgakatOpsBot (TELEGRAM_TOKEN_OPS + TELEGRAM_GRUPO_OPS_ID).
 """
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
@@ -22,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "Softnet_Ventas" / "bots"))
-from telegram_utils import enviar_grupo_interno  # noqa: E402
+from telegram_utils import enviar_grupo_ops  # noqa: E402
 
 LOG_DIR = ROOT / "logs"
 LOG_DIR.mkdir(exist_ok=True)
@@ -215,7 +215,7 @@ def main():
             f"🔔 <b>Health check — {datetime.now():%Y-%m-%d %H:%M}</b>\n"
             f"{len(todas_alertas)} alerta(s) en {revisadas} tareas críticas\n\n"
         )
-        ok = enviar_grupo_interno(encabezado + cuerpo)
+        ok = enviar_grupo_ops(encabezado + cuerpo)
         log.info("Telegram %s — %d alertas enviadas", "OK" if ok else "FALLO", len(todas_alertas))
     else:
         log.info("Todo OK — %d tareas revisadas", revisadas)

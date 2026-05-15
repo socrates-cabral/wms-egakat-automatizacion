@@ -1098,21 +1098,36 @@ def update_sharepoint_workbook(
             for col_idx in range(1, formula_end_col + 1)
         }
 
-        # Última fila con dato real en col A (ignora filas de fórmula vacías del template)
+        # Identificar TODAS las filas vacías (col A = None) — trailing E intermedias.
+        # Archivos como data Runo Tradicional.xlsx y data Derco.xlsx arrastran miles
+        # de filas huérfanas/vacías entre bloques de datos válidos. El trim trailing-only
+        # anterior no las limpiaba (detectado 2026-05-15).
+        empty_rows = []
         last_data_row = DATA_START_ROW - 1
         for check_row in range(DATA_START_ROW, target_sheet.max_row + 1):
-            if target_sheet.cell(row=check_row, column=1).value is not None:
+            if target_sheet.cell(row=check_row, column=1).value is None:
+                empty_rows.append(check_row)
+            else:
                 last_data_row = check_row
 
-        # Eliminar filas vacías (col A = None) después del último dato real.
-        # Solo si hay al menos una fila de datos reales (evita borrar la fila template
-        # en archivos que aún no tienen ningún registro).
-        if last_data_row >= DATA_START_ROW:
-            trim_from = last_data_row + 1
-            rows_to_trim = target_sheet.max_row - last_data_row
-            if rows_to_trim > 0:
-                target_sheet.delete_rows(trim_from, rows_to_trim)
-                log(f"[SP] Filas vacías eliminadas: {rows_to_trim} (desde fila {trim_from}).", log_path)
+        # Solo borrar si hay al menos una fila de datos reales (evita arrasar el template
+        # en archivos sin registros). Si no hay datos, dejar el archivo como está.
+        if last_data_row >= DATA_START_ROW and empty_rows:
+            sorted_empty = sorted(empty_rows)
+            empty_groups = []
+            for _, grp in itertools.groupby(enumerate(sorted_empty), lambda x: x[0] - x[1]):
+                g = list(map(_op.itemgetter(1), grp))
+                empty_groups.append((g[0], len(g)))
+            total_empty = len(empty_rows)
+            for start, count in reversed(empty_groups):
+                target_sheet.delete_rows(start, count)
+            log(f"[SP] Filas vacías eliminadas: {total_empty} en {len(empty_groups)} bloques.", log_path)
+
+            # Recalcular last_data_row tras la limpieza (las filas se reindexaron).
+            last_data_row = DATA_START_ROW - 1
+            for check_row in range(DATA_START_ROW, target_sheet.max_row + 1):
+                if target_sheet.cell(row=check_row, column=1).value is not None:
+                    last_data_row = check_row
 
         start_row = last_data_row + 1
         for offset, row_values in enumerate(unique_rows):

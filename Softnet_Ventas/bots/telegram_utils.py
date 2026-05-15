@@ -74,6 +74,16 @@ def enviar_grupo_interno(texto: str) -> bool:
     return _send(token, grupo_id, texto)
 
 
+def enviar_grupo_ops(texto: str) -> bool:
+    """Envía mensaje al grupo Egakat Ops (@EgakatOpsBot). Usado por alertas operativas WMS."""
+    token = os.getenv("TELEGRAM_TOKEN_OPS")
+    grupo_id = os.getenv("TELEGRAM_GRUPO_OPS_ID")
+    if not grupo_id:
+        print("[FALLO] TELEGRAM_GRUPO_OPS_ID no configurado")
+        return False
+    return _send(token, grupo_id, texto)
+
+
 def enviar_cliente(chat_id: int, texto: str) -> bool:
     """Envía mensaje a un cliente en chat 1-a-1."""
     token = os.getenv("TELEGRAM_TOKEN_CLIENTE")
