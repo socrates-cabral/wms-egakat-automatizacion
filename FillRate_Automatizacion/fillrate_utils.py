@@ -458,33 +458,43 @@ def get_reporting_window(reference_date: Optional[date] = None) -> Tuple[date, d
     Calcula ventana de fechas para descarga WMS.
 
     Reglas:
-    - Backfill (--mes): Mes completo especificado hasta último día
-    - Días 1-10 del mes: Ventana desde INICIO DEL MES ANTERIOR hasta HOY
-      -> Captura pedidos del mes anterior que se completan en primeros 10 días
-      -> Permite actualizar OTIF con pedidos que se finalizan tarde
-    - Día 11+: Ventana desde INICIO DEL MES ACTUAL hasta HOY
-      -> Operación normal (mes actual acumulado)
+    - Backfill (--mes): Mes completo especificado hasta último día (sin D-1).
+    - Días 1-10 del mes: Ventana desde INICIO DEL MES ANTERIOR hasta AYER (D-1).
+      -> Captura pedidos del mes anterior que se completan en primeros 10 días.
+      -> Permite actualizar OTIF con pedidos que se finalizan tarde.
+    - Día 11+: Ventana desde INICIO DEL MES ACTUAL hasta AYER (D-1).
+      -> Operación normal (mes actual acumulado).
+
+    POR QUÉ D-1 (cambio 2026-05-15):
+    El script corre a las 8:15 AM por Task Scheduler. A esa hora el "día actual"
+    está recién arrancando — las operaciones en curso no se reflejan completas en
+    WMS aún. Si usáramos D, capturaríamos datos parciales que reaparecen "más
+    completos" mañana y reescriben las filas. Con D-1 capturamos solo días
+    cerrados → KPIs estables todo el día, sin transitorios.
+    Trade-off aceptado: data del día actual aparece con 1 día de delay.
     """
     import calendar as _cal
     today = reference_date or date.today()
     real_today = date.today()
+    yesterday = real_today - timedelta(days=1)
 
-    # BACKFILL (--mes): Mes completo hasta último día
+    # BACKFILL (--mes): Mes completo hasta último día (NO aplica D-1 acá: backfill
+    # apunta a un mes pasado completo, no al mes en curso).
     if reference_date and (today.year, today.month) < (real_today.year, real_today.month):
         start = date(today.year, today.month, 1)
         last_day = _cal.monthrange(today.year, today.month)[1]
         return start, date(today.year, today.month, last_day)
 
-    # DÍAS 1-10: Ventana desde inicio de mes ANTERIOR hasta HOY
-    # Captura pedidos del mes anterior que se completan en la primera semana
+    # DÍAS 1-10: Ventana desde inicio de mes ANTERIOR hasta AYER (D-1).
+    # Captura pedidos del mes anterior que se completan en la primera semana.
     if 1 <= real_today.day <= 10 and reference_date is None:
         last_month_end = date(real_today.year, real_today.month, 1) - timedelta(days=1)
         last_month_start = date(last_month_end.year, last_month_end.month, 1)
-        return last_month_start, real_today
+        return last_month_start, yesterday
 
-    # DÍA 11+: Ventana normal (solo mes actual hasta HOY)
+    # DÍA 11+: Ventana normal (mes actual hasta AYER D-1).
     start = date(today.year, today.month, 1)
-    return start, real_today
+    return start, yesterday
 
 
 def format_wms_date(value: date) -> str:
