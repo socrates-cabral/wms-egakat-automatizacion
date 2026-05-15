@@ -1007,12 +1007,40 @@ def update_sharepoint_workbook(
     year = year or sample_date.year
     meses_corte = meses_corte or {}
 
-    # Conjunto de Nro Aplica (col D, índice 3) que trae el nuevo download.
-    # Usamos este set para identificar filas a reemplazar en lugar de filtrar por
-    # mes/año de Fecha de Ingreso. El enfoque anterior solo borraba filas del mes
-    # actual, dejando intactas las OPs de meses anteriores todavía activas —
-    # cada corrida las re-insertaba acumulando duplicados.
-    aplica_set = {row[3] for row in unique_rows if row[3] is not None}
+    # ============================================================================
+    # IDENTIDAD COMPUESTA — NO TOCAR sin entender. Tercera incidencia historica.
+    # ============================================================================
+    # La identidad unica de una fila es la TUPLA:
+    #     (Empresa col B idx 1, Nro Aplica col D idx 3, Mes-Año de Fecha Ingreso col I idx 8)
+    #
+    # NUNCA usar Nro Aplica solo como identificador.
+    # WHY: para varios clientes (Cepas, Collico, Delibest, Intime, Mascotas,
+    # Nativo Drinks, Omnitech — todos Pudahuel), Nro Aplica son correlativos
+    # chicos (1, 4, 5, 6, ..., 60) que se repiten cada mes. Si filtramos por
+    # Nro Aplica solo, borramos TODA la historia.
+    # Para clientes Quilicura (Derco, Daikin, Pochteca) los Nro Aplica son
+    # IDs globales de 5-6 dígitos no repetibles, pero la tupla cubre ambos casos.
+    #
+    # INCIDENTES PREVIOS:
+    # - 2026-05-08 (commit a537a90): cambio aplica_set sin entender unicidad ->
+    #   archivos Pudahuel perdieron 95-100% de historia en 1 semana.
+    # ============================================================================
+    def _norm_empresa(v):
+        # Normaliza Empresa: strip + upper. Defensivo contra inconsistencia de
+        # padding/case entre runs del WMS (las celdas a veces vienen con espacios
+        # de padding o variaciones de capitalización).
+        if v is None:
+            return None
+        return str(v).strip().upper()
+
+    def _row_identity(row):
+        empresa = _norm_empresa(row[1]) if len(row) > 1 else None
+        nro_aplica = row[3] if len(row) > 3 else None
+        fecha_ingreso = coerce_datetime(row[DATE_COLUMN_INDEX - 1]) if len(row) >= DATE_COLUMN_INDEX else None
+        mes_year = (fecha_ingreso.year, fecha_ingreso.month) if fecha_ingreso else None
+        return (empresa, nro_aplica, mes_year)
+
+    identidad_set = {_row_identity(row) for row in unique_rows if row[3] is not None}
 
     relative_path = get_sharepoint_relative_path(client)
     log(f"[SP] Descargando archivo SharePoint: {relative_path}", log_path)
@@ -1028,7 +1056,7 @@ def update_sharepoint_workbook(
 
         rows_to_delete: List[int] = []
         for row_idx, row in enumerate(ws_readonly.iter_rows(min_row=DATA_START_ROW, values_only=True), start=DATA_START_ROW):
-            if len(row) >= 4 and row[3] in aplica_set:
+            if len(row) >= DATE_COLUMN_INDEX and _row_identity(row) in identidad_set:
                 rows_to_delete.append(row_idx)
 
         wb_readonly.close()
