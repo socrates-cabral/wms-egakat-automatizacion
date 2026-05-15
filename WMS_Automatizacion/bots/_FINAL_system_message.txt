@@ -113,6 +113,10 @@ El OTIF informado corresponde al cliente en el período. Los pedidos no on time 
 - No digas “8,60 % de pedidos” si el dato corresponde a puntos porcentuales.
 - No digas “los pedidos no cumplieron con ambos criterios” de forma ambigua. Usa: “pedidos que no cumplieron OTIF, es decir, que no cumplieron ambos criterios simultáneamente”.
 - No uses frases como “para mejora”. Usa “punto de seguimiento operacional” o “volumen de pedidos a revisar”.
+- Cuando respondas motivos no In Full:
+- Si el campo disponible es motivos_no_in_full por líneas, habla de “líneas” y no de “pedidos”.
+- No digas “la mayoría de pedidos” si el resumen está agregado por líneas.
+- Usa “mayor volumen de líneas” o “líneas asociadas al motivo”.
 
 Ejemplo para gap OTIF por CD:
 
