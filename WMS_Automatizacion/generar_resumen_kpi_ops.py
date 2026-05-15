@@ -14,6 +14,11 @@ MIGRACIÓN SERVIDOR 24/7:
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
+# Modulo compartido con canal_derco_auto.py para que ambos clasifiquen Rack/Est igual.
+from pathlib import Path as _PathBoot  # noqa: E402
+sys.path.insert(0, str(_PathBoot(__file__).parent))
+from canal_derco_utils import clasificar_ubicacion_dim  # noqa: E402
+
 import argparse
 import calendar
 import json
@@ -1581,9 +1586,10 @@ def cargar_dataframe_productividad_historico(
 
     df = pd.concat(frames, ignore_index=True)
     df["Ubicacion_Clave"] = df["Ubicacion"].map(normalizar_ubicacion_lookup)
-    df["Tipo_Ubicacion_Dim"] = df["Ubicacion_Clave"].map(
-        lambda key: ubicaciones_map.get(key, {}).get("locacion", "SIN_DIM")
-    )
+    # Fase 2: clasificacion Rack/Est unificada con canal_derco_auto.py via canal_derco_utils.
+    # Antes: lookup contra Tabla Ubicaciones CDs.xlsx (DimUbicaciones) -> SIN_DIM si no estaba.
+    # Ahora: regla de prefijos sobre Ubicacion (mismo criterio que data Derco).
+    df["Tipo_Ubicacion_Dim"] = df["Ubicacion"].map(clasificar_ubicacion_dim)
     df["Cliente_Meta"] = df.apply(lambda row: cliente_meta_productividad(row.get("Cliente"), row.get("Centro")), axis=1)
     df["Fecha_Turno"] = df["timestamp_operacion"].map(calcular_fecha_turno)
     df["Turno"] = df["timestamp_operacion"].map(calcular_turno)
@@ -2395,7 +2401,9 @@ def ajustar_canal_detalle_derco(row: pd.Series) -> tuple[str, str, str, str, str
         canal_detalle = canal_principal
     else:
         canal_detalle = canal_principal
-    metodo = "dimubicaciones" if tipo_dim != "SIN_DIM" else "no_disponible"
+    # Fase 2: la clasificacion ahora viene de canal_derco_utils.clasificar_ubicacion_dim
+    # (regla de prefijos), no de la tabla DimUbicaciones.
+    metodo = "regla_prefijos" if tipo_dim != "SIN_DIM" else "no_disponible"
     return canal_principal, canal_detalle, tipo_meta, tipo_corregida, metodo
 
 
@@ -2651,9 +2659,10 @@ def calcular_productividad(
 
     df = pd.concat(frames, ignore_index=True)
     df["Ubicacion_Clave"] = df["Ubicacion"].map(normalizar_ubicacion_lookup)
-    df["Tipo_Ubicacion_Dim"] = df["Ubicacion_Clave"].map(
-        lambda key: ubicaciones_map.get(key, {}).get("locacion", "SIN_DIM")
-    )
+    # Fase 2: clasificacion Rack/Est unificada con canal_derco_auto.py via canal_derco_utils.
+    # Antes: lookup contra Tabla Ubicaciones CDs.xlsx (DimUbicaciones) -> SIN_DIM si no estaba.
+    # Ahora: regla de prefijos sobre Ubicacion (mismo criterio que data Derco).
+    df["Tipo_Ubicacion_Dim"] = df["Ubicacion"].map(clasificar_ubicacion_dim)
     df["Cliente_Meta"] = df.apply(lambda row: cliente_meta_productividad(row.get("Cliente"), row.get("Centro")), axis=1)
     df["Fecha_Turno"] = df["timestamp_operacion"].map(calcular_fecha_turno)
     df["Turno"] = df["timestamp_operacion"].map(calcular_turno)
@@ -2762,15 +2771,18 @@ def calcular_productividad(
             top = derco_payload["canales"][0]
             derco_payload["top_canal_por_lineas"] = top["canal"]
             derco_payload["top_canal_por_unidades"] = max(derco_payload["canales"], key=lambda item: item["unidades"])["canal"]
+        # Fase 2: detalle Rack/Est siempre viene de canal_derco_utils (regla de prefijos),
+        # no depende de DimUbicaciones. Si Tipo_Ubicacion_Dim es SIN_DIM aqui significa
+        # ubicacion vacia/nula, no falta de la tabla.
         match_ap = int(ap_total["Tipo_Ubicacion_Dim"].ne("SIN_DIM").sum()) if not ap_total.empty else 0
         if not ap_total.empty and match_ap == len(ap_total):
-            derco_payload["ap_detalle_metodo"] = "dimubicaciones"
+            derco_payload["ap_detalle_metodo"] = "regla_prefijos"
         elif not ap_total.empty and match_ap > 0:
-            derco_payload["ap_detalle_metodo"] = "dimubicaciones_parcial"
-            derco_payload["advertencia"] = "Detalle AP Rack / AP Estanteria requiere DimUbicaciones para precision completa."
+            derco_payload["ap_detalle_metodo"] = "regla_prefijos_parcial"
+            derco_payload["advertencia"] = "Algunas lineas AP no tienen Ubicacion registrada en MovDerco."
         else:
             derco_payload["ap_detalle_metodo"] = "no_disponible"
-            derco_payload["advertencia"] = "Detalle AP Rack / AP Estanteria requiere DimUbicaciones para precision completa."
+            derco_payload["advertencia"] = "Sin Ubicacion en MovDerco para detalle AP Rack / AP Estanteria."
 
     df["Fecha_Turno_Texto"] = df["Fecha_Turno"].map(serializar_fecha_productividad)
     fechas_validas = df[df["Fecha_Turno_Texto"] != ""].copy()
