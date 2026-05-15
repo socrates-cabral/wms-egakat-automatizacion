@@ -697,7 +697,7 @@
       historicoOut.derco_canales_historico = {
         periodo: `${periodoSolicitado.mes_nombre || 'mes'} ${periodoSolicitado.anio || ''}`.trim(),
         canales: filtrado,
-        regla: 'Mostrar desglose líneas/unidades por canal DERCO desde derco_canales_historico.canales. CES no existe en datos DERCO — indicarlo si se pregunta. La conclusión debe señalar el canal con mayor carga operativa del período.'
+        regla: 'Mostrar desglose líneas/unidades por canal DERCO desde derco_canales_historico.canales. Si CES aparece como canal, reportarlo (corresponde a MY con destino concesionario, mismo criterio que FillRate). La conclusión debe señalar el canal con mayor carga operativa del período.'
       };
     }
     return JSON.stringify(historicoOut);
@@ -1016,12 +1016,12 @@
         canales_originales: Array.isArray(prod?.derco?.canales_originales) ? prod.derco.canales_originales : [],
         top_canal_por_lineas: prod?.derco?.top_canal_por_lineas || null,
         top_canal_por_unidades: prod?.derco?.top_canal_por_unidades || null,
-        nota: 'canales agrupa AP_R+AP_E como AP. canales_originales los mantiene separados (AP_R=Rack, AP_E=Estantería). CES no existe en datos DERCO — indicarlo si se pregunta.'
+        nota: 'canales agrupa AP_R+AP_E como AP y CAP+MY+SG en CAP-MY-SG. canales_originales separa: AP, MY, CAP, SG, GT, CES (CES = MY con destino concesionario, mismo criterio que FillRate). Si CES aparece, reportarlo; si no aparece para el período, mencionar que no hubo pedidos CES en ese rango.'
       };
       prodCompacta.consulta_resuelta = {
         tipo: 'derco_canales_totales',
         cliente: 'DERCO',
-        regla: 'Mostrar desglose de líneas y unidades por canal DERCO desde derco_canales.canales (agrupado). Si se pide AP separado, usar canales_originales. CES no existe en los datos: indicarlo explícitamente. La conclusión debe señalar qué canal concentra mayor carga operativa del período.'
+        regla: 'Mostrar desglose de líneas y unidades por canal DERCO desde derco_canales.canales (agrupado). Si se pide AP separado, usar canales_originales. CES es un canal válido (MY con destino concesionario, mismo criterio que FillRate); si aparece en canales_originales, reportarlo. Si no aparece para el período, indicar que no hubo pedidos CES en ese rango. La conclusión debe señalar qué canal concentra mayor carga operativa del período.'
       };
     }
 

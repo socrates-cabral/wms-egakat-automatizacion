@@ -17,7 +17,12 @@ sys.stdout.reconfigure(encoding="utf-8")
 # Modulo compartido con canal_derco_auto.py para que ambos clasifiquen Rack/Est igual.
 from pathlib import Path as _PathBoot  # noqa: E402
 sys.path.insert(0, str(_PathBoot(__file__).parent))
-from canal_derco_utils import clasificar_ubicacion_dim  # noqa: E402
+from canal_derco_utils import (  # noqa: E402
+    canal_principal_derco,
+    cargar_base_ces,
+    clasificar_ubicacion_dim,
+    resolver_canal_con_ces,
+)
 
 import argparse
 import calendar
@@ -63,6 +68,8 @@ else:
     print(f"       Agregar a .env: ONEDRIVE_ROOT={_ONEDRIVE_ROOT}")
 
 NNSS_DIR = _ONEDRIVE_ROOT / "Datos para Dashboard - NNSS Operacional"
+# Base CES vive en la carpeta de Productividad (no NNSS).
+BASE_CES_PATH = _ONEDRIVE_ROOT / "Datos para Dashboard - Productividad" / "Archivos Soporte" / "Base CES.xlsx"
 PRODUCTIVIDAD_ROOT_OFICIAL = _ONEDRIVE_ROOT / "Datos para Dashboard - Productividad"
 DIMENSIONES_ROOT = _ONEDRIVE_ROOT / "datos para Dashboard EK" / "Productividad"
 DIMENSIONES_FILENAME = "Tablas dimensiones.xlsx"
@@ -1594,6 +1601,9 @@ def cargar_dataframe_productividad_historico(
     df["Fecha_Turno"] = df["timestamp_operacion"].map(calcular_fecha_turno)
     df["Turno"] = df["timestamp_operacion"].map(calcular_turno)
     df["Hora_Operativa"] = df["timestamp_operacion"].map(calcular_hora_operativa)
+    # Fase 2 CES: inyectar columna es_ces_destino antes de clasificar canal,
+    # para que MY+destino_CES se reclasifique como canal CES (mismo criterio FillRate).
+    df = _aplicar_es_ces_destino(df)
     canales = df.apply(ajustar_canal_detalle_derco, axis=1, result_type="expand")
     canales.columns = [
         "Canal_Principal",
@@ -2390,6 +2400,14 @@ def ajustar_canal_detalle_derco(row: pd.Series) -> tuple[str, str, str, str, str
 
     canal_principal, _ = calcular_canal_derco(row.get("Comprobante externo"), row.get("Destino"))
     tipo_meta = tipo_corregida if tipo_corregida != "SIN_DIM" else "SIN_DIM"
+
+    # Fase 2 CES: MY con destino en Base CES se reclasifica como CES (mismo criterio
+    # que canal_derco_auto.py para FillRate). La columna es_ces_destino la inyecta
+    # _aplicar_es_ces_destino() antes del apply.
+    es_ces = bool(row.get("es_ces_destino", False))
+    if canal_principal == "MY" and es_ces:
+        return "CES", "CES", tipo_meta, tipo_corregida, "ces_destino"
+
     if canal_principal == "AP":
         if tipo_corregida == "RACK":
             canal_detalle = "AP Rack"
@@ -2405,6 +2423,59 @@ def ajustar_canal_detalle_derco(row: pd.Series) -> tuple[str, str, str, str, str
     # (regla de prefijos), no de la tabla DimUbicaciones.
     metodo = "regla_prefijos" if tipo_dim != "SIN_DIM" else "no_disponible"
     return canal_principal, canal_detalle, tipo_meta, tipo_corregida, metodo
+
+
+# ----------------------------------------------------------------------------
+# Fase 2 CES: detector de destinos CES en MovDerco (productividad)
+# ----------------------------------------------------------------------------
+
+# Cache modulo: Base CES se carga una sola vez por proceso.
+_CES_MATCHER: Any = None  # callable(destino) -> nombre_ces | None
+_CES_CARGADA = False
+_CES_DISPONIBLE = False
+
+
+def _cargar_ces_lazy() -> bool:
+    """Carga Base CES una sola vez. Retorna True si esta disponible."""
+    global _CES_MATCHER, _CES_CARGADA, _CES_DISPONIBLE
+    if _CES_CARGADA:
+        return _CES_DISPONIBLE
+    _CES_CARGADA = True
+    if not BASE_CES_PATH.exists():
+        print(f"[WARN] Base CES no encontrada en {BASE_CES_PATH}; CES no se clasificara en productividad.")
+        return False
+    try:
+        _ces_set, _CES_MATCHER = cargar_base_ces(str(BASE_CES_PATH))
+        _CES_DISPONIBLE = True
+        return True
+    except Exception as exc:  # noqa: BLE001
+        print(f"[WARN] No se pudo cargar Base CES ({exc}); CES no se clasificara en productividad.")
+        return False
+
+
+def _aplicar_es_ces_destino(df: pd.DataFrame) -> pd.DataFrame:
+    """Inyecta columna booleana 'es_ces_destino' en el df.
+
+    Solo evalua filas de DERCO/GRUPO PLANET (las unicas que aplican canal CES).
+    Si Base CES no esta disponible, todas quedan en False (no se reclasifica nada,
+    comportamiento equivalente al previo).
+    """
+    if "es_ces_destino" in df.columns:
+        return df
+    disponible = _cargar_ces_lazy()
+    if not disponible or "Destino" not in df.columns:
+        df["es_ces_destino"] = False
+        return df
+    # Solo evaluar filas DERCO/GRUPO PLANET para no gastar CPU en otros clientes.
+    mask_derco = df["Cliente"].map(normalizar_mayusculas).isin({"DERCO", "GRUPO PLANET"})
+    if not mask_derco.any():
+        df["es_ces_destino"] = False
+        return df
+    destinos_unicos = df.loc[mask_derco, "Destino"].dropna().astype(str).unique()
+    mapa_ces = {d: (_CES_MATCHER(d) is not None) for d in destinos_unicos}
+    es_ces = df["Destino"].astype(str).map(mapa_ces).fillna(False).astype(bool)
+    df["es_ces_destino"] = es_ces & mask_derco
+    return df
 
 
 def campos_pedidos_unicos(pedidos: int, campo_unicos: str) -> dict[str, int]:
@@ -2668,6 +2739,8 @@ def calcular_productividad(
     df["Turno"] = df["timestamp_operacion"].map(calcular_turno)
     df["Hora_Operativa"] = df["timestamp_operacion"].map(calcular_hora_operativa)
 
+    # Fase 2 CES: idem productividad historica — clasificar destinos CES antes del canal.
+    df = _aplicar_es_ces_destino(df)
     canales = df.apply(ajustar_canal_detalle_derco, axis=1, result_type="expand")
     canales.columns = [
         "Canal_Principal",

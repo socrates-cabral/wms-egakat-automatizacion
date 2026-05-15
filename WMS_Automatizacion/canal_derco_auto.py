@@ -33,7 +33,14 @@ import pandas as pd
 import openpyxl
 
 sys.path.insert(0, str(Path(__file__).parent))
-from canal_derco_utils import clasificar_ubicacion, clasificar_ubicacion_estricta  # noqa: E402
+from canal_derco_utils import (  # noqa: E402
+    canal_principal_derco,
+    cargar_base_ces,
+    clasificar_ubicacion,
+    clasificar_ubicacion_estricta,
+    norm_str_canal,
+    resolver_canal_con_ces,
+)
 
 warnings.filterwarnings("ignore")
 
@@ -41,7 +48,7 @@ warnings.filterwarnings("ignore")
 BASE = r"C:\Users\Socrates Cabral\OneDrive - EGA KAT LOGISTICA SPA"
 
 DATA_DERCO = BASE + r"\Datos para Dashboard - NNSS Operacional\Quilicura\data Derco.xlsx"
-BASE_CES = BASE + r"\Datos para Dashboard - NNSS Operacional\Archivos Soporte\Base CES.xlsx"
+BASE_CES = BASE + r"\Datos para Dashboard - Productividad\Archivos Soporte\Base CES.xlsx"
 MOV_GLOB = BASE + r"\Datos para Dashboard - Productividad\CD QUILICURA\*\*\MovDerco.xlsx"
 
 HOJA_DD = "Seguimiento de pedidos"
@@ -66,12 +73,10 @@ def log(msg: str = "") -> None:
 
 # -- HELPERS ------------------------------------------------------------------
 
-def norm_str(s) -> str:
-    """Normaliza texto para comparaciones: mayusculas, sin puntuacion extra."""
-    s = str(s).upper().strip()
-    s = re.sub(r"[.,/]", " ", s)
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
+# norm_str_canal y canal_principal_derco viven en canal_derco_utils.py (Fase 2:
+# compartidos con generar_resumen_kpi_ops.py para que productividad clasifique
+# CES igual que FillRate). Alias local para retrocompatibilidad de este modulo.
+norm_str = norm_str_canal
 
 
 def fix_cols(df: pd.DataFrame) -> pd.DataFrame:
@@ -85,85 +90,13 @@ def find_col(df: pd.DataFrame, pattern: str):
     return matches[0] if matches else None
 
 
-def canal_principal_derco(comprobante_ext, destino) -> str:
-    """
-    Canal principal segun la clave de 2+4 chars (misma logica del bot WMS).
-    Retorna: AP | GT | LB | SG | CAP | MY  (AP se afina luego a AP_R/AP_E).
-    """
-    comp = str(comprobante_ext).strip().upper()
-    dest = str(destino).strip().upper()
-    clave = comp[:2] + dest[:4]
-    if clave == "46AP00":
-        return "AP"
-    if clave in ("31SODI", "31WALM", "31EASY", "31REND", "31HIPE"):
-        return "GT"
-    if clave == "55LO B":
-        return "LB"
-    if clave == "46SG00":
-        return "SG"
-    if clave in ("91SG00", "91AP00", "91CORO"):
-        return "CAP"
-    return "MY"
-
-
-# -- 1. BASE CES --------------------------------------------------------------
+# canal_principal_derco y cargar_base_ces viven en canal_derco_utils.py (Fase 2).
+# Wrapper local cargar_ces para preservar la firma usada en main() de este modulo:
+# antes no aceptaba log_callback, ahora delegamos al log local del modulo.
 
 def cargar_ces(path: str):
-    """
-    Lee Base CES (base 1 y base 2). base 1 es la fuente solida.
-    Valida que los concesionarios de base 2 esten contenidos en base 1.
-    Devuelve (ces_set, matcher) donde matcher(destino) -> nombre_ces | None.
-    """
-    excluir = {
-        norm_str("Nombre del solicitante"),
-        norm_str("Nombre del Destinatario"),
-        norm_str("nan"),
-        "",
-    }
-
-    b1 = pd.read_excel(path, sheet_name="base 1", header=2)
-    b2 = pd.read_excel(path, sheet_name="base 2", header=1)
-
-    base1_nombres = set()
-    for col_idx in (1, 2):  # solicitante + destinatario
-        if col_idx < b1.shape[1]:
-            base1_nombres.update(b1.iloc[:, col_idx].dropna().astype(str).tolist())
-    base1_norm = {norm_str(n) for n in base1_nombres} - excluir
-
-    base2_nombres = set()
-    if b2.shape[1] > 0:
-        base2_nombres.update(b2.iloc[:, 0].dropna().astype(str).tolist())
-    base2_norm = {norm_str(n) for n in base2_nombres} - excluir
-
-    # Validacion base2 contenida en base1
-    faltantes = sorted(base2_norm - base1_norm)
-    log(f"  Base CES base 1: {len(base1_norm)} concesionarios")
-    log(f"  Base CES base 2: {len(base2_norm)} concesionarios")
-    if faltantes:
-        log(f"  [!] {len(faltantes)} de base 2 NO estan en base 1 (se agregan al set):")
-        for f in faltantes:
-            log(f"        - {f}")
-    else:
-        log("  base 2 esta totalmente contenida en base 1.")
-
-    ces_set = base1_norm | base2_norm
-
-    # Matcher tolerante a truncado (~20 chars) y sufijo /sucursal del Destino MovDerco
-    ces_list = sorted(ces_set, key=len, reverse=True)
-
-    def matcher(destino):
-        d = norm_str(str(destino).split("/")[0])  # parte empresa antes del /
-        if len(d) < 6:
-            return None
-        if d in ces_set:
-            return d
-        for c in ces_list:
-            n = min(len(d), len(c))
-            if n >= 10 and d[:n] == c[:n]:
-                return c
-        return None
-
-    return ces_set, matcher
+    """Wrapper de cargar_base_ces (canal_derco_utils) que enchufa el log local."""
+    return cargar_base_ces(path, log_callback=log)
 
 
 # -- 2. MOVDERCO --------------------------------------------------------------
@@ -259,13 +192,9 @@ def construir_resumen_op(mov: pd.DataFrame, matcher) -> dict:
     return resumen.set_index("OP").to_dict("index")
 
 
-def resolver_canal(canal_ppal, rack_lines, est_lines, es_ces) -> str:
-    """Aplica las reglas de negocio para el canal final."""
-    if canal_ppal == "AP":
-        return "AP_E" if est_lines > rack_lines else "AP_R"  # empate -> AP_R
-    if canal_ppal == "MY" and es_ces:
-        return "CES"
-    return canal_ppal
+# resolver_canal vive en canal_derco_utils.resolver_canal_con_ces (Fase 2).
+# Alias local para retrocompatibilidad.
+resolver_canal = resolver_canal_con_ces
 
 
 # -- 4. REESCRIBIR data Derco -------------------------------------------------
