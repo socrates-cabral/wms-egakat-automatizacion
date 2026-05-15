@@ -43,7 +43,7 @@ class CryptoComExchange(BaseExchange):
         return payload
 
     def _public_get(self, endpoint: str, params: dict = None) -> dict:
-        resp = requests.get(f"{REST_URL}/{endpoint}", params=params or {}, timeout=15)
+        resp = requests.get(f"{REST_URL}/{endpoint}", params=params or {}, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         if data.get("code") != 0:
@@ -52,7 +52,7 @@ class CryptoComExchange(BaseExchange):
 
     def _private_post(self, method: str, params: dict) -> dict:
         payload = self._sign(method, params)
-        resp = requests.post(f"{REST_URL}/private/{method.split('/')[-1]}", json=payload, timeout=15)
+        resp = requests.post(f"{REST_URL}/private/{method.split('/')[-1]}", json=payload, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         if data.get("code") != 0:

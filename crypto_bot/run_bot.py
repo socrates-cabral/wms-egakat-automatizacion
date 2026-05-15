@@ -11,7 +11,10 @@ from pathlib import Path
 RESUMEN_DIARIO_HORA = 22
 _FLAG_RESUMEN       = Path(__file__).parent / "data" / ".resumen_enviado_hoy"
 _FLAG_FUERA_RANGO   = Path(__file__).parent / "data" / ".alerta_fuera_rango_{par}"
+_FLAG_PROXIMIDAD    = Path(__file__).parent / "data" / ".alerta_proximidad_{par}_{lado}"
 _ALERTA_COOLDOWN_H  = 4
+_PROXIMIDAD_COOLDOWN_H = 8
+_PROXIMIDAD_PCT     = 3.0  # alerta si precio está dentro del 3% del borde del grid
 
 
 def _debe_enviar_resumen() -> bool:
@@ -41,38 +44,76 @@ def _verificar_rango(precio: float, par: str, par_cfg: dict, notifier) -> None:
 
     lower = par_cfg["grid_lower"]
     upper = par_cfg["grid_upper"]
+    coin  = par.split("_")[0]
+    prefijo = "[PAPER] " if config.MODO_PAPER_TRADING else ""
+    ahora = time.time()
+
     if lower <= precio <= upper:
-        flag = Path(str(_FLAG_FUERA_RANGO).replace("{par}", par))
-        if flag.exists():
-            flag.unlink()
+        # Limpiar flag fuera de rango si volvió adentro
+        flag_fr = Path(str(_FLAG_FUERA_RANGO).replace("{par}", par))
+        if flag_fr.exists():
+            flag_fr.unlink()
+
+        # Alerta amarilla: precio dentro del 3% del borde inferior
+        dist_lower_pct = (precio - lower) / lower * 100
+        if dist_lower_pct <= _PROXIMIDAD_PCT:
+            flag_p = Path(str(_FLAG_PROXIMIDAD).replace("{par}", par).replace("{lado}", "lower"))
+            if not flag_p.exists() or ahora - float(flag_p.read_text().strip()) >= _PROXIMIDAD_COOLDOWN_H * 3600:
+                notifier.enviar_texto(
+                    f"{prefijo}⚠️ <b>{coin} cerca del límite inferior del grid</b>\n"
+                    f"Precio: ${precio:,.2f} ({dist_lower_pct:.1f}% sobre el piso ${lower:,})\n"
+                    f"Si cae más, el bot dejará de operar.\n"
+                    f"Considerar ajustar el grid o usar kill switch."
+                )
+                flag_p.parent.mkdir(exist_ok=True)
+                flag_p.write_text(str(ahora))
+        else:
+            flag_p = Path(str(_FLAG_PROXIMIDAD).replace("{par}", par).replace("{lado}", "lower"))
+            if flag_p.exists():
+                flag_p.unlink()
+
+        # Alerta amarilla: precio dentro del 3% del borde superior
+        dist_upper_pct = (upper - precio) / upper * 100
+        if dist_upper_pct <= _PROXIMIDAD_PCT:
+            flag_p = Path(str(_FLAG_PROXIMIDAD).replace("{par}", par).replace("{lado}", "upper"))
+            if not flag_p.exists() or ahora - float(flag_p.read_text().strip()) >= _PROXIMIDAD_COOLDOWN_H * 3600:
+                notifier.enviar_texto(
+                    f"{prefijo}⚠️ <b>{coin} cerca del límite superior del grid</b>\n"
+                    f"Precio: ${precio:,.2f} ({dist_upper_pct:.1f}% bajo el techo ${upper:,})\n"
+                    f"Si sube más, el bot dejará de operar."
+                )
+                flag_p.parent.mkdir(exist_ok=True)
+                flag_p.write_text(str(ahora))
+        else:
+            flag_p = Path(str(_FLAG_PROXIMIDAD).replace("{par}", par).replace("{lado}", "upper"))
+            if flag_p.exists():
+                flag_p.unlink()
+
         return
 
-    flag = Path(str(_FLAG_FUERA_RANGO).replace("{par}", par))
-    ahora = time.time()
-    if flag.exists():
-        if ahora - float(flag.read_text().strip()) < _ALERTA_COOLDOWN_H * 3600:
+    # Precio fuera del rango — alerta roja
+    flag_fr = Path(str(_FLAG_FUERA_RANGO).replace("{par}", par))
+    if flag_fr.exists():
+        if ahora - float(flag_fr.read_text().strip()) < _ALERTA_COOLDOWN_H * 3600:
             return
 
-    amplitud  = upper - lower
-    levels    = par_cfg["grid_levels"]
-    # step aproximado alineado a precio del par
-    step_ref  = 1000 if "BTC" in par else 50
+    amplitud = upper - lower
+    step_ref = 1000 if "BTC" in par else 50
     new_lo, new_hi = _sugerir_rango(precio, amplitud, step_ref)
 
-    direccion = "BAJO" if precio < lower else "SUBIO"
-    prefijo   = "[PAPER] " if config.MODO_PAPER_TRADING else ""
-    coin      = par.split("_")[0]
+    direccion = "BAJÓ" if precio < lower else "SUBIÓ"
     notifier.enviar_texto(
-        f"{prefijo}<b>ALERTA: {coin} fuera del grid</b>\n"
+        f"{prefijo}🔴 <b>{coin} FUERA del grid</b>\n"
         f"{coin} {direccion}: ${precio:,.2f}\n"
-        f"Grid actual: ${lower:,} – ${upper:,}\n\n"
+        f"Grid actual: ${lower:,} – ${upper:,}\n"
+        f"El bot no opera hasta que vuelva al rango.\n\n"
         f"Rango sugerido:\n"
-        f"  {par.split('_')[0]}_GRID_LOWER = {new_lo}\n"
-        f"  {par.split('_')[0]}_GRID_UPPER = {new_hi}\n\n"
+        f"  {coin}_GRID_LOWER = {new_lo}\n"
+        f"  {coin}_GRID_UPPER = {new_hi}\n\n"
         f"Actualizar en .env y reiniciar el bot."
     )
-    flag.parent.mkdir(exist_ok=True)
-    flag.write_text(str(ahora))
+    flag_fr.parent.mkdir(exist_ok=True)
+    flag_fr.write_text(str(ahora))
 
 
 def setup_logging() -> tuple:
@@ -192,7 +233,7 @@ def run_par(exchange, par: str, par_cfg: dict, logger, notifier, trend_filter, g
     except Exception as e:
         logger.error(f"[FALLO] [{par}] Error en ciclo: {e}")
         err_str = str(e)
-        _connectivity_keywords = ("SSL", "Max retries", "ConnectionError", "RemoteDisconnected", "Timeout", "EOF")
+        _connectivity_keywords = ("SSL", "Max retries", "ConnectionError", "RemoteDisconnected", "Timeout", "timed out", "EOF")
         if any(k in err_str for k in _connectivity_keywords):
             prefijo = "[PAPER] " if config.MODO_PAPER_TRADING else ""
             notifier.enviar_texto(f"{prefijo}<b>CONECTIVIDAD [{par}]</b>\n{err_str[:300]}")

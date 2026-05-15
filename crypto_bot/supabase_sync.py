@@ -24,7 +24,9 @@ def _get_client():
     if _client:
         return _client
     url = os.getenv("SUPABASE_URL", "")
-    key = os.getenv("SUPABASE_KEY", "")
+    # Proceso backend: service role bypasea RLS correctamente
+    # Fallback a anon key si service role no está configurado
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("SUPABASE_KEY", "")
     if not url or not key:
         return None
     from supabase import create_client
