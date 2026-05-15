@@ -476,6 +476,22 @@ def parse_legacy_excel_html(path: Path) -> Dict[str, Any]:
             break
 
     if report_index is None:
+        # Si hay portada (filas parseadas del HTML), el WMS exportó un reporte vacío
+        # sin movimientos — es válido. Si no hay filas, el archivo está corrupto.
+        if rows:
+            internal_cd = normalize_text(rows[0][0] if rows[0] else "")
+            internal_company = normalize_text(rows[2][0] if len(rows) >= 3 and rows[2] else "")
+            internal_scope = normalize_text(rows[3][0] if len(rows) >= 4 and rows[3] else "")
+            return {
+                "tables_count": len(tables),
+                "title_rows": rows,
+                "headers": [],
+                "detail_records": [],
+                "trailing_messages": [],
+                "internal_cd": internal_cd,
+                "internal_company": internal_company,
+                "internal_scope": internal_scope,
+            }
         raise RuntimeError("No se encontro fila de encabezado historico en el .XLS HTML.")
 
     title_rows = rows[:report_index]

@@ -844,6 +844,15 @@ def _process_client(
         if html_path and html_path.exists():
             html_path.unlink(missing_ok=True)
 
+    # Sin movimientos en la ventana: avanzar checkpoint sin subir nada a SharePoint
+    if df_new.empty:
+        _save_checkpoint_client(client_key, to_dt.date())
+        log(
+            f"[OK] {client['empresa_wms']}: sin movimientos en el periodo | checkpoint={to_dt.date()}",
+            log_path,
+        )
+        return {"ok": True, "filas_nuevas": 0, "filas_totales": 0, "detalle": "sin movimientos"}
+
     filas_nuevas_total = len(df_new)
 
     # 3) Determinar si la ventana cruza un mes.

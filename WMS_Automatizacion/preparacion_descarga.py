@@ -94,6 +94,38 @@ DERCO_CHUNK_DIAS = 5         # tamaño de partición para DERCO
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
 
+def _columnas_desde_historial(carpeta_cliente, subcarpeta, nombre_archivo):
+    """Obtiene columnas desde el historial del cliente; si no hay, busca en cualquier otro cliente."""
+    base_cliente = Path(ONEDRIVE_BASE) / carpeta_cliente / subcarpeta
+    candidatos = sorted(base_cliente.rglob(nombre_archivo), key=lambda f: f.stat().st_mtime, reverse=True) if base_cliente.exists() else []
+    if not candidatos:
+        candidatos = sorted(Path(ONEDRIVE_BASE).rglob(nombre_archivo), key=lambda f: f.stat().st_mtime, reverse=True)
+    for p in candidatos:
+        try:
+            df = pd.read_excel(p, nrows=0, engine="openpyxl")
+            if df.columns.tolist():
+                return df.columns.tolist()
+        except Exception:
+            continue
+    return []
+
+
+def _asegurar_headers(ruta_archivo, carpeta_cliente, subcarpeta, nombre_archivo):
+    """Si el Excel guardado no tiene columnas, las restaura desde el historial del cliente."""
+    try:
+        df = pd.read_excel(ruta_archivo, nrows=0, engine="openpyxl")
+        if df.columns.tolist():
+            return
+    except Exception:
+        return
+    cols = _columnas_desde_historial(carpeta_cliente, subcarpeta, nombre_archivo)
+    if cols:
+        pd.DataFrame(columns=cols).to_excel(ruta_archivo, index=False, engine="openpyxl")
+        log(f"  -> [HEADERS] {len(cols)} columnas restauradas desde historial")
+    else:
+        log("  -> [ADVERTENCIA] Sin historial para restaurar headers — archivo permanece vacio")
+
+
 def log(msg):
     msg = (msg
            .replace("→", "->").replace("✓", "OK").replace("✗", "ERR")
@@ -255,6 +287,7 @@ def descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str,
         try:
             log(f"  -> Fechas: {fd_str} a {fh_str} (intento {intento}/2)")
             _bajar_excel(page, empresa_wms, fd_str, fh_str, archivo_final, estado_filtro)
+            _asegurar_headers(archivo_final, carpeta_cliente, "Preparación", "Pedidos Preparados.xlsx")
             log(f"  -> [OK] Guardado: {archivo_final}")
             return True
         except Exception as e:
@@ -336,6 +369,15 @@ def descargar_chunked(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str,
     # Caso 6: si hubo chunks fallidos, guardar igual pero advertir gap de datos
     if chunks_ok < len(chunks):
         log(f"  -> [ADVERTENCIA] Datos INCOMPLETOS: solo {chunks_ok}/{len(chunks)} chunks OK — hay gap en el periodo")
+
+    # Si todos los chunks estaban vacíos el df queda sin columnas — restaurar desde historial
+    if not df_total.columns.tolist():
+        cols = _columnas_desde_historial(carpeta_cliente, "Preparación", "Pedidos Preparados.xlsx")
+        if cols:
+            df_total = pd.DataFrame(columns=cols)
+            log(f"  -> [HEADERS] {len(cols)} columnas restauradas desde historial")
+        else:
+            log("  -> [ADVERTENCIA] Sin historial para restaurar headers — archivo permanece vacio")
 
     archivo_final = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
     df_total.to_excel(archivo_final, index=False, engine="openpyxl")

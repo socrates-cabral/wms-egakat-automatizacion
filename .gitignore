@@ -52,6 +52,8 @@ _*_backup_*.py
 VDR_Comparador/vdr_ultimo_procesado.txt
 crypto_bot/data/
 crypto_bot/estado_grid*.json
+# Outputs de validación KPI ops (data, no código)
+WMS_Automatizacion/resumen_kpi_ops_*_validacion_*.json
 *.db
 *.sqlite
 *.sqlite3
