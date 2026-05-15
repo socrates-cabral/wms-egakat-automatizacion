@@ -3,6 +3,22 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-05-15] update | FillRate — rename histórico columna y reconciliación Quilicura
+
+**Tipo:** Hallazgo + reconciliación manual
+
+**Páginas actualizadas:**
+- wiki/proyectos/fillrate-automatizacion.md (sección "Hallazgo: rename histórico columna fecha" + "Filas vacías masivas")
+
+**Hallazgos:**
+- `Fecha y hora de Generación` (WMS bruto) = `Fecha y hora de Ingreso` (procesado). Mismo dato, nombre cambiado en algún momento — canónico debería ser "Generación".
+- Filas vacías intercaladas masivas en `data Runo Tradicional.xlsx` (1042 huérfanas + 729 vacías de 1855) y `data Derco.xlsx` (~35.226 de 69.975). Trim de fillrate solo borra trailing, no intermedias.
+- Reconciliación Quilicura vs WMS: Pochteca -16, Cervecería ABI -7, Daikin -4, Mascotas Latinas -1, Derco +2 (Aplica 196099 y 196119 del 12-may, anulados después de corrida previa).
+
+**Memoria guardada:** `project_fillrate_columna_generacion.md`
+
+---
+
 ## [2026-05-01] ingest | Code Review Bots Telegram Codex
 
 **Tipo:** Revisión código (calidad, seguridad, optimización)  

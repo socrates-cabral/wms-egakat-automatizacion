@@ -1,5 +1,5 @@
 # Wiki Index — ClaudeWork
-Última compilación: 2026-05-01
+Última compilación: 2026-05-15
 
 ## Proyectos
 

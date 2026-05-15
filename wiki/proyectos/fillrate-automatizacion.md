@@ -3,7 +3,7 @@ title: FillRate — Automatización WMS Egakat
 type: proyecto
 sources: [FillRate_Automatizacion/fillrate_descarga.py, FillRate_Automatizacion/fillrate_utils.py, FillRate_Automatizacion/fillrate_config.py]
 related: [proyecto-wms-egakat, graph-api-microsoft, playwright-wms]
-updated: 2026-04-15
+updated: 2026-05-15
 confidence: high
 ---
 
@@ -137,3 +137,12 @@ Algunos archivos tienen templates pre-escritos con cientos de filas vacías. El 
 - **15/04/2026**: Derco FALLO por 423 (archivo abierto en Excel Online). Resto OK.
 - **04/05/2026**: Omnitech agregado + backfill anual. Bug `start_row`/filas vacías corregido.
 - **08/05/2026**: Bug duplicación abril detectado y corregido (aplica-based). Bug O(n²) delete corregido (bulk ranges). 14 clientes corregidos. Derco: 45,681 duplicados reemplazados, archivo 31MB→13MB.
+- **15/05/2026**: Reconciliación manual de archivos Quilicura vs WMS bruto. Diffs encontrados (faltantes/sobrantes por cliente): Pochteca -16, Cervecería ABI -7, Daikin -4, Mascotas Latinas -1, Derco +2 (Nro Aplica 196099 y 196119 del 12-may, anulados en WMS posterior a corrida previa).
+
+## Hallazgo: rename histórico columna fecha (2026-05-15)
+La columna **`Fecha y hora de Generación`** del reporte WMS bruto fue renombrada en algún momento a **`Fecha y hora de Ingreso`** en los archivos procesados (`data <Cliente>.xlsx`). Son la misma columna semánticamente — el nombre canónico debería ser **`Generación`** (el original del WMS).
+
+**Implicancia para diffs:** al comparar dataset procesado vs WMS bruto por clave compuesta (Empresa + Nro Aplica + Mes Fecha Ingreso/Generación), hay que mapear ambos nombres a la misma columna antes del matching por mes. Sin esto, las órdenes cercanas al cambio de mes generan falsos positivos. Detectado al diferenciar `data Derco.xlsx` (34.749 keys) vs `Reporte_Consulta_de_Fill_Rate (DERCO).xlsx` (34.747 keys): aparecían 29 sobrantes + 27 faltantes; el diff real es 2 sobrantes y 0 faltantes.
+
+## Filas vacías masivas en archivos procesados (2026-05-15)
+`data Runo Tradicional.xlsx` y `data Derco.xlsx` arrastran miles de filas vacías intercaladas (no solo trailing): Runo tenía 1042 filas huérfanas con datos parciales 2025 (sin Empresa ni Nro Aplica) + 729 vacías totales entre los bloques de datos válidos; Derco tiene ~35.226 vacías de 69.975 totales. La lógica de trim en `fillrate_utils.py:update_sharepoint_workbook` solo elimina vacías trailing, no las intermedias. El usuario corrige manualmente cuando aparecen.
