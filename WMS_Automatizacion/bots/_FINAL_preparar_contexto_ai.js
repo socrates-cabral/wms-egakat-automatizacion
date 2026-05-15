@@ -261,6 +261,28 @@
     // Caso genérico: "canal/canales/por canal/tipo de canal" + DERCO mencionado
     (_mencionaCanalGenerico && _mencionaDerco);
 
+  // Detecta intención de DESGLOSE INDIVIDUAL (canales_originales) vs AGRUPADO (canales).
+  // Por default canales DERCO se entregan agrupados (AP / CAP-MY-SG-CES / GT). Con estas
+  // keywords se prefiere la vista individual (AP, MY, CAP, SG, GT, CES separados).
+  const pideDesgloseCanales = pideDercoCanales && (
+    msg.includes('desglosa') ||
+    msg.includes('desglose') ||
+    msg.includes('desglosar') ||
+    msg.includes('detalle') ||
+    msg.includes('detallado') ||
+    msg.includes('detallar') ||
+    msg.includes('individual') ||
+    msg.includes('individuales') ||
+    msg.includes('originales') ||
+    msg.includes('separado') ||
+    msg.includes('separados') ||
+    msg.includes('uno por uno') ||
+    // Si menciona CES específicamente, también va a individual (CES solo está en originales)
+    msg.includes('ces') ||
+    // Si nombra 2+ canales específicos, claramente quiere individual
+    _dercoCanalesCount >= 2
+  );
+
   const esInventario =
     msg.includes('inventario') ||
     msg.includes('ubicacion') ||
@@ -1019,9 +1041,12 @@
         nota: 'canales agrupa AP_R+AP_E como AP y CAP+MY+SG+CES en CAP-MY-SG-CES (canal mayorista). canales_originales separa: AP, MY, CAP, SG, GT, CES (CES = MY con destino concesionario, parte del mayorista). Si CES aparece, reportarlo; si no aparece para el período, mencionar que no hubo pedidos CES en ese rango. La suma de los 4 individuales (CAP+MY+SG+CES) debe igualar el grupo CAP-MY-SG-CES.'
       };
       prodCompacta.consulta_resuelta = {
-        tipo: 'derco_canales_totales',
+        tipo: pideDesgloseCanales ? 'derco_canales_individuales' : 'derco_canales_agrupados',
         cliente: 'DERCO',
-        regla: 'Mostrar desglose de líneas y unidades por canal DERCO desde derco_canales.canales (agrupado). Si se pide AP separado, usar canales_originales. CES es un canal válido (MY con destino concesionario, mismo criterio que FillRate); si aparece en canales_originales, reportarlo. Si no aparece para el período, indicar que no hubo pedidos CES en ese rango. La conclusión debe señalar qué canal concentra mayor carga operativa del período.'
+        vista_preferida: pideDesgloseCanales ? 'canales_originales' : 'canales',
+        regla: pideDesgloseCanales
+          ? 'Vista INDIVIDUAL solicitada (palabra clave: desglosa/desglose/detalle/individual/originales/separado o se nombró CES o 2+ canales). Usar derco_canales.canales_originales (AP, MY, CAP, SG, GT, CES separados). NO agrupar CAP+MY+SG+CES. Si CES aparece, reportarlo; si no aparece para el período, mencionar que no hubo pedidos CES. La conclusión debe señalar qué canal individual concentra mayor carga operativa.'
+          : 'Vista AGRUPADA por default. Usar derco_canales.canales (AP, CAP-MY-SG-CES, GT). El grupo CAP-MY-SG-CES contiene CAP+MY+SG+CES y representa el canal mayorista DERCO. Si el usuario después pide individual, usar canales_originales. La conclusión debe señalar qué grupo concentra mayor carga operativa.'
       };
     }
 
