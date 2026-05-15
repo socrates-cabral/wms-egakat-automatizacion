@@ -1,16 +1,16 @@
 {
-  "fecha_evaluacion": "2026-04-29 15:40:30.345165",
+  "fecha_evaluacion": "2026-05-10 13:06:58.014515",
   "n_partidos_test": 1926,
-  "accuracy": 0.5202,
-  "log_loss": 0.9873,
-  "brier_home": 0.2188,
-  "brier_draw": 0.1843,
-  "brier_away": 0.1851,
+  "accuracy": 0.5228,
+  "log_loss": 0.9862,
+  "brier_home": 0.2185,
+  "brier_draw": 0.1841,
+  "brier_away": 0.1847,
   "confusion_matrix": [
     [
-      668,
-      6,
-      181
+      675,
+      4,
+      176
     ],
     [
       313,
@@ -18,57 +18,57 @@
       160
     ],
     [
-      261,
-      3,
-      329
+      262,
+      4,
+      327
     ]
   ],
   "analisis_umbral": [
     {
       "umbral": 0.4,
-      "n_partidos": 1652,
-      "cobertura": 85.8,
-      "accuracy": 0.5466
+      "n_partidos": 1655,
+      "cobertura": 85.9,
+      "accuracy": 0.5535
     },
     {
       "umbral": 0.45,
-      "n_partidos": 1258,
-      "cobertura": 65.3,
-      "accuracy": 0.597
+      "n_partidos": 1254,
+      "cobertura": 65.1,
+      "accuracy": 0.5997
     },
     {
       "umbral": 0.5,
-      "n_partidos": 898,
-      "cobertura": 46.6,
-      "accuracy": 0.6392
+      "n_partidos": 905,
+      "cobertura": 47.0,
+      "accuracy": 0.6464
     },
     {
       "umbral": 0.55,
-      "n_partidos": 572,
-      "cobertura": 29.7,
-      "accuracy": 0.6923
+      "n_partidos": 584,
+      "cobertura": 30.3,
+      "accuracy": 0.7021
     },
     {
       "umbral": 0.6,
       "n_partidos": 304,
       "cobertura": 15.8,
-      "accuracy": 0.75
+      "accuracy": 0.7566
     },
     {
       "umbral": 0.65,
-      "n_partidos": 100,
-      "cobertura": 5.2,
+      "n_partidos": 92,
+      "cobertura": 4.8,
       "accuracy": 0.75
     }
   ],
   "mejor_combinacion": {
     "umbral": 0.6,
     "value_min": 0.03,
-    "n_apuestas": 11,
+    "n_apuestas": 12,
     "pct_dataset": 0.6,
-    "accuracy": 54.55,
-    "roi_flat": 9.82,
-    "roi_kelly": 5.7
+    "accuracy": 58.33,
+    "roi_flat": 14.42,
+    "roi_kelly": 7.48
   },
   "roi_por_liga": {
     "Liga 2": {
@@ -93,7 +93,7 @@
       "n_apuestas": 3,
       "accuracy": 33.33,
       "roi_flat": -40.0,
-      "roi_kelly": -1.52,
+      "roi_kelly": -1.41,
       "activa": false
     },
     "Bundesliga": {
@@ -102,16 +102,16 @@
       "n_apuestas": 3,
       "accuracy": 66.67,
       "roi_flat": 19.33,
-      "roi_kelly": 1.81,
+      "roi_kelly": 1.66,
       "activa": false
     },
     "Serie A": {
       "liga_id": 135,
       "n_partidos_test": 342,
-      "n_apuestas": 5,
-      "accuracy": 60.0,
-      "roi_flat": 34.0,
-      "roi_kelly": 5.42,
+      "n_apuestas": 6,
+      "accuracy": 66.67,
+      "roi_flat": 39.17,
+      "roi_kelly": 7.24,
       "activa": false
     },
     "La Liga": {

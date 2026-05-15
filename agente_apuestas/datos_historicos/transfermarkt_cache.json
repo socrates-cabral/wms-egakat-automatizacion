@@ -4,17 +4,17 @@
     "valor_total_mill_eur": 1024.5,
     "n_jugadores": 28,
     "valor_por_jugador": 36.59,
-    "fecha_consulta": "2026-03-23",
-    "valido_hasta": "2026-04-22",
+    "fecha_consulta": "2026-05-15",
+    "valido_hasta": "2026-06-14",
     "fuente": "transfermarkt"
   },
   "Monaco": {
     "equipo": "Monaco",
-    "valor_total_mill_eur": 359.05,
+    "valor_total_mill_eur": 391.55,
     "n_jugadores": 28,
-    "valor_por_jugador": 12.82,
-    "fecha_consulta": "2026-03-23",
-    "valido_hasta": "2026-04-22",
+    "valor_por_jugador": 13.98,
+    "fecha_consulta": "2026-05-10",
+    "valido_hasta": "2026-06-09",
     "fuente": "transfermarkt"
   },
   "Nice": {
@@ -49,8 +49,8 @@
     "valor_total_mill_eur": 547.5,
     "n_jugadores": 25,
     "valor_por_jugador": 21.9,
-    "fecha_consulta": "2026-03-23",
-    "valido_hasta": "2026-04-22",
+    "fecha_consulta": "2026-05-15",
+    "valido_hasta": "2026-06-14",
     "fuente": "transfermarkt"
   },
   "Brighton": {
@@ -94,8 +94,8 @@
     "valor_total_mill_eur": 1164.05,
     "n_jugadores": 29,
     "valor_por_jugador": 40.14,
-    "fecha_consulta": "2026-03-23",
-    "valido_hasta": "2026-04-22",
+    "fecha_consulta": "2026-05-04",
+    "valido_hasta": "2026-06-03",
     "fuente": "transfermarkt"
   },
   "Bayern Munich": {
@@ -112,8 +112,8 @@
     "valor_total_mill_eur": 1167.4,
     "n_jugadores": 24,
     "valor_por_jugador": 48.64,
-    "fecha_consulta": "2026-03-23",
-    "valido_hasta": "2026-04-22",
+    "fecha_consulta": "2026-05-10",
+    "valido_hasta": "2026-06-09",
     "fuente": "transfermarkt"
   },
   "Real Madrid": {
@@ -172,11 +172,11 @@
   },
   "Fiorentina": {
     "equipo": "Fiorentina",
-    "valor_total_mill_eur": 247.45,
+    "valor_total_mill_eur": 243.85,
     "n_jugadores": 27,
-    "valor_por_jugador": 9.16,
-    "fecha_consulta": "2026-03-23",
-    "valido_hasta": "2026-04-22",
+    "valor_por_jugador": 9.03,
+    "fecha_consulta": "2026-05-04",
+    "valido_hasta": "2026-06-03",
     "fuente": "transfermarkt"
   },
   "Napoli": {
@@ -229,8 +229,8 @@
     "valor_total_mill_eur": 483.5,
     "n_jugadores": 23,
     "valor_por_jugador": 21.02,
-    "fecha_consulta": "2026-04-06",
-    "valido_hasta": "2026-05-06",
+    "fecha_consulta": "2026-05-10",
+    "valido_hasta": "2026-06-09",
     "fuente": "transfermarkt"
   },
   "Manchester United": {
@@ -312,6 +312,33 @@
     "valor_por_jugador": 18.82,
     "fecha_consulta": "2026-04-27",
     "valido_hasta": "2026-05-27",
+    "fuente": "transfermarkt"
+  },
+  "Everton": {
+    "equipo": "Everton",
+    "valor_total_mill_eur": 450.45,
+    "n_jugadores": 25,
+    "valor_por_jugador": 18.02,
+    "fecha_consulta": "2026-05-04",
+    "valido_hasta": "2026-06-03",
+    "fuente": "transfermarkt"
+  },
+  "Eintracht Frankfurt": {
+    "equipo": "Eintracht Frankfurt",
+    "valor_total_mill_eur": 388.55,
+    "n_jugadores": 28,
+    "valor_por_jugador": 13.88,
+    "fecha_consulta": "2026-05-08",
+    "valido_hasta": "2026-06-07",
+    "fuente": "transfermarkt"
+  },
+  "Lyon": {
+    "equipo": "Lyon",
+    "valor_total_mill_eur": 282.55,
+    "n_jugadores": 29,
+    "valor_por_jugador": 9.74,
+    "fecha_consulta": "2026-05-10",
+    "valido_hasta": "2026-06-09",
     "fuente": "transfermarkt"
   }
 }

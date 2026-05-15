@@ -127,6 +127,107 @@ def _get_resultado_mlb(home: str, away: str, fecha: str) -> dict | None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CONSULTAR RESULTADO NBA VIA NBA_API (gratis, sin key)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _get_resultado_nba(home: str, away: str, fecha: str) -> dict | None:
+    """
+    Busca el resultado de un partido NBA usando nba_api (gratis, sin key).
+    Busca en game logs del equipo local buscando coincidencia de fecha y rival.
+
+    Returns:
+        {"estado": str, "home_goles": int, "away_goles": int,
+         "score": str, "terminado": bool}
+        o None si no se encuentra o nba_api no está instalado.
+    """
+    try:
+        from nba_api.stats.static import teams as nba_teams
+        from nba_api.stats.endpoints import TeamGameLogs
+        from datetime import date, datetime
+        import time
+
+        fecha_dt = date.fromisoformat(fecha[:10]) if fecha else None
+        if fecha_dt is None:
+            return None
+
+        all_teams = nba_teams.get_teams()
+        home_l = home.lower()
+
+        team_id = None
+        for t in all_teams:
+            if (home_l in t["full_name"].lower() or
+                    home_l in t["nickname"].lower() or
+                    t["nickname"].lower() in home_l or
+                    t["abbreviation"].lower() in home_l):
+                team_id = t["id"]
+                break
+
+        if team_id is None:
+            print(f"[AVISO] NBA team no encontrado: {home}")
+            return None
+
+        time.sleep(0.6)
+        season = f"{fecha_dt.year - 1}-{str(fecha_dt.year)[2:]}" if fecha_dt.month < 7 else f"{fecha_dt.year}-{str(fecha_dt.year + 1)[2:]}"
+        logs = TeamGameLogs(
+            team_id_nullable=str(team_id),
+            season_nullable=season,
+            season_type_nullable="Regular Season",
+        )
+        df = logs.get_data_frames()[0]
+        if df.empty:
+            return None
+
+        away_l = away.lower()
+        for _, row in df.iterrows():
+            game_date_str = row.get("GAME_DATE", "")
+            try:
+                game_date = datetime.strptime(game_date_str, "%b %d, %Y").date()
+            except ValueError:
+                try:
+                    game_date = date.fromisoformat(game_date_str[:10])
+                except Exception:
+                    continue
+
+            if abs((game_date - fecha_dt).days) > 2:
+                continue
+
+            matchup = row.get("MATCHUP", "").lower()
+            if not (away_l[:5] in matchup or matchup.split()[-1][:5] in away_l):
+                continue
+
+            wl = row.get("WL", "")
+            pts_home = int(row.get("PTS", 0))
+            # MATCHUP format: "BOS vs. ORL" (home) o "BOS @ ORL" (away)
+            is_home_game = "vs." in matchup
+            if is_home_game:
+                home_pts = pts_home
+                # Calcular puntos rival desde +/-
+                plus_minus = row.get("PLUS_MINUS", 0) or 0
+                away_pts = pts_home - int(plus_minus)
+            else:
+                away_pts = pts_home
+                plus_minus = row.get("PLUS_MINUS", 0) or 0
+                home_pts = pts_home - int(plus_minus)
+
+            return {
+                "estado":     "Final",
+                "home_goles": max(0, home_pts),
+                "away_goles": max(0, away_pts),
+                "score":      f"{max(0, home_pts)}-{max(0, away_pts)}",
+                "terminado":  True,
+            }
+
+        return None
+
+    except ImportError:
+        print("[AVISO] nba_api no instalado — py -m pip install nba_api")
+        return None
+    except Exception as e:
+        print(f"[AVISO] NBA API error: {e}")
+        return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # DETERMINAR SI LA APUESTA GANÓ
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -191,7 +292,8 @@ def verificar_pendientes(verbose: bool = True) -> dict:
                                "retorno_neto": float}
     """
     apuestas = leer_historico()
-    pendientes = [a for a in apuestas if a.get("resultado_real") is None]
+    NO_RESUELTO = {None, "score no disponible (hash externo)"}
+    pendientes = [a for a in apuestas if a.get("resultado_real") in NO_RESUELTO]
 
     if not pendientes:
         print("[INFO] No hay apuestas pendientes de verificar.")
@@ -264,7 +366,51 @@ def verificar_pendientes(verbose: bool = True) -> dict:
                               f"(MLB) → Estado: {resultado_mlb['estado']} (no terminado)")
                     continue
 
-            # Otros deportes con hash o MLB sin datos: pendiente manual
+            # NBA: resolver via nba_api (gratis, sin key)
+            if liga == "NBA":
+                resultado_nba = _get_resultado_nba(
+                    apuesta["home"], apuesta["away"],
+                    (apuesta.get("fecha_partido") or "")[:10]
+                )
+                if resultado_nba and resultado_nba["terminado"]:
+                    home_g = resultado_nba["home_goles"]
+                    away_g = resultado_nba["away_goles"]
+                    ganado = evaluar_apuesta(
+                        apuesta["tipo_apuesta"], apuesta["seleccion"],
+                        home_g, away_g,
+                    )
+                    retorno = (round(apuesta["monto_apostado"] * apuesta["cuota"]
+                                     - apuesta["monto_apostado"], 2)
+                               if ganado is True else
+                               (-apuesta["monto_apostado"] if ganado is False else 0.0))
+                    resumen["verificadas"] += 1
+                    resumen["ganadas"]  += (1 if ganado is True  else 0)
+                    resumen["perdidas"] += (1 if ganado is False else 0)
+                    resumen["no_determinadas"] += (1 if ganado is None else 0)
+                    resumen["retorno_neto"] += retorno
+
+                    idx = idx_por_id[apuesta["id"]]
+                    apuestas[idx]["resultado_real"] = resultado_nba["score"]
+                    apuestas[idx]["score_final"]    = resultado_nba["score"]
+                    apuestas[idx]["ganado"]         = ganado
+                    apuestas[idx]["retorno"]        = retorno
+
+                    if verbose:
+                        icono = "✅" if ganado else ("❌" if ganado is False else "❓")
+                        print(f"  {icono} [{apuesta['id'][:8]}] {apuesta['home']} vs {apuesta['away']} "
+                              f"| Score: {resultado_nba['score']} "
+                              f"| {apuesta['tipo_apuesta']} {apuesta['seleccion']} "
+                              f"@ {apuesta['cuota']} "
+                              f"| Retorno: ${retorno:+,.0f} [nba_api]")
+                    continue
+                elif resultado_nba and not resultado_nba["terminado"]:
+                    resumen["pendientes"] += 1
+                    if verbose:
+                        print(f"  ⏳ [{apuesta['id'][:8]}] {apuesta['home']} vs {apuesta['away']} "
+                              f"(NBA) → Estado: {resultado_nba['estado']} (no terminado)")
+                    continue
+
+            # Otros deportes con hash: pendiente manual
             resumen["pendientes"] += 1
             if verbose:
                 print(f"  🔎 [{apuesta['id'][:8]}] {apuesta['home']} vs {apuesta['away']} "

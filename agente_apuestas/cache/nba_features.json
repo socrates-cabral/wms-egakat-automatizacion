@@ -20,7 +20,7 @@
     },
     "fuente": "nba_api"
   },
-  "_timestamp": "2026-04-23T09:02:07.482731",
+  "_timestamp": "2026-05-15T09:01:25.319922",
   "nba|atlanta hawks|new york knicks|2026-04-06": {
     "home": {
       "rest_days": 358,
@@ -556,6 +556,27 @@
     },
     "fuente": "nba_api"
   },
+  "nba|orlando magic|detroit pistons|2026-05-01": {
+    "home": {
+      "rest_days": 383,
+      "back_to_back": false,
+      "win_pct_l10": 0.7,
+      "streak": -1,
+      "pts_pg": 108.5,
+      "efg_pct": 0.54,
+      "ts_pct": 0.574
+    },
+    "away": {
+      "rest_days": 383,
+      "back_to_back": false,
+      "win_pct_l10": 0.4,
+      "streak": -2,
+      "pts_pg": 116.6,
+      "efg_pct": 0.541,
+      "ts_pct": 0.576
+    },
+    "fuente": "nba_api"
+  },
   "nba|atlanta hawks|new york knicks|2026-04-23": {
     "home": {
       "rest_days": 375,
@@ -574,6 +595,237 @@
       "pts_pg": 110.7,
       "efg_pct": 0.547,
       "ts_pct": 0.579
+    },
+    "fuente": "nba_api"
+  },
+  "nba|toronto raptors|cleveland cavaliers|2026-05-01": {
+    "home": {
+      "rest_days": 383,
+      "back_to_back": false,
+      "win_pct_l10": 0.5,
+      "streak": -2,
+      "pts_pg": 114.3,
+      "efg_pct": 0.524,
+      "ts_pct": 0.545
+    },
+    "away": {
+      "rest_days": 383,
+      "back_to_back": false,
+      "win_pct_l10": 0.6,
+      "streak": -1,
+      "pts_pg": 119.7,
+      "efg_pct": 0.565,
+      "ts_pct": 0.587
+    },
+    "fuente": "nba_api"
+  },
+  "nba|detroit pistons|orlando magic|2026-05-03": {
+    "home": {
+      "rest_days": 385,
+      "back_to_back": false,
+      "win_pct_l10": 0.4,
+      "streak": -2,
+      "pts_pg": 116.6,
+      "efg_pct": 0.541,
+      "ts_pct": 0.576
+    },
+    "away": {
+      "rest_days": 385,
+      "back_to_back": false,
+      "win_pct_l10": 0.7,
+      "streak": -1,
+      "pts_pg": 108.5,
+      "efg_pct": 0.54,
+      "ts_pct": 0.574
+    },
+    "fuente": "nba_api"
+  },
+  "nba|cleveland cavaliers|toronto raptors|2026-05-03": {
+    "home": {
+      "rest_days": 385,
+      "back_to_back": false,
+      "win_pct_l10": 0.6,
+      "streak": -1,
+      "pts_pg": 119.7,
+      "efg_pct": 0.565,
+      "ts_pct": 0.587
+    },
+    "away": {
+      "rest_days": 385,
+      "back_to_back": false,
+      "win_pct_l10": 0.5,
+      "streak": -2,
+      "pts_pg": 114.3,
+      "efg_pct": 0.524,
+      "ts_pct": 0.545
+    },
+    "fuente": "nba_api"
+  },
+  "nba|detroit pistons|cleveland cavaliers|2026-05-05": {
+    "home": {
+      "rest_days": 387,
+      "back_to_back": false,
+      "win_pct_l10": 0.4,
+      "streak": -2,
+      "pts_pg": 116.6,
+      "efg_pct": 0.541,
+      "ts_pct": 0.576
+    },
+    "away": {
+      "rest_days": 387,
+      "back_to_back": false,
+      "win_pct_l10": 0.6,
+      "streak": -1,
+      "pts_pg": 119.7,
+      "efg_pct": 0.565,
+      "ts_pct": 0.587
+    },
+    "fuente": "nba_api"
+  },
+  "nba|new york knicks|philadelphia 76ers|2026-05-06": {
+    "home": {
+      "rest_days": 388,
+      "back_to_back": false,
+      "win_pct_l10": 0.6,
+      "streak": 1,
+      "pts_pg": 110.7,
+      "efg_pct": 0.547,
+      "ts_pct": 0.579
+    },
+    "away": {
+      "rest_days": 388,
+      "back_to_back": false,
+      "win_pct_l10": 0.1,
+      "streak": -2,
+      "pts_pg": 107.0,
+      "efg_pct": 0.513,
+      "ts_pct": 0.543
+    },
+    "fuente": "nba_api"
+  },
+  "nba|detroit pistons|cleveland cavaliers|2026-05-07": {
+    "home": {
+      "rest_days": 389,
+      "back_to_back": false,
+      "win_pct_l10": 0.4,
+      "streak": -2,
+      "pts_pg": 116.6,
+      "efg_pct": 0.541,
+      "ts_pct": 0.576
+    },
+    "away": {
+      "rest_days": 389,
+      "back_to_back": false,
+      "win_pct_l10": 0.6,
+      "streak": -1,
+      "pts_pg": 119.7,
+      "efg_pct": 0.565,
+      "ts_pct": 0.587
+    },
+    "fuente": "nba_api"
+  },
+  "nba|philadelphia 76ers|new york knicks|2026-05-08": {
+    "home": {
+      "rest_days": 390,
+      "back_to_back": false,
+      "win_pct_l10": 0.1,
+      "streak": -2,
+      "pts_pg": 107.0,
+      "efg_pct": 0.513,
+      "ts_pct": 0.543
+    },
+    "away": {
+      "rest_days": 390,
+      "back_to_back": false,
+      "win_pct_l10": 0.6,
+      "streak": 1,
+      "pts_pg": 110.7,
+      "efg_pct": 0.547,
+      "ts_pct": 0.579
+    },
+    "fuente": "nba_api"
+  },
+  "nba|cleveland cavaliers|detroit pistons|2026-05-09": {
+    "home": {
+      "rest_days": 391,
+      "back_to_back": false,
+      "win_pct_l10": 0.6,
+      "streak": -1,
+      "pts_pg": 119.7,
+      "efg_pct": 0.565,
+      "ts_pct": 0.587
+    },
+    "away": {
+      "rest_days": 391,
+      "back_to_back": false,
+      "win_pct_l10": 0.4,
+      "streak": -2,
+      "pts_pg": 116.6,
+      "efg_pct": 0.541,
+      "ts_pct": 0.576
+    },
+    "fuente": "nba_api"
+  },
+  "nba|philadelphia 76ers|new york knicks|2026-05-10": {
+    "home": {
+      "rest_days": 392,
+      "back_to_back": false,
+      "win_pct_l10": 0.1,
+      "streak": -2,
+      "pts_pg": 107.0,
+      "efg_pct": 0.513,
+      "ts_pct": 0.543
+    },
+    "away": {
+      "rest_days": 392,
+      "back_to_back": false,
+      "win_pct_l10": 0.6,
+      "streak": 1,
+      "pts_pg": 110.7,
+      "efg_pct": 0.547,
+      "ts_pct": 0.579
+    },
+    "fuente": "nba_api"
+  },
+  "nba|minnesota timberwolves|san antonio spurs|2026-05-10": {
+    "home": {
+      "rest_days": 392,
+      "back_to_back": false,
+      "win_pct_l10": 0.8,
+      "streak": 3,
+      "pts_pg": 118.6,
+      "efg_pct": 0.577,
+      "ts_pct": 0.602
+    },
+    "away": {
+      "rest_days": 392,
+      "back_to_back": false,
+      "win_pct_l10": 0.3,
+      "streak": 1,
+      "pts_pg": 111.1,
+      "efg_pct": 0.551,
+      "ts_pct": 0.579
+    },
+    "fuente": "nba_api"
+  },
+  "nba|cleveland cavaliers|detroit pistons|2026-05-15": {
+    "home": {
+      "rest_days": 397,
+      "back_to_back": false,
+      "win_pct_l10": 0.6,
+      "streak": -1,
+      "pts_pg": 119.7,
+      "efg_pct": 0.565,
+      "ts_pct": 0.587
+    },
+    "away": {
+      "rest_days": 397,
+      "back_to_back": false,
+      "win_pct_l10": 0.4,
+      "streak": -2,
+      "pts_pg": 116.6,
+      "efg_pct": 0.541,
+      "ts_pct": 0.576
     },
     "fuente": "nba_api"
   }

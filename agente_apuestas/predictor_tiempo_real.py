@@ -72,6 +72,11 @@ def _cargar_modelo():
     modelo = joblib.load(modelo_path)
     scaler = joblib.load(scaler_path) if scaler_path.exists() else None
 
+    # Preferir feature_names.json (guardado por entrenador.py con las 51 features reales)
+    # feature_columns.json es un archivo legado con solo 35 features
+    feature_names_path = modelos_dir / "feature_names.json"
+    if feature_names_path.exists():
+        cols_path = feature_names_path
     if cols_path.exists():
         with open(cols_path, "r", encoding="utf-8") as f:
             feature_cols = json.load(f)
@@ -136,8 +141,14 @@ def _calcular_forma_reciente(home: str, away: str, fecha: str, df_hist: pd.DataF
         fecha_dt = pd.to_datetime(fecha, errors="coerce")
         if pd.isna(fecha_dt):
             return features
+        # Normalizar timezone: si fecha_dt tiene tz y df_hist no (o viceversa), eliminar tz
+        if getattr(fecha_dt, "tzinfo", None) is not None:
+            fecha_dt = fecha_dt.tz_localize(None)
+        col_date = df_hist["date"]
+        if hasattr(col_date.dtype, "tz") and col_date.dtype.tz is not None:
+            col_date = col_date.dt.tz_localize(None)
 
-        df_antes = df_hist[df_hist["date"] < fecha_dt]
+        df_antes = df_hist[col_date < fecha_dt]
 
         for equipo, prefijo in [(home, "home"), (away, "away")]:
             # Match exacto primero, luego por primer token (manejo de nombres parciales)
@@ -239,6 +250,7 @@ def _construir_features(partido: dict, pi_ratings: dict, feature_cols: list,
     exp_home = 1.0 / (1.0 + 10 ** ((pi_away - pi_home) / 3.0))
     exp_away = 1.0 - exp_home
 
+    liga_id_val = partido.get("liga_id", LIGA_SERIE_A)
     features = {
         "pi_rating_home": pi_home,
         "pi_rating_away": pi_away,
@@ -247,13 +259,34 @@ def _construir_features(partido: dict, pi_ratings: dict, feature_cols: list,
         "pi_exp_away":    exp_away,
         "pi_diff_abs":    abs(pi_diff),
         "ghost_game":     int(pi_home == 0.0 or pi_away == 0.0),
-        "_liga_id":       float(partido.get("liga_id", LIGA_SERIE_A)),
+        "_liga_id":       float(liga_id_val),
+        "liga_ucl":       int(liga_id_val == 2),
+        "es_vuelta":      int(partido.get("es_vuelta", 0) or 0),
     }
 
     # Sprint 20: Forma reciente L5 (cierra brecha entrenamiento/predicción)
     if df_hist is not None and not df_hist.empty:
         forma = _calcular_forma_reciente(home, away, fecha_hoy, df_hist)
         features.update(forma)
+
+    # FootyStats features: corners, posesión, shots, sot, cards, xG_fs (Sprint 19)
+    # Misma lógica que feature_builder — prefijo fs_{k}_{lado}
+    try:
+        liga_nombre_fs = partido.get("liga_nombre", "") or partido.get("league", {}).get("name", "")
+        if not liga_nombre_fs:
+            _LIGA_ID_MAP = {39: "Premier League", 140: "La Liga", 135: "Serie A",
+                            78: "Bundesliga", 61: "Ligue 1", 2: "Champions League"}
+            liga_nombre_fs = _LIGA_ID_MAP.get(int(liga_id_val) if liga_id_val else 0, "")
+        if liga_nombre_fs:
+            from entrenamiento.footystats_features import get_footystats_features
+            fs = get_footystats_features(home, away, liga_nombre_fs, fecha_hoy)
+            if fs.get("disponible"):
+                for lado, prefijo in [("home", "home"), ("away", "away")]:
+                    for k, v in fs.get(lado, {}).items():
+                        if v is not None:
+                            features[f"fs_{k}_{prefijo}"] = float(v)
+    except Exception:
+        pass
 
     # Transfermarkt features
     try:
@@ -574,6 +607,6 @@ if __name__ == "__main__":
             print(f"    -> {r['seleccion_legible']} | conf={r['confianza']:.1%} | "
                   f"value={r['value']:.1%} | cuota={r['cuota']}")
     else:
-        print("[INFO] Sin recomendaciones para hoy (ninguna pasa umbral=0.70 + value>=0.10)")
+        print("[INFO] Sin recomendaciones para hoy (ninguna pasa umbral=0.65 + value>=0.10)")
 
     print("\n[OK] predictor_tiempo_real.py listo")

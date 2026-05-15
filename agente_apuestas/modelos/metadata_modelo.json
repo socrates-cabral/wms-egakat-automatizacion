@@ -1,10 +1,10 @@
 {
-  "fecha": "2026-04-29 15:40:30.347670",
-  "accuracy_test": 0.5202,
+  "fecha": "2026-05-10 13:06:58.016169",
+  "accuracy_test": 0.5228,
   "modelo_activo": false,
   "ligas_activas": [],
   "ligas_suspendidas": [],
   "umbral_prod": 0.6,
   "value_min_prod": 0.03,
-  "roi_flat_mejor": 9.82
+  "roi_flat_mejor": 14.42
 }

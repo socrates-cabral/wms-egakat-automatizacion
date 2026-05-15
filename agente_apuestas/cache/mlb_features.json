@@ -16,7 +16,7 @@
     },
     "fuente": "mlb_statsapi"
   },
-  "_timestamp": "2026-04-21T16:01:13.334045",
+  "_timestamp": "2026-05-15T09:01:46.347100",
   "mlb|new york mets|arizona diamondbacks|2026-04-07": {
     "home": {
       "runs_pg": 4.2,
@@ -80,6 +80,431 @@
       "runs_pg": 4.5,
       "runs_against_pg": 5.5,
       "win_pct_l10": 0.3,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|minnesota twins|toronto blue jays|2026-05-03": {
+    "home": {
+      "runs_pg": 4.2,
+      "runs_against_pg": 6.1,
+      "win_pct_l10": 0.2,
+      "streak": -2,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.8,
+      "runs_against_pg": 4.0,
+      "win_pct_l10": 0.6,
+      "streak": 2,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|new york yankees|baltimore orioles|2026-05-03": {
+    "home": {
+      "runs_pg": 5.5,
+      "runs_against_pg": 3.0,
+      "win_pct_l10": 0.8,
+      "streak": 2,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 5.3,
+      "runs_against_pg": 7.0,
+      "win_pct_l10": 0.4,
+      "streak": -2,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|philadelphia phillies|athletics|2026-05-05": {
+    "home": {
+      "runs_pg": 4.3,
+      "runs_against_pg": 3.4,
+      "win_pct_l10": 0.7,
+      "streak": 2,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.7,
+      "runs_against_pg": 4.3,
+      "win_pct_l10": 0.5,
+      "streak": 1,
+      "rest_days": 2
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|miami marlins|baltimore orioles|2026-05-05": {
+    "home": {
+      "runs_pg": 3.4,
+      "runs_against_pg": 3.8,
+      "win_pct_l10": 0.4,
+      "streak": -2,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.4,
+      "runs_against_pg": 8.1,
+      "win_pct_l10": 0.3,
+      "streak": -4,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|tampa bay rays|toronto blue jays|2026-05-06": {
+    "home": {
+      "runs_pg": 3.4,
+      "runs_against_pg": 1.4,
+      "win_pct_l10": 0.9,
+      "streak": 5,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.1,
+      "runs_against_pg": 3.5,
+      "win_pct_l10": 0.5,
+      "streak": -3,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|st. louis cardinals|milwaukee brewers|2026-05-06": {
+    "home": {
+      "runs_pg": 5.8,
+      "runs_against_pg": 4.3,
+      "win_pct_l10": 0.7,
+      "streak": 1,
+      "rest_days": 2
+    },
+    "away": {
+      "runs_pg": 5.1,
+      "runs_against_pg": 3.2,
+      "win_pct_l10": 0.5,
+      "streak": -2,
+      "rest_days": 2
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|new york yankees|texas rangers|2026-05-07": {
+    "home": {
+      "runs_pg": 5.8,
+      "runs_against_pg": 3.4,
+      "win_pct_l10": 0.7,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 2.9,
+      "runs_against_pg": 3.6,
+      "win_pct_l10": 0.4,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|washington nationals|minnesota twins|2026-05-07": {
+    "home": {
+      "runs_pg": 5.0,
+      "runs_against_pg": 4.3,
+      "win_pct_l10": 0.6,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.8,
+      "runs_against_pg": 6.0,
+      "win_pct_l10": 0.4,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|kansas city royals|cleveland guardians|2026-05-07": {
+    "home": {
+      "runs_pg": 4.6,
+      "runs_against_pg": 3.8,
+      "win_pct_l10": 0.7,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 3.8,
+      "runs_against_pg": 3.9,
+      "win_pct_l10": 0.4,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|cincinnati reds|houston astros|2026-05-08": {
+    "home": {
+      "runs_pg": 3.8,
+      "runs_against_pg": 6.9,
+      "win_pct_l10": 0.2,
+      "streak": -7,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.1,
+      "runs_against_pg": 5.2,
+      "win_pct_l10": 0.5,
+      "streak": -1,
+      "rest_days": 2
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|toronto blue jays|los angeles angels|2026-05-09": {
+    "home": {
+      "runs_pg": 3.9,
+      "runs_against_pg": 3.1,
+      "win_pct_l10": 0.5,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 3.1,
+      "runs_against_pg": 4.1,
+      "win_pct_l10": 0.3,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|miami marlins|washington nationals|2026-05-10": {
+    "home": {
+      "runs_pg": 4.1,
+      "runs_against_pg": 4.5,
+      "win_pct_l10": 0.4,
+      "streak": 2,
+      "rest_days": 0
+    },
+    "away": {
+      "runs_pg": 4.7,
+      "runs_against_pg": 4.9,
+      "win_pct_l10": 0.5,
+      "streak": -2,
+      "rest_days": 0
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|baltimore orioles|athletics|2026-05-10": {
+    "home": {
+      "runs_pg": 4.4,
+      "runs_against_pg": 6.7,
+      "win_pct_l10": 0.3,
+      "streak": -3,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 5.5,
+      "runs_against_pg": 4.9,
+      "win_pct_l10": 0.6,
+      "streak": 3,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|boston red sox|tampa bay rays|2026-05-10": {
+    "home": {
+      "runs_pg": 3.3,
+      "runs_against_pg": 3.6,
+      "win_pct_l10": 0.5,
+      "streak": 1,
+      "rest_days": 2
+    },
+    "away": {
+      "runs_pg": 3.2,
+      "runs_against_pg": 1.5,
+      "win_pct_l10": 0.8,
+      "streak": -1,
+      "rest_days": 2
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|philadelphia phillies|colorado rockies|2026-05-10": {
+    "home": {
+      "runs_pg": 4.9,
+      "runs_against_pg": 4.1,
+      "win_pct_l10": 0.7,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 5.5,
+      "runs_against_pg": 6.8,
+      "win_pct_l10": 0.3,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|cleveland guardians|los angeles angels|2026-05-11": {
+    "home": {
+      "runs_pg": 5.0,
+      "runs_against_pg": 4.6,
+      "win_pct_l10": 0.5,
+      "streak": -2,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 2.9,
+      "runs_against_pg": 4.3,
+      "win_pct_l10": 0.4,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|baltimore orioles|new york yankees|2026-05-11": {
+    "home": {
+      "runs_pg": 3.6,
+      "runs_against_pg": 6.5,
+      "win_pct_l10": 0.3,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 6.2,
+      "runs_against_pg": 3.6,
+      "win_pct_l10": 0.6,
+      "streak": -3,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|cleveland guardians|los angeles angels|2026-05-12": {
+    "home": {
+      "runs_pg": 4.9,
+      "runs_against_pg": 4.3,
+      "win_pct_l10": 0.5,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 2.9,
+      "runs_against_pg": 4.7,
+      "win_pct_l10": 0.4,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|baltimore orioles|new york yankees|2026-05-12": {
+    "home": {
+      "runs_pg": 3.7,
+      "runs_against_pg": 6.0,
+      "win_pct_l10": 0.4,
+      "streak": 2,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 5.7,
+      "runs_against_pg": 3.7,
+      "win_pct_l10": 0.5,
+      "streak": -4,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|baltimore orioles|new york yankees|2026-05-13": {
+    "home": {
+      "runs_pg": 3.9,
+      "runs_against_pg": 4.6,
+      "win_pct_l10": 0.5,
+      "streak": 1,
+      "rest_days": 0
+    },
+    "away": {
+      "runs_pg": 4.3,
+      "runs_against_pg": 3.9,
+      "win_pct_l10": 0.4,
+      "streak": -1,
+      "rest_days": 0
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|cincinnati reds|washington nationals|2026-05-13": {
+    "home": {
+      "runs_pg": 3.4,
+      "runs_against_pg": 6.2,
+      "win_pct_l10": 0.2,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 5.2,
+      "runs_against_pg": 4.9,
+      "win_pct_l10": 0.5,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|pittsburgh pirates|colorado rockies|2026-05-14": {
+    "home": {
+      "runs_pg": 5.1,
+      "runs_against_pg": 4.4,
+      "win_pct_l10": 0.6,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.3,
+      "runs_against_pg": 6.5,
+      "win_pct_l10": 0.3,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|minnesota twins|miami marlins|2026-05-14": {
+    "home": {
+      "runs_pg": 4.5,
+      "runs_against_pg": 5.9,
+      "win_pct_l10": 0.5,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.1,
+      "runs_against_pg": 4.7,
+      "win_pct_l10": 0.4,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|milwaukee brewers|san diego padres|2026-05-14": {
+    "home": {
+      "runs_pg": 4.2,
+      "runs_against_pg": 2.6,
+      "win_pct_l10": 0.7,
+      "streak": -1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 3.6,
+      "runs_against_pg": 3.1,
+      "win_pct_l10": 0.6,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "fuente": "mlb_statsapi"
+  },
+  "mlb|pittsburgh pirates|philadelphia phillies|2026-05-15": {
+    "home": {
+      "runs_pg": 4.1,
+      "runs_against_pg": 3.9,
+      "win_pct_l10": 0.6,
+      "streak": 1,
+      "rest_days": 1
+    },
+    "away": {
+      "runs_pg": 4.5,
+      "runs_against_pg": 3.3,
+      "win_pct_l10": 0.7,
       "streak": 1,
       "rest_days": 1
     },
