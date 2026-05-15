@@ -243,17 +243,23 @@
     msg.includes('my') ||
     msg.includes('sg');
 
-  // Detecta consulta de desglose por canal DERCO (AP/MY/SG/CAP/GT/CES)
-  // sin requerir que el usuario escriba "canal" o "DERCO"
+  // Detecta consulta de desglose por canal DERCO (AP/MY/SG/CAP/GT/CES).
+  // Acepta tanto nombres específicos como referencias genéricas ("canal de derco",
+  // "por tipo de canal" cuando el cliente solicitado es DERCO, etc.).
   const _DERCO_CANAL_KEYS = ['my', 'sg', 'cap', 'gt', 'ces'];
   const _dercoCanalesCount = _DERCO_CANAL_KEYS.filter(k => msg.includes(k)).length;
+  const _mencionaDerco = msg.includes('derco');
+  const _mencionaCanalGenerico = msg.includes('canal') || msg.includes('canales') ||
+    msg.includes('tipo de canal') || msg.includes('por canal');
   const pideDercoCanales = _dercoCanalesCount >= 2 ||
     (msg.includes(' ap') && _dercoCanalesCount >= 1) ||
     msg.includes('ap rack') ||
     msg.includes('ap estanteria') ||
     msg.includes('ap estantería') ||
     (msg.includes('rack') && msg.includes('estanteria')) ||
-    (msg.includes('rack') && msg.includes('estantería'));
+    (msg.includes('rack') && msg.includes('estantería')) ||
+    // Caso genérico: "canal/canales/por canal/tipo de canal" + DERCO mencionado
+    (_mencionaCanalGenerico && _mencionaDerco);
 
   const esInventario =
     msg.includes('inventario') ||

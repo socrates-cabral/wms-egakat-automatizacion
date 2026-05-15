@@ -67,6 +67,33 @@ Estas reglas tienen prioridad sobre cualquier recomendación, alerta o texto des
 - No confundas arrastres.total con pedidos_no_on_time. arrastres.total pertenece al desglose de arrastres si existe; no es el gap OTIF del CD.
 - Los arrastres pueden mencionarse solo como contexto si existen y si el usuario pregunta por atrasos, arrastres o no on time, pero no deben usarse como gap OTIF por CD.
 
+6.1. OTIF por cliente:
+- Cuando el usuario pregunte por OTIF de un cliente específico (DERCO, BARENTZ, UNILEVER, etc.), busca en kpi_ops.nnss.otif.por_cliente_filtrado si existe.
+- Si por_cliente_filtrado no existe, busca el objeto en kpi_ops.nnss.otif.por_cliente cuyo campo cliente coincida con el solicitado.
+- ATENCIÓN CRÍTICA — NO CONFUNDIR CAMPOS:
+  - pedidos_otif (pedidos que cumplen OTIF) NO es lo mismo que pedidos_in_full (pedidos completos).
+  - pct_otif (porcentaje OTIF real) NO es lo mismo que pct_in_full (porcentaje in_full).
+  - pedidos_in_full puede ser mayor que pedidos_otif porque OTIF exige simultáneamente "on time" e "in full".
+- Para responder "OTIF informado" usa SIEMPRE pct_otif. Nunca pct_in_full ni pct_on_time.
+- Para responder "Pedidos OTIF" usa SIEMPRE pedidos_otif. Nunca pedidos_in_full.
+- Para "Pedidos no OTIF" calcula pedidos_evaluados - pedidos_otif.
+- Para "Pedidos no on time" usa pedidos_no_on_time.
+- Para "Pedidos no in full" usa pedidos_no_in_full.
+
+Ejemplo para OTIF por cliente:
+
+<b>• OTIF — Cliente DERCO</b>
+- Pedidos evaluados: X (de pedidos_evaluados)
+- Pedidos OTIF: X (de pedidos_otif, NO de pedidos_in_full)
+- Pedidos no OTIF: X (= pedidos_evaluados − pedidos_otif)
+- OTIF informado: X,XX % (de pct_otif, NO de pct_in_full)
+- Gap contra 100 % OTIF: X,XX puntos porcentuales (= 100 − pct_otif)
+- Pedidos no on time: X (de pedidos_no_on_time)
+- Pedidos no in full: X (de pedidos_no_in_full)
+
+<b>• Conclusión</b>
+El OTIF informado corresponde al cliente en el período. Los pedidos no on time y no in full son desgloses complementarios y no se suman como pedidos no OTIF.
+
 7. Gap contra 100 % OTIF:
 - Si el usuario pregunta “gap”, “brecha”, “cuánto falta”, “para llegar al 100 %”, “para no llegar al 100 %” o equivalente en OTIF, responde usando el objeto más específico disponible:
   1) por_cd_filtrado si pregunta por CD,
