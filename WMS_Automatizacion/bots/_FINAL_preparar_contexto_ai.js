@@ -150,6 +150,21 @@
   // esUsuario ya no depende de esProductividad; se activa solo con señales de operador
   const esUsuario = esConsultaUsuarioOperador;
 
+  // Detecta intención de "lista completa" — el usuario quiere TODOS los operadores,
+  // no solo el top. Si está activo, el cap TOP_USUARIOS se desactiva.
+  const pideListaCompletaUsuarios = esUsuario && (
+    msg.includes('todos los usuarios') ||
+    msg.includes('todos los operadores') ||
+    msg.includes('todos los registros') ||
+    msg.includes('lista completa') ||
+    msg.includes('ranking completo') ||
+    msg.includes('lista entera') ||
+    msg.includes('sin limite') ||
+    msg.includes('sin tope') ||
+    msg.includes('no top') ||
+    msg.includes('ranking total')
+  );
+
   // Detectar si pide "más productivo" (criterio eficiencia) vs ranking por volumen
   const esMasProductivo =
     esUsuario && (
@@ -585,12 +600,15 @@
         fillrate_ytd:      filtrarClientes ? filtrarRows(hn.fillrate_ytd)      : hn.fillrate_ytd
       },
       productividad: {
-        mensual_cliente:     filtrarClientes ? filtrarRows(hp.mensual_cliente) : hp.mensual_cliente,
-        ytd_cliente:         filtrarClientes ? filtrarRows(hp.ytd_cliente)     : hp.ytd_cliente,
-        derco_ap_mensual:    hp.derco_ap_mensual,
-        derco_ap_ytd:        hp.derco_ap_ytd,
-        por_usuario:         hp.por_usuario,
-        por_usuario_mensual: hp.por_usuario_mensual
+        mensual_cliente:                  filtrarClientes ? filtrarRows(hp.mensual_cliente) : hp.mensual_cliente,
+        ytd_cliente:                      filtrarClientes ? filtrarRows(hp.ytd_cliente)     : hp.ytd_cliente,
+        derco_ap_mensual:                 hp.derco_ap_mensual,
+        derco_ap_ytd:                     hp.derco_ap_ytd,
+        por_usuario:                      hp.por_usuario,
+        por_usuario_mensual:              hp.por_usuario_mensual,
+        por_usuario_canal:                hp.por_usuario_canal,
+        por_usuario_canal_mensual:        hp.por_usuario_canal_mensual,
+        lineas_no_asignadas_por_canal_mes: hp.lineas_no_asignadas_por_canal_mes
       }
     };
   };
@@ -1108,17 +1126,19 @@
         porUsuarioFiltrado = porUsuarioFiltrado.slice().sort((a, b) => Number(a.mes) - Number(b.mes));
       } else if (esMasProductivo) {
         // "Operador más productivo" → criterio eficiencia: lineas_por_hora_activa
+        const limite = pideListaCompletaUsuarios ? porUsuarioBase.length : TOP_USUARIOS;
         porUsuarioFiltrado = porUsuarioBase
           .slice()
           .sort((a, b) => Number(b.lineas_por_hora_activa || 0) - Number(a.lineas_por_hora_activa || 0))
-          .slice(0, TOP_USUARIOS)
+          .slice(0, limite)
           .map((x, i) => ({ ...x, posicion: i + 1 }));
       } else {
         // "Ranking de operadores" → criterio volumen: lineas totales descendente
+        const limite = pideListaCompletaUsuarios ? porUsuarioBase.length : TOP_USUARIOS;
         porUsuarioFiltrado = porUsuarioBase
           .slice()
           .sort((a, b) => Number(b.lineas || 0) - Number(a.lineas || 0))
-          .slice(0, TOP_USUARIOS)
+          .slice(0, limite)
           .map((x, i) => ({ ...x, posicion: i + 1 }));
       }
 
@@ -1137,6 +1157,7 @@
         usuario_filtrado: usuarioDetectado || null,
         criterio_ranking: criterioRanking,
         texto_ranking: textoRanking,
+        lista_completa: pideListaCompletaUsuarios,
         regla: [
           'El array por_usuario YA ESTÁ ORDENADO según criterio_ranking. Presentar los registros en el MISMO ORDEN del campo posicion. NO reordenar.',
           'Cada registro es independiente y autónomo. NO mezclar campos entre registros distintos.',
@@ -1144,13 +1165,104 @@
           'REGLA METODOLOGICA: estos indicadores provienen de movimientos WMS, no de asistencia RRHH. dias_activos_wms = fechas_turno distintas con actividad; horas_activas_wms = slots hora únicos con actividad. La conclusión DEBE incluir: "El criterio usado es líneas por hora activa WMS. No corresponde a asistencia ni horas trabajadas reales."',
           'Para "ranking de operadores": usar lineas totales, texto "' + textoRanking + '".',
           'Para "operador más productivo": usar lineas_por_hora_activa, texto "criterio: líneas por hora activa WMS".',
-          'Si se filtra por usuario específico, mostrar todos sus meses disponibles si el mes solicitado no tiene datos.'
+          'Si se filtra por usuario específico, mostrar todos sus meses disponibles si el mes solicitado no tiene datos.',
+          'Si por_usuario_truncado=true, aclarar que se muestra el top (por_usuario_mostrados de por_usuario_total) y que el usuario puede pedir "lista completa" / "todos los operadores" para ver todos.',
+          'Si por_usuario_truncado=false y la consulta no pidió lista completa, asumí que estos son TODOS los operadores disponibles para ese filtro.'
         ].join(' ')
       };
       prodCompacta.por_usuario = porUsuarioFiltrado;
       prodCompacta.por_usuario_total = totalBase;
       prodCompacta.por_usuario_mostrados = porUsuarioFiltrado.length;
       prodCompacta.por_usuario_truncado = !usuarioDetectado && totalBase > TOP_USUARIOS;
+    }
+
+    // Desglose operador × canal (solo DERCO). Se activa cuando el query menciona
+    // operador/usuario Y canal (pideDercoCanales). Sirve por_usuario_canal_mensual
+    // filtrado por mes/CD/usuario según corresponda.
+    const _porUsuarioCanalMensualGlobal = Array.isArray(kpi.historico?.productividad?.por_usuario_canal_mensual)
+      ? kpi.historico.productividad.por_usuario_canal_mensual
+      : [];
+    if (esUsuario && pideDercoCanales && _porUsuarioCanalMensualGlobal.length > 0) {
+      const TOP_USUARIOS_CANAL = 50;
+      const mesObjetivoUC = periodoSolicitado.mes || null;
+
+      let baseUC = mesObjetivoUC
+        ? _porUsuarioCanalMensualGlobal.filter(x => Number(x.mes) === mesObjetivoUC)
+        : _porUsuarioCanalMensualGlobal;
+
+      if (cdSolicitado) {
+        const cdExactoUC = 'CD ' + cdSolicitado;
+        baseUC = baseUC.filter(x => normText(x.cd) === cdExactoUC);
+      }
+
+      let filtradoUC;
+      if (usuarioDetectado) {
+        filtradoUC = baseUC.filter(
+          x => (x.usuario || '').toUpperCase() === usuarioDetectado
+        );
+        if (filtradoUC.length === 0) {
+          filtradoUC = _porUsuarioCanalMensualGlobal.filter(
+            x => (x.usuario || '').toUpperCase() === usuarioDetectado
+          );
+        }
+        // Orden lógico: por mes ascendente, luego canal por líneas desc
+        filtradoUC = filtradoUC.slice().sort((a, b) =>
+          Number(a.mes) - Number(b.mes) ||
+          (a.canal || '').localeCompare(b.canal || '') ||
+          Number(b.lineas || 0) - Number(a.lineas || 0)
+        );
+      } else {
+        // Sin usuario específico: top N global ordenado por líneas (top ranking
+        // distribuido a través de canales — el modelo agrupará para presentar).
+        // Si user pide lista completa → todos los registros.
+        const limiteUC = pideListaCompletaUsuarios ? baseUC.length : TOP_USUARIOS_CANAL;
+        filtradoUC = baseUC
+          .slice()
+          .sort((a, b) => Number(b.lineas || 0) - Number(a.lineas || 0))
+          .slice(0, limiteUC)
+          .map((x, i) => ({ ...x, posicion: i + 1 }));
+      }
+
+      prodCompacta.por_usuario_canal = filtradoUC;
+      prodCompacta.por_usuario_canal_total = baseUC.length;
+      prodCompacta.por_usuario_canal_mostrados = filtradoUC.length;
+      prodCompacta.por_usuario_canal_truncado = !usuarioDetectado && !pideListaCompletaUsuarios && baseUC.length > TOP_USUARIOS_CANAL;
+
+      // Líneas no asignadas a operador por canal/mes — para que el modelo pueda
+      // explicar diferencias cuando la suma de operadores no totaliza el total del canal.
+      const lineasNoAsignadas = Array.isArray(kpi.historico?.productividad?.lineas_no_asignadas_por_canal_mes)
+        ? kpi.historico.productividad.lineas_no_asignadas_por_canal_mes
+        : [];
+      let lineasNoAsignadasFiltrado = lineasNoAsignadas;
+      if (mesObjetivoUC) {
+        lineasNoAsignadasFiltrado = lineasNoAsignadasFiltrado.filter(x => Number(x.mes) === mesObjetivoUC);
+      }
+      if (cdSolicitado) {
+        const cdExactoLNA = cdSolicitado;
+        lineasNoAsignadasFiltrado = lineasNoAsignadasFiltrado.filter(x => normText(x.cd).includes(cdExactoLNA));
+      }
+      if (lineasNoAsignadasFiltrado.length > 0) {
+        prodCompacta.lineas_no_asignadas_por_canal = lineasNoAsignadasFiltrado;
+      }
+
+      prodCompacta.consulta_resuelta_canal = {
+        tipo: 'operador_por_canal',
+        cliente: 'DERCO',
+        cd: cdSolicitado ? 'CD ' + cdSolicitado : 'TODOS',
+        mes: mesObjetivoUC || 'todos',
+        usuario_filtrado: usuarioDetectado || null,
+        lista_completa: pideListaCompletaUsuarios,
+        regla: [
+          'Usar por_usuario_canal para responder desglose operador × canal.',
+          'Cada registro es (cd, usuario, canal, mes) con lineas, unidades, dias_trabajados, horas_activas y sus tasas derivadas.',
+          'Terminología: "Días activos WMS", "Horas activas WMS", "Líneas por día activo", "Líneas por hora activa WMS", "Unidades por día activo", "Unidades por hora activa WMS". No usar "asistencia" ni "horas trabajadas reales".',
+          'Si el usuario pidió un usuario específico, agrupar la presentación por canal y mostrar los meses si hay varios.',
+          'Si no hay usuario específico, agrupar por canal y presentar top operadores dentro de cada canal (los registros ya vienen ordenados por líneas descendente globalmente — el modelo debe agrupar).',
+          'Si por_usuario_canal_truncado=true, aclarar que se muestran los principales N de un universo más grande (por_usuario_canal_total) y que el usuario puede pedir "lista completa" para verlos todos.',
+          'Si lineas_no_asignadas_por_canal existe, AVISAR que la suma de operadores puede ser menor al total del canal porque hay líneas con Fecha_Turno fuera del mes (spillover) o sin operador WMS registrado. Mostrar lineas_asignadas_a_operador, lineas_no_asignadas y total_lineas_canal para que el usuario vea el desglose.',
+          'La conclusión debe explicar que el criterio es líneas por hora activa WMS y que el split por canal aplica solo a DERCO.'
+        ].join(' ')
+      };
     }
 
     contexto = {

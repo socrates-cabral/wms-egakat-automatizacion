@@ -45,7 +45,10 @@ except ImportError:  # Específico, no Exception genérico
 
 from openpyxl import load_workbook
 from dotenv import load_dotenv
-from productividad_usuarios import calcular_por_usuario
+from productividad_usuarios import (
+    calcular_por_usuario,
+    calcular_por_usuario_canal,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -2121,13 +2124,53 @@ def construir_historico_otif_mensual(
 
     # por_usuario_mensual: un registro por (cd, usuario, mes) para todos los meses disponibles
     por_usuario_mensual: list[dict] = []
+    # por_usuario_canal_mensual: un registro por (cd, usuario, canal, mes) — solo DERCO
+    por_usuario_canal_mensual: list[dict] = []
     for _month in range(1, hasta_mes + 1):
         _df = registros_por_mes.get(_month, {}).get("df_productividad")
         if _df is not None and not _df.empty:
             por_usuario_mensual.extend(calcular_por_usuario(_df, year, _month))
+            por_usuario_canal_mensual.extend(
+                calcular_por_usuario_canal(_df, year, _month, cliente_filtro="DERCO")
+            )
 
     # Alias: mes más reciente como atajo rápido para consultas del periodo actual
     por_usuario = [f for f in por_usuario_mensual if f.get("mes") == hasta_mes]
+    por_usuario_canal = [f for f in por_usuario_canal_mensual if f.get("mes") == hasta_mes]
+
+    # lineas_no_asignadas_por_canal_mes: gap entre derco_canales_mensual (total del canal)
+    # y la suma de por_usuario_canal_mensual (operadores que sí clasifican). El gap suele
+    # ser por líneas con Fecha_Turno fuera del mes del archivo (spillover) o sin Registro
+    # válido. Sirve para que el bot explique al usuario por qué suma operador != total canal.
+    from collections import defaultdict as _dd
+    _agg_puc = _dd(lambda: {"lineas": 0, "unidades": 0.0})
+    for r in por_usuario_canal_mensual:
+        k = (r["cd"], r["canal"], r["mes"])
+        _agg_puc[k]["lineas"] += r["lineas"]
+        _agg_puc[k]["unidades"] += r["unidades"]
+    lineas_no_asignadas_por_canal_mes: list[dict] = []
+    for r in derco_canales_mensual:
+        k = ("CD " + str(r["cd"]).upper(), r["canal"], r["mes"])
+        # CD en derco_canales_mensual viene ya normalizado a "QUILICURA"/"PUDAHUEL" etc;
+        # _agg_puc usa cd_display ("CD QUILICURA"). Probamos ambas formas.
+        suma = _agg_puc.get(k, {"lineas": 0, "unidades": 0.0})
+        if suma["lineas"] == 0:
+            k_alt = (str(r["cd"]), r["canal"], r["mes"])
+            suma = _agg_puc.get(k_alt, suma)
+        diff_lineas = r["lineas"] - suma["lineas"]
+        diff_unidades = r.get("unidades", 0) - suma["unidades"]
+        if diff_lineas > 0:
+            lineas_no_asignadas_por_canal_mes.append({
+                "cd": r["cd"],
+                "anio": r.get("anio", year),
+                "mes": r["mes"],
+                "canal": r["canal"],
+                "lineas_no_asignadas": int(diff_lineas),
+                "unidades_no_asignadas": round_safe(diff_unidades, 2),
+                "total_lineas_canal": int(r["lineas"]),
+                "lineas_asignadas_a_operador": int(suma["lineas"]),
+                "motivo": "Líneas con Fecha_Turno fuera del mes del archivo (spillover) o sin operador WMS registrado",
+            })
 
     return {
         "disponible": bool(otif_mensual or productividad_mensual_cliente),
@@ -2156,6 +2199,9 @@ def construir_historico_otif_mensual(
             "derco_canales_mensual": derco_canales_mensual,
             "por_usuario": por_usuario,
             "por_usuario_mensual": por_usuario_mensual,
+            "por_usuario_canal": por_usuario_canal,
+            "por_usuario_canal_mensual": por_usuario_canal_mensual,
+            "lineas_no_asignadas_por_canal_mes": lineas_no_asignadas_por_canal_mes,
         },
     }
 
