@@ -723,6 +723,8 @@ def _run(args: argparse.Namespace, log_path: Path, started_at: datetime) -> int:
                     for client_attempt in range(1, MAX_CLIENT_ATTEMPTS + 1):
                         context = browser.new_context(accept_downloads=True)
                         page = context.new_page()
+                        # Dismissar popups JS del WMS (sesion anterior, advertencias, etc.)
+                        page.on("dialog", lambda d: d.dismiss())
                         try:
                             if client_attempt > 1:
                                 log(
