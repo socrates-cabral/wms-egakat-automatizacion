@@ -17,6 +17,7 @@ except ImportError:
 _CD_DISPLAY = {
     "QUILICURA": "CD QUILICURA",
     "PUDAHUEL": "CD PUDAHUEL",
+    "PUDAHUEL UNITARIO": "CD PUDAHUEL UNITARIO",
 }
 
 
@@ -209,4 +210,104 @@ def calcular_por_usuario_canal(
         })
 
     resultados.sort(key=lambda x: (x["cd"], x["usuario"], -x["lineas"]))
+    return resultados
+
+def calcular_por_usuario_cliente(
+    df: "pd.DataFrame | None",
+    year: int,
+    month: int,
+    excluir_clientes: "set[str] | None" = None,
+) -> list[dict[str, Any]]:
+    """
+    Agrupa el DataFrame por (Centro_Norm, Cliente_Norm, Registro) para el mes dado.
+
+    Permite ver la productividad de cada operario desglosada por cliente,
+    respondiendo preguntas como "¿qué operarios trabajaron Barentz en Pudahuel?".
+
+    Para DERCO usar calcular_por_usuario_canal (más granular, por canal de venta).
+
+    excluir_clientes: set de nombres de cliente a excluir (normalizados en mayúsculas).
+      Ej: {"DERCO", "GRUPO PLANET"} para no duplicar lo que ya cubre por_usuario_canal.
+
+    Retorna lista ordenada por (cd, cliente, lineas desc) con los mismos
+    campos que calcular_por_usuario más:
+      cliente: nombre normalizado del cliente
+    """
+    if pd is None or df is None or df.empty:
+        return []
+
+    cols_requeridas = {
+        "Centro_Norm", "Cliente_Norm", "Registro",
+        "Salida", "Fecha_Turno", "Hora_Operativa",
+    }
+    if not cols_requeridas.issubset(df.columns):
+        return []
+
+    df_base = df.copy()
+
+    # Excluir clientes indicados (DERCO ya tiene su propio desglose por canal)
+    if excluir_clientes:
+        excluir_upper = {c.strip().upper() for c in excluir_clientes}
+        df_base = df_base[
+            ~df_base["Cliente_Norm"].astype(str).str.upper().str.strip().isin(excluir_upper)
+        ]
+
+    mask = df_base["Fecha_Turno"].notna()
+    df_base = df_base[mask].copy()
+    if df_base.empty:
+        return []
+
+    df_base["_ft_year"] = df_base["Fecha_Turno"].apply(
+        lambda d: d.year if hasattr(d, "year") else None
+    )
+    df_base["_ft_month"] = df_base["Fecha_Turno"].apply(
+        lambda d: d.month if hasattr(d, "month") else None
+    )
+    df_mes = df_base[(df_base["_ft_year"] == year) & (df_base["_ft_month"] == month)]
+
+    df_mes = df_mes[
+        df_mes["Registro"].notna()
+        & (df_mes["Registro"].astype(str).str.strip() != "")
+    ]
+
+    if df_mes.empty:
+        return []
+
+    df_mes = df_mes.copy()
+    df_mes["_hora_slot"] = df_mes["Hora_Operativa"].apply(
+        lambda h: int(h) if (h is not None and h == h) else None
+    )
+
+    resultados: list[dict[str, Any]] = []
+
+    for (centro, cliente, usuario), grupo in df_mes.groupby(
+        ["Centro_Norm", "Cliente_Norm", "Registro"], sort=True
+    ):
+        cd_display = _CD_DISPLAY.get(str(centro).upper().strip(), f"CD {centro}")
+        lineas = int(len(grupo))
+        unidades = float(round(float(grupo["Salida"].sum()), 2))
+        dias_trabajados = int(grupo["Fecha_Turno"].nunique())
+        horas_activas = int(
+            grupo[["Fecha_Turno", "_hora_slot"]]
+            .dropna()
+            .drop_duplicates()
+            .shape[0]
+        )
+        resultados.append({
+            "cd": cd_display,
+            "anio": year,
+            "mes": month,
+            "cliente": str(cliente),
+            "usuario": str(usuario),
+            "lineas": lineas,
+            "unidades": unidades,
+            "dias_trabajados": dias_trabajados,
+            "horas_activas": horas_activas,
+            "lineas_por_dia_activo": _div_safe(lineas, dias_trabajados),
+            "unidades_por_dia_activo": _div_safe(unidades, dias_trabajados),
+            "lineas_por_hora_activa": _div_safe(lineas, horas_activas),
+            "unidades_por_hora_activa": _div_safe(unidades, horas_activas),
+        })
+
+    resultados.sort(key=lambda x: (x["cd"], x["cliente"], -x["lineas"]))
     return resultados

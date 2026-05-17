@@ -48,6 +48,7 @@ from dotenv import load_dotenv
 from productividad_usuarios import (
     calcular_por_usuario,
     calcular_por_usuario_canal,
+    calcular_por_usuario_cliente,
 )
 
 
@@ -2126,6 +2127,9 @@ def construir_historico_otif_mensual(
     por_usuario_mensual: list[dict] = []
     # por_usuario_canal_mensual: un registro por (cd, usuario, canal, mes) — solo DERCO
     por_usuario_canal_mensual: list[dict] = []
+    # por_usuario_cliente_mensual: un registro por (cd, cliente, usuario, mes) — excluye DERCO
+    # (DERCO ya tiene desglose más granular por canal en por_usuario_canal_mensual)
+    por_usuario_cliente_mensual: list[dict] = []
     for _month in range(1, hasta_mes + 1):
         _df = registros_por_mes.get(_month, {}).get("df_productividad")
         if _df is not None and not _df.empty:
@@ -2133,10 +2137,17 @@ def construir_historico_otif_mensual(
             por_usuario_canal_mensual.extend(
                 calcular_por_usuario_canal(_df, year, _month, cliente_filtro="DERCO")
             )
+            por_usuario_cliente_mensual.extend(
+                calcular_por_usuario_cliente(
+                    _df, year, _month,
+                    excluir_clientes={"DERCO", "GRUPO PLANET"},
+                )
+            )
 
     # Alias: mes más reciente como atajo rápido para consultas del periodo actual
     por_usuario = [f for f in por_usuario_mensual if f.get("mes") == hasta_mes]
     por_usuario_canal = [f for f in por_usuario_canal_mensual if f.get("mes") == hasta_mes]
+    por_usuario_cliente = [f for f in por_usuario_cliente_mensual if f.get("mes") == hasta_mes]
 
     # lineas_no_asignadas_por_canal_mes: gap entre derco_canales_mensual (total del canal)
     # y la suma de por_usuario_canal_mensual (operadores que sí clasifican). El gap suele
@@ -2201,6 +2212,8 @@ def construir_historico_otif_mensual(
             "por_usuario_mensual": por_usuario_mensual,
             "por_usuario_canal": por_usuario_canal,
             "por_usuario_canal_mensual": por_usuario_canal_mensual,
+            "por_usuario_cliente": por_usuario_cliente,
+            "por_usuario_cliente_mensual": por_usuario_cliente_mensual,
             "lineas_no_asignadas_por_canal_mes": lineas_no_asignadas_por_canal_mes,
         },
     }

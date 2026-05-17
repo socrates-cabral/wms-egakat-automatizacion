@@ -1,6 +1,6 @@
 ---
 title: KPI Operativo — Resumen JSON para Bot Telegram
-updated: 2026-05-10
+updated: 2026-05-16
 type: proyecto
 sources: [WMS_Automatizacion/generar_resumen_kpi_ops.py, WMS_Automatizacion/api_operaciones.py]
 related: [bot-ops-egakat, graph-api-microsoft, n8n-workflows]
@@ -258,3 +258,33 @@ df["Canal_Agrupado"] = df["Canal_Principal"].map(
 Para el historico usar siempre `Canal_Principal` (separado: MY, SG, CAP, GT, AP). `Canal_Agrupado` es solo para la vista consolidada del período actual.
 
 **Validado abril 2026:** CAP 2.430 + MY 7.347 + SG 288 = 10.065 ✓ (idéntico al grupo anterior)
+
+---
+
+## Fix productividad × operario × cliente no-DERCO — TDZ bug (2026-05-16)
+
+**Nuevos campos en `historico.productividad` (desde sprint anterior):**
+- `por_usuario_cliente` — operarios del período actual agrupados por (cd, cliente)
+- `por_usuario_cliente_mensual` — ídem histórico: 173 registros, excluye DERCO y GRUPO PLANET
+
+**Bug:** `_porUsuarioClienteMensualGlobal` se declaraba en línea ~1336 del JS (dentro del bloque `if (esProductividad)`) pero se **usaba en línea ~1219** (bloque `else` anidado que corre antes). TDZ de JavaScript: acceder a un `const` de scope padre antes de su declaración → `ReferenceError` silenciado por n8n → variable = `[]` → `_usaClienteExacto = false` → fallback → "información no disponible".
+
+**Fix:** Mover declaración al inicio del script (línea 115), junto a `_porUsuarioMensualGlobal`:
+```javascript
+const _porUsuarioClienteMensualGlobal = Array.isArray(kpi.historico?.productividad?.por_usuario_cliente_mensual)
+  ? kpi.historico.productividad.por_usuario_cliente_mensual
+  : [];
+```
+Declaración duplicada en línea 1336 reemplazada por comentario. Sin cambios de lógica.
+
+**Flujo correcto** para "productividad Barentz por operador mayo":
+1. `_porUsuarioClienteMensualGlobal` = 173 registros (reads from `kpi.historico` en memoria local)
+2. Filter: `mes===5 && cliente==='BARENTZ'` → 3 registros
+3. `_usaClienteExacto = true` → `prodCompacta.por_usuario_cliente` = datos exactos
+4. Contexto ~2KB → llega al AI → respuesta correcta
+
+**Validado producción 2026-05-16:**
+- Unilever × operador mayo: JCARO 224 líneas, YGARCIA2 147, GPAILLAN 38, LLAMBERT 15 ✓
+- Barentz × operador mayo: JCARO 45 líneas, YGARCIA2 32, GPAILLAN 2 ✓
+
+**Archivos:** `_FINAL_preparar_contexto_ai.js` y `Egakat_Ops_Bot___WMS_Intelligence_v1_FIX.json`

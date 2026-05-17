@@ -1,4 +1,4 @@
-={{
+{{
 (() => {
   const rawMsg =
     $('Limpiar mensaje').item.json.mensaje_limpio ||
@@ -110,6 +110,11 @@
   const _porUsuarioMensualGlobal = Array.isArray(kpi.historico?.productividad?.por_usuario_mensual)
     ? kpi.historico.productividad.por_usuario_mensual
     : [];
+  // DEBE declararse aquí (antes de cualquier bloque if) para evitar TDZ al usarse
+  // dentro del bloque else de esConsultaCanal (línea ~1219).
+  const _porUsuarioClienteMensualGlobal = Array.isArray(kpi.historico?.productividad?.por_usuario_cliente_mensual)
+    ? kpi.historico.productividad.por_usuario_cliente_mensual
+    : [];
   const _usuariosDisponibles = [
     ...new Set(_porUsuarioMensualGlobal.map(x => (x.usuario || '').toUpperCase().trim()).filter(Boolean))
   ];
@@ -121,6 +126,8 @@
     usuarioDetectado !== null ||
     msg.includes('usuario') ||
     msg.includes('usuarios') ||
+    msg.includes('operario') ||
+    msg.includes('operarios') ||
     msg.includes('operador') ||
     msg.includes('operadores') ||
     msg.includes('trabajador') ||
@@ -263,7 +270,7 @@
   // "por tipo de canal" cuando el cliente solicitado es DERCO, etc.).
   const _DERCO_CANAL_KEYS = ['my', 'sg', 'cap', 'gt', 'ces'];
   const _dercoCanalesCount = _DERCO_CANAL_KEYS.filter(k => msg.includes(k)).length;
-  const _mencionaDerco = msg.includes('derco');
+  const _mencionaDerco = msg.includes('derco') || msg.includes('planet');
   const _mencionaCanalGenerico = msg.includes('canal') || msg.includes('canales') ||
     msg.includes('tipo de canal') || msg.includes('por canal');
   const pideDercoCanales = _dercoCanalesCount >= 2 ||
@@ -472,26 +479,26 @@
     const k = kpiOps || {};
 
     if (nombreKpi === 'otif' || nombreKpi === 'nnss' || nombreKpi === 'fillrate') {
-      const p = k?.nnss?.periodo || k?.fillrate?.periodo;
+      const p = kpi?.nnss?.periodo || kpi?.fillrate?.periodo;
       if (p?.anio && p?.mes) return { anio: Number(p.anio), mes: Number(p.mes), fuente: 'kpi_ops.nnss.periodo' };
     }
 
     if (nombreKpi === 'productividad') {
-      const p = k?.productividad?.diario?.periodo || k?.productividad?.global?.periodo || k?.productividad?.periodo;
+      const p = kpi?.productividad?.diario?.periodo || kpi?.productividad?.global?.periodo || kpi?.productividad?.periodo;
       if (p?.anio && p?.mes) return { anio: Number(p.anio), mes: Number(p.mes), fuente: 'kpi_ops.productividad.periodo' };
     }
 
     if (nombreKpi === 'inventario') {
-      const p = k?.inventario?.conteos_ciclicos?.periodo || k?.inventario?.ira_ila?.periodo || k?.inventario?.avance_conteo?.periodo;
+      const p = kpi?.inventario?.conteos_ciclicos?.periodo || kpi?.inventario?.ira_ila?.periodo || kpi?.inventario?.avance_conteo?.periodo;
       if (p?.anio && p?.mes) return { anio: Number(p.anio), mes: Number(p.mes), fuente: 'kpi_ops.inventario.periodo' };
     }
 
     const p =
-      k?.nnss?.periodo ||
-      k?.productividad?.diario?.periodo ||
-      k?.productividad?.global?.periodo ||
-      k?.inventario?.conteos_ciclicos?.periodo ||
-      k?.inventario?.ira_ila?.periodo;
+      kpi?.nnss?.periodo ||
+      kpi?.productividad?.diario?.periodo ||
+      kpi?.productividad?.global?.periodo ||
+      kpi?.inventario?.conteos_ciclicos?.periodo ||
+      kpi?.inventario?.ira_ila?.periodo;
 
     if (p?.anio && p?.mes) return { anio: Number(p.anio), mes: Number(p.mes), fuente: 'periodo_disponible_general' };
 
@@ -531,23 +538,23 @@
   const solicitudYtdSinHistorico =
     periodoSolicitado.es_ytd &&
     !(
-      k?.historico ||
-      k?.kpi_historico ||
-      k?.nnss?.otif_ytd ||
-      k?.nnss?.historico ||
-      k?.productividad?.ytd ||
-      k?.productividad?.historico ||
-      k?.inventario?.historico
+      kpi?.historico ||
+      kpi?.kpi_historico ||
+      kpi?.nnss?.otif_ytd ||
+      kpi?.nnss?.historico ||
+      kpi?.productividad?.ytd ||
+      kpi?.productividad?.historico ||
+      kpi?.inventario?.historico
     );
 
   const solicitudComparativaSinHistorico =
     periodoSolicitado.es_comparativo &&
     !(
-      k?.historico ||
-      k?.kpi_historico ||
-      k?.nnss?.historico ||
-      k?.productividad?.historico ||
-      k?.inventario?.historico
+      kpi?.historico ||
+      kpi?.kpi_historico ||
+      kpi?.nnss?.historico ||
+      kpi?.productividad?.historico ||
+      kpi?.inventario?.historico
     );
 
   let contexto = {
@@ -608,6 +615,8 @@
         por_usuario_mensual:              hp.por_usuario_mensual,
         por_usuario_canal:                hp.por_usuario_canal,
         por_usuario_canal_mensual:        hp.por_usuario_canal_mensual,
+        por_usuario_cliente:              hp.por_usuario_cliente,
+        por_usuario_cliente_mensual:      hp.por_usuario_cliente_mensual,
         lineas_no_asignadas_por_canal_mes: hp.lineas_no_asignadas_por_canal_mes
       }
     };
@@ -1051,21 +1060,26 @@
     }
 
     if (pideDercoCanales) {
-      prodCompacta.derco_canales = {
-        canales: Array.isArray(prod?.derco?.canales) ? prod.derco.canales : [],
-        canales_originales: Array.isArray(prod?.derco?.canales_originales) ? prod.derco.canales_originales : [],
-        top_canal_por_lineas: prod?.derco?.top_canal_por_lineas || null,
-        top_canal_por_unidades: prod?.derco?.top_canal_por_unidades || null,
-        nota: 'canales agrupa AP_R+AP_E como AP y CAP+MY+SG+CES en CAP-MY-SG-CES (canal mayorista). canales_originales separa: AP, MY, CAP, SG, GT, CES (CES = MY con destino concesionario, parte del mayorista). Si CES aparece, reportarlo; si no aparece para el período, mencionar que no hubo pedidos CES en ese rango. La suma de los 4 individuales (CAP+MY+SG+CES) debe igualar el grupo CAP-MY-SG-CES.'
-      };
-      prodCompacta.consulta_resuelta = {
-        tipo: pideDesgloseCanales ? 'derco_canales_individuales' : 'derco_canales_agrupados',
-        cliente: 'DERCO',
-        vista_preferida: pideDesgloseCanales ? 'canales_originales' : 'canales',
-        regla: pideDesgloseCanales
-          ? 'Vista INDIVIDUAL solicitada (palabra clave: desglosa/desglose/detalle/individual/originales/separado o se nombró CES o 2+ canales). Usar derco_canales.canales_originales (AP, MY, CAP, SG, GT, CES separados). NO agrupar CAP+MY+SG+CES. Si CES aparece, reportarlo; si no aparece para el período, mencionar que no hubo pedidos CES. La conclusión debe señalar qué canal individual concentra mayor carga operativa.'
-          : 'Vista AGRUPADA por default. Usar derco_canales.canales (AP, CAP-MY-SG-CES, GT). El grupo CAP-MY-SG-CES contiene CAP+MY+SG+CES y representa el canal mayorista DERCO. Si el usuario después pide individual, usar canales_originales. La conclusión debe señalar qué grupo concentra mayor carga operativa.'
-      };
+      // Cuando el usuario pide operarios × canal (esUsuario=true), NO agregar derco_canales
+      // (totales por canal) porque el AI elige los totales e ignora por_usuario_canal.
+      // El bloque por_usuario_canal (más abajo) maneja toda la respuesta en ese caso.
+      if (!esUsuario) {
+        prodCompacta.derco_canales = {
+          canales: Array.isArray(prod?.derco?.canales) ? prod.derco.canales : [],
+          canales_originales: Array.isArray(prod?.derco?.canales_originales) ? prod.derco.canales_originales : [],
+          top_canal_por_lineas: prod?.derco?.top_canal_por_lineas || null,
+          top_canal_por_unidades: prod?.derco?.top_canal_por_unidades || null,
+          nota: 'canales agrupa AP_R+AP_E como AP y CAP+MY+SG+CES en CAP-MY-SG-CES (canal mayorista). canales_originales separa: AP, MY, CAP, SG, GT, CES (CES = MY con destino concesionario, parte del mayorista). Si CES aparece, reportarlo; si no aparece para el período, mencionar que no hubo pedidos CES en ese rango. La suma de los 4 individuales (CAP+MY+SG+CES) debe igualar el grupo CAP-MY-SG-CES.'
+        };
+        prodCompacta.consulta_resuelta = {
+          tipo: pideDesgloseCanales ? 'derco_canales_individuales' : 'derco_canales_agrupados',
+          cliente: 'DERCO',
+          vista_preferida: pideDesgloseCanales ? 'canales_originales' : 'canales',
+          regla: pideDesgloseCanales
+            ? 'Vista INDIVIDUAL solicitada (palabra clave: desglosa/desglose/detalle/individual/originales/separado o se nombró CES o 2+ canales). Usar derco_canales.canales_originales (AP, MY, CAP, SG, GT, CES separados). NO agrupar CAP+MY+SG+CES. Si CES aparece, reportarlo; si no aparece para el período, mencionar que no hubo pedidos CES. La conclusión debe señalar qué canal individual concentra mayor carga operativa.'
+            : 'Vista AGRUPADA por default. Usar derco_canales.canales (AP, CAP-MY-SG-CES, GT). El grupo CAP-MY-SG-CES contiene CAP+MY+SG+CES y representa el canal mayorista DERCO. Si el usuario después pide individual, usar canales_originales. La conclusión debe señalar qué grupo concentra mayor carga operativa.'
+        };
+      }
     }
 
     if (pideCanal && fechaISO) {
@@ -1094,9 +1108,10 @@
       const TOP_USUARIOS = 25;
 
       // Determinar mes objetivo: el solicitado o el más reciente disponible
-      const mesObjetivo = periodoSolicitado.mes || null;
+      const _mesesDisponibles = [...new Set(porUsuarioMensual.map(x => Number(x.mes)))].sort((a, b) => b - a);
+      const mesObjetivo = periodoSolicitado.mes || _mesesDisponibles[0] || null;
 
-      // Filtrar base: por mes si se especificó, sino todos los meses
+      // Filtrar base: siempre por mes (solicitado o más reciente) — nunca mezclar meses
       let porUsuarioBase = mesObjetivo
         ? porUsuarioMensual.filter(x => Number(x.mes) === mesObjetivo)
         : porUsuarioMensual;
@@ -1126,20 +1141,46 @@
         porUsuarioFiltrado = porUsuarioFiltrado.slice().sort((a, b) => Number(a.mes) - Number(b.mes));
       } else if (esMasProductivo) {
         // "Operador más productivo" → criterio eficiencia: lineas_por_hora_activa
-        const limite = pideListaCompletaUsuarios ? porUsuarioBase.length : TOP_USUARIOS;
-        porUsuarioFiltrado = porUsuarioBase
-          .slice()
-          .sort((a, b) => Number(b.lineas_por_hora_activa || 0) - Number(a.lineas_por_hora_activa || 0))
-          .slice(0, limite)
-          .map((x, i) => ({ ...x, posicion: i + 1 }));
+        // Top N POR CD para que todos los CDs queden representados.
+        const TOP_EFI_POR_CD = 8;
+        if (pideListaCompletaUsuarios) {
+          porUsuarioFiltrado = porUsuarioBase
+            .slice()
+            .sort((a, b) => Number(b.lineas_por_hora_activa || 0) - Number(a.lineas_por_hora_activa || 0))
+            .map((x, i) => ({ ...x, posicion: i + 1 }));
+        } else {
+          const cdsEfi = [...new Set(porUsuarioBase.map(x => (x.cd || 'SIN_CD').trim()))].sort();
+          porUsuarioFiltrado = [];
+          let posEfi = 1;
+          for (const cd of cdsEfi) {
+            porUsuarioBase
+              .filter(x => (x.cd || 'SIN_CD').trim() === cd)
+              .sort((a, b) => Number(b.lineas_por_hora_activa || 0) - Number(a.lineas_por_hora_activa || 0))
+              .slice(0, TOP_EFI_POR_CD)
+              .forEach((x, i) => porUsuarioFiltrado.push({ ...x, posicion_cd: i + 1, posicion: posEfi++ }));
+          }
+        }
       } else {
         // "Ranking de operadores" → criterio volumen: lineas totales descendente
-        const limite = pideListaCompletaUsuarios ? porUsuarioBase.length : TOP_USUARIOS;
-        porUsuarioFiltrado = porUsuarioBase
-          .slice()
-          .sort((a, b) => Number(b.lineas || 0) - Number(a.lineas || 0))
-          .slice(0, limite)
-          .map((x, i) => ({ ...x, posicion: i + 1 }));
+        // Top N POR CD para que todos los CDs queden representados.
+        const TOP_VOL_POR_CD = 8;
+        if (pideListaCompletaUsuarios) {
+          porUsuarioFiltrado = porUsuarioBase
+            .slice()
+            .sort((a, b) => Number(b.lineas || 0) - Number(a.lineas || 0))
+            .map((x, i) => ({ ...x, posicion: i + 1 }));
+        } else {
+          const cdsVol = [...new Set(porUsuarioBase.map(x => (x.cd || 'SIN_CD').trim()))].sort();
+          porUsuarioFiltrado = [];
+          let posVol = 1;
+          for (const cd of cdsVol) {
+            porUsuarioBase
+              .filter(x => (x.cd || 'SIN_CD').trim() === cd)
+              .sort((a, b) => Number(b.lineas || 0) - Number(a.lineas || 0))
+              .slice(0, TOP_VOL_POR_CD)
+              .forEach((x, i) => porUsuarioFiltrado.push({ ...x, posicion_cd: i + 1, posicion: posVol++ }));
+          }
+        }
       }
 
       const totalBase = porUsuarioBase.length;
@@ -1150,41 +1191,158 @@
         ? 'Ranking por líneas por hora activa WMS'
         : 'Ranking por volumen de líneas';
 
-      prodCompacta.consulta_resuelta = {
-        tipo: 'por_usuario_operador',
-        cd: cdSolicitado ? 'CD ' + cdSolicitado : 'TODOS',
-        mes: mesObjetivo || 'todos',
-        usuario_filtrado: usuarioDetectado || null,
-        criterio_ranking: criterioRanking,
-        texto_ranking: textoRanking,
-        lista_completa: pideListaCompletaUsuarios,
-        regla: [
-          'El array por_usuario YA ESTÁ ORDENADO según criterio_ranking. Presentar los registros en el MISMO ORDEN del campo posicion. NO reordenar.',
-          'Cada registro es independiente y autónomo. NO mezclar campos entre registros distintos.',
-          'TERMINOLOGIA OBLIGATORIA: el campo dias_trabajados se presenta como "Días activos WMS"; horas_activas como "Horas activas WMS"; lineas_por_hora_activa como "Líneas por hora activa WMS"; unidades_por_hora_activa como "Unidades por hora activa WMS". NUNCA usar "días trabajados", "horas trabajadas reales", "horas trabajadas" ni "asistencia".',
-          'REGLA METODOLOGICA: estos indicadores provienen de movimientos WMS, no de asistencia RRHH. dias_activos_wms = fechas_turno distintas con actividad; horas_activas_wms = slots hora únicos con actividad. La conclusión DEBE incluir: "El criterio usado es líneas por hora activa WMS. No corresponde a asistencia ni horas trabajadas reales."',
-          'Para "ranking de operadores": usar lineas totales, texto "' + textoRanking + '".',
-          'Para "operador más productivo": usar lineas_por_hora_activa, texto "criterio: líneas por hora activa WMS".',
-          'Si se filtra por usuario específico, mostrar todos sus meses disponibles si el mes solicitado no tiene datos.',
-          'Si por_usuario_truncado=true, aclarar que se muestra el top (por_usuario_mostrados de por_usuario_total) y que el usuario puede pedir "lista completa" / "todos los operadores" para ver todos.',
-          'Si por_usuario_truncado=false y la consulta no pidió lista completa, asumí que estos son TODOS los operadores disponibles para ese filtro.'
-        ].join(' ')
-      };
-      prodCompacta.por_usuario = porUsuarioFiltrado;
-      prodCompacta.por_usuario_total = totalBase;
-      prodCompacta.por_usuario_mostrados = porUsuarioFiltrado.length;
-      prodCompacta.por_usuario_truncado = !usuarioDetectado && totalBase > TOP_USUARIOS;
+      // Cuando la consulta pide canal, por_usuario_canal es la fuente principal.
+      // Se omite por_usuario (ranking general) para que el AI no lo confunda con el canal.
+      const _esConsultaCanal = pideDercoCanales || _mencionaCanalGenerico;
+
+      if (_esConsultaCanal) {
+        prodCompacta.consulta_resuelta = {
+          tipo: 'operador_por_canal',
+          fuente_principal: 'por_usuario_canal',
+          cd: cdSolicitado ? 'CD ' + cdSolicitado : 'TODOS',
+          mes: mesObjetivo || 'todos',
+          usuario_filtrado: usuarioDetectado || null,
+          lista_completa: pideListaCompletaUsuarios,
+          regla: [
+            'CONSULTA OPERARIO × CANAL. Fuente principal: campo por_usuario_canal.',
+            'OBLIGATORIO: listar cada OPERARIO INDIVIDUALMENTE dentro de su canal. NO sumar ni totalizar por canal.',
+            'Cada fila de por_usuario_canal es UN operario en UN canal: (cd, usuario, canal, mes, lineas, unidades, ...).',
+            'Agrupar la presentación por canal, luego listar operarios de mayor a menor líneas dentro de cada canal.',
+            'TERMINOLOGIA: dias_trabajados → "Días activos WMS"; horas_activas → "Horas activas WMS"; lineas_por_hora_activa → "Líneas por hora activa WMS".',
+            'Si por_usuario_canal_truncado=true, aclarar que se muestran los principales N y el usuario puede pedir "lista completa".',
+            'La conclusión DEBE incluir: "El criterio es líneas por hora activa WMS. No corresponde a asistencia ni horas trabajadas reales."',
+            'NO usar canal totals del campo derco_canales (no está en este contexto). Usar SOLO por_usuario_canal.'
+          ].join(' ')
+        };
+        // NO agregar por_usuario para evitar que el AI lo use en lugar de por_usuario_canal.
+      } else {
+        // ── Cliente específico no-DERCO: usar por_usuario_cliente si disponible ──
+        // por_usuario_cliente_mensual tiene desglose real (cd, cliente, usuario)
+        // generado por calcular_por_usuario_cliente en productividad_usuarios.py.
+        const _clienteEsNoDerco = clienteSolicitado && clienteSolicitado !== 'DERCO';
+        const _mesUC2 = periodoSolicitado.mes ||
+          ([...new Set(_porUsuarioClienteMensualGlobal.map(x => Number(x.mes)))]
+            .sort((a, b) => b - a)[0] || null);
+
+        // Intentar usar datos exactos por cliente
+        let _baseCliente = [];
+        if (_clienteEsNoDerco && _porUsuarioClienteMensualGlobal.length > 0) {
+          _baseCliente = _porUsuarioClienteMensualGlobal.filter(x =>
+            (!_mesUC2 || Number(x.mes) === _mesUC2) &&
+            (x.cliente || '').toUpperCase().trim() === clienteSolicitado
+          );
+          if (cdSolicitado) {
+            const _cdExCli = 'CD ' + cdSolicitado;
+            _baseCliente = _baseCliente.filter(x => normText(x.cd) === cdSolicitado ||
+              (x.cd || '').toUpperCase().trim() === _cdExCli.toUpperCase());
+          }
+        }
+
+        const _usaClienteExacto = _clienteEsNoDerco && _baseCliente.length > 0;
+
+        if (_usaClienteExacto) {
+          // ✅ Datos exactos para este cliente — top N por CD
+          const TOP_CLI_POR_CD = 10;
+          const _cdsCliente = [...new Set(_baseCliente.map(x => (x.cd||'SIN_CD').trim()))].sort();
+          let _filtradoCliente = [];
+          let _posCliGlobal = 1;
+          if (pideListaCompletaUsuarios || usuarioDetectado) {
+            _filtradoCliente = _baseCliente
+              .sort((a, b) => Number(b.lineas||0) - Number(a.lineas||0))
+              .map((x, i) => ({ ...x, posicion: i + 1 }));
+          } else {
+            for (const cd of _cdsCliente) {
+              _baseCliente
+                .filter(x => (x.cd||'SIN_CD').trim() === cd)
+                .sort((a, b) => Number(b.lineas||0) - Number(a.lineas||0))
+                .slice(0, TOP_CLI_POR_CD)
+                .forEach((x, i) => _filtradoCliente.push({ ...x, posicion_cd: i+1, posicion: _posCliGlobal++ }));
+            }
+          }
+          const _hayTruncCliente = !usuarioDetectado && !pideListaCompletaUsuarios &&
+            _cdsCliente.some(cd => _baseCliente.filter(x=>(x.cd||'SIN_CD').trim()===cd).length > TOP_CLI_POR_CD);
+
+          prodCompacta.consulta_resuelta = {
+            tipo: 'por_usuario_cliente_exacto',
+            cliente: clienteSolicitado,
+            cd: cdSolicitado ? 'CD ' + cdSolicitado : 'TODOS',
+            mes: _mesUC2 || 'todos',
+            usuario_filtrado: usuarioDetectado || null,
+            fuente: 'por_usuario_cliente',
+            nota_fuente: 'Datos exactos: operarios que registraron movimientos WMS para ' + clienteSolicitado + '. No es un estimado CD-global.',
+            lista_completa: pideListaCompletaUsuarios,
+            regla: [
+              'DATOS EXACTOS por cliente. por_usuario_cliente contiene solo los operarios que trabajaron para ' + clienteSolicitado + '.',
+              'Agrupar por CD si hay varios. Dentro de cada CD ordenar por líneas desc.',
+              'TERMINOLOGIA: dias_trabajados → "Días activos WMS"; horas_activas → "Horas activas WMS"; lineas_por_hora_activa → "Líneas por hora activa WMS".',
+              'La conclusión DEBE incluir: "El criterio usado es líneas por hora activa WMS. No corresponde a asistencia ni horas trabajadas reales."',
+              'Si por_usuario_cliente_truncado=true, aclarar top N y que el usuario puede pedir lista completa.'
+            ].join(' ')
+          };
+          prodCompacta.por_usuario_cliente = _filtradoCliente;
+          prodCompacta.por_usuario_cliente_total = _baseCliente.length;
+          prodCompacta.por_usuario_cliente_mostrados = _filtradoCliente.length;
+          prodCompacta.por_usuario_cliente_truncado = _hayTruncCliente;
+
+        } else {
+          // Fallback: ranking CD-completo con advertencia
+          const _cdsConDatosUsuario = [
+            ...new Set(porUsuarioBase.map(x => (x.cd || '').trim()).filter(Boolean))
+          ].sort();
+          const _notaFallback = _clienteEsNoDerco
+            ? ('INSTRUCCIÓN: MOSTRAR el array por_usuario que está en el contexto — '
+              + 'es el ranking del CD completo para el período, no datos vacíos. '
+              + 'ACLARAR al usuario que los operarios se reportan a nivel de CD completo '
+              + 'y que próximamente se contará con el desglose específico por cliente. '
+              + 'CDs con datos disponibles: ' + _cdsConDatosUsuario.join(', ') + '.')
+            : null;
+
+          prodCompacta.consulta_resuelta = {
+            tipo: 'por_usuario_operador',
+            cd: cdSolicitado ? 'CD ' + cdSolicitado : 'TODOS',
+            cds_con_datos_operarios: _cdsConDatosUsuario,
+            mes: mesObjetivo || 'todos',
+            usuario_filtrado: usuarioDetectado || null,
+            criterio_ranking: criterioRanking,
+            texto_ranking: textoRanking,
+            nota_cliente_operario: _notaFallback,
+            lista_completa: pideListaCompletaUsuarios,
+            regla: [
+              'El array por_usuario YA ESTÁ ORDENADO según criterio_ranking. Presentar en el MISMO ORDEN del campo posicion.',
+              'TERMINOLOGIA OBLIGATORIA: dias_trabajados → "Días activos WMS"; horas_activas → "Horas activas WMS"; lineas_por_hora_activa → "Líneas por hora activa WMS".',
+              'REGLA METODOLOGICA: provienen de movimientos WMS, no de asistencia RRHH. La conclusión DEBE incluir: "El criterio usado es líneas por hora activa WMS. No corresponde a asistencia ni horas trabajadas reales."',
+              'ACCIÓN OBLIGATORIA: MOSTRAR el array por_usuario que está en el contexto. NO decir que no hay datos.',
+              'Si nota_cliente_operario es no-nulo: leerlo y aclarar al usuario que son del CD completo, no del cliente específico.',
+              'Para "ranking de operadores": usar lineas totales, texto "' + textoRanking + '".',
+              'Si por_usuario_truncado=true, aclarar top (por_usuario_mostrados de por_usuario_total).'
+            ].join(' ')
+          };
+          prodCompacta.por_usuario = porUsuarioFiltrado;
+          prodCompacta.por_usuario_total = totalBase;
+          prodCompacta.por_usuario_mostrados = porUsuarioFiltrado.length;
+          const _topPorCdActual2 = esMasProductivo ? 8 : 8;
+          const _cdsEnBase2 = [...new Set(porUsuarioBase.map(x => (x.cd||'SIN_CD').trim()))];
+          prodCompacta.por_usuario_truncado = !usuarioDetectado && !pideListaCompletaUsuarios &&
+            _cdsEnBase2.some(cd => porUsuarioBase.filter(x=>(x.cd||'SIN_CD').trim()===cd).length > _topPorCdActual2);
+        }
+        // por_usuario data handled in if/else blocks above
+      }
     }
 
     // Desglose operador × canal (solo DERCO). Se activa cuando el query menciona
-    // operador/usuario Y canal (pideDercoCanales). Sirve por_usuario_canal_mensual
-    // filtrado por mes/CD/usuario según corresponda.
+    // operador/usuario Y canal (pideDercoCanales o _mencionaCanalGenerico). El único
+    // desglose por canal disponible es DERCO, así que se sirve aunque DERCO no se
+    // mencione explícitamente ("operario por canal" → se entiende que es DERCO).
     const _porUsuarioCanalMensualGlobal = Array.isArray(kpi.historico?.productividad?.por_usuario_canal_mensual)
       ? kpi.historico.productividad.por_usuario_canal_mensual
       : [];
-    if (esUsuario && pideDercoCanales && _porUsuarioCanalMensualGlobal.length > 0) {
-      const TOP_USUARIOS_CANAL = 50;
-      const mesObjetivoUC = periodoSolicitado.mes || null;
+    // _porUsuarioClienteMensualGlobal declarado al inicio del script (evita TDZ).
+    if (esUsuario && (pideDercoCanales || _mencionaCanalGenerico) && _porUsuarioCanalMensualGlobal.length > 0) {
+      // Top 8 por canal → máx ~24 registros para 3 canales, ~1.900 chars, bajo límite Telegram.
+      // El usuario puede pedir "lista completa" para ver todos.
+      const TOP_POR_CANAL = 8;
+      const _mesesDisponiblesUC = [...new Set(_porUsuarioCanalMensualGlobal.map(x => Number(x.mes)))].sort((a, b) => b - a);
+      const mesObjetivoUC = periodoSolicitado.mes || _mesesDisponiblesUC[0] || null;
 
       let baseUC = mesObjetivoUC
         ? _porUsuarioCanalMensualGlobal.filter(x => Number(x.mes) === mesObjetivoUC)
@@ -1212,21 +1370,35 @@
           Number(b.lineas || 0) - Number(a.lineas || 0)
         );
       } else {
-        // Sin usuario específico: top N global ordenado por líneas (top ranking
-        // distribuido a través de canales — el modelo agrupará para presentar).
-        // Si user pide lista completa → todos los registros.
-        const limiteUC = pideListaCompletaUsuarios ? baseUC.length : TOP_USUARIOS_CANAL;
-        filtradoUC = baseUC
-          .slice()
-          .sort((a, b) => Number(b.lineas || 0) - Number(a.lineas || 0))
-          .slice(0, limiteUC)
-          .map((x, i) => ({ ...x, posicion: i + 1 }));
+        // Sin usuario específico: top N POR CANAL (no global).
+        // Garantiza que todos los canales aparezcan representados.
+        const canalesUnicos = [...new Set(baseUC.map(x => x.canal || 'SIN_CANAL'))].sort();
+        filtradoUC = [];
+        let posGlobal = 1;
+        for (const canal of canalesUnicos) {
+          const enCanal = baseUC
+            .filter(x => (x.canal || 'SIN_CANAL') === canal)
+            .sort((a, b) => Number(b.lineas || 0) - Number(a.lineas || 0));
+          const limite = pideListaCompletaUsuarios ? enCanal.length : TOP_POR_CANAL;
+          enCanal.slice(0, limite).forEach((x, i) => {
+            filtradoUC.push({ ...x, posicion_canal: i + 1, posicion: posGlobal++ });
+          });
+        }
       }
+
+      // Totales reales por canal para que el AI indique cuántos quedan fuera.
+      const canalesUnicosBase = [...new Set(baseUC.map(x => x.canal || 'SIN_CANAL'))].sort();
+      const totalPorCanal = Object.fromEntries(
+        canalesUnicosBase.map(c => [c, baseUC.filter(x => (x.canal || 'SIN_CANAL') === c).length])
+      );
+      const hayTruncadoEnAlgunCanal = !usuarioDetectado && !pideListaCompletaUsuarios &&
+        canalesUnicosBase.some(c => totalPorCanal[c] > TOP_POR_CANAL);
 
       prodCompacta.por_usuario_canal = filtradoUC;
       prodCompacta.por_usuario_canal_total = baseUC.length;
+      prodCompacta.por_usuario_canal_total_por_canal = totalPorCanal;
       prodCompacta.por_usuario_canal_mostrados = filtradoUC.length;
-      prodCompacta.por_usuario_canal_truncado = !usuarioDetectado && !pideListaCompletaUsuarios && baseUC.length > TOP_USUARIOS_CANAL;
+      prodCompacta.por_usuario_canal_truncado = hayTruncadoEnAlgunCanal;
 
       // Líneas no asignadas a operador por canal/mes — para que el modelo pueda
       // explicar diferencias cuando la suma de operadores no totaliza el total del canal.
@@ -1248,6 +1420,7 @@
       prodCompacta.consulta_resuelta_canal = {
         tipo: 'operador_por_canal',
         cliente: 'DERCO',
+        nota_cliente: 'El desglose operador × canal solo existe para DERCO. Si el usuario preguntó genéricamente ("por canal" sin mencionar DERCO), responder con los datos de DERCO y aclarar que el canal aplica a DERCO únicamente.',
         cd: cdSolicitado ? 'CD ' + cdSolicitado : 'TODOS',
         mes: mesObjetivoUC || 'todos',
         usuario_filtrado: usuarioDetectado || null,
