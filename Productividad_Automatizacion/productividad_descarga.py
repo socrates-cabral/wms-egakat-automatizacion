@@ -363,6 +363,8 @@ def _download_runtime_export(
         context = browser.new_context(accept_downloads=True)
         page = context.new_page()
         page.set_default_timeout(60_000)
+        # Dismissar popups JS del WMS (sesion anterior, "2000+ filas", etc.)
+        page.on("dialog", lambda d: d.dismiss())
 
         try:
             page.goto(WMS_LOGIN_URL, wait_until="load", timeout=60_000)
