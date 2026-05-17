@@ -3,7 +3,7 @@ title: FillRate — Automatización WMS Egakat
 type: proyecto
 sources: [FillRate_Automatizacion/fillrate_descarga.py, FillRate_Automatizacion/fillrate_utils.py, FillRate_Automatizacion/fillrate_config.py]
 related: [proyecto-wms-egakat, graph-api-microsoft, playwright-wms]
-updated: 2026-05-15
+updated: 2026-05-17
 confidence: high
 ---
 
@@ -147,6 +147,43 @@ La columna **`Fecha y hora de Generación`** del reporte WMS bruto está renombr
 **Implicancia para scripts:** los scripts de diff/reconciliación deben usar **índice posicional (col 8)** en vez de buscar por nombre. `reconcile_fillrate.py` y `cleanup_fillrate_target.py` ya lo hacen así (`FECHA_INGRESO_COL_IDX = 8`) — son seguros y no necesitan modificación.
 
 Bug observado el 2026-05-15: un script de inspección ad-hoc buscó la columna por nombre y falló al encontrar "Generación" en el WMS bruto, asignando `mes=None` a todos los keys y produciendo 29 sobrantes + 27 faltantes (falso positivo). Al usar índice posicional el diff real fue 2 sobrantes (Aplica 196099 y 196119 anulados) y 0 faltantes.
+
+## Fixes aplicados (2026-05-17) — data Derco.xlsx filtros + notación científica
+
+**Contexto:** El archivo `data Derco.xlsx` tenía AutoFilter activo (con filtros de filas/columnas aplicados). Esto causaba que al ejecutar `fillrate_descarga.py` las fórmulas de las columnas AA–AT (copias desde la fila template = fila 2) referenciaran filas incorrectas, porque `openpyxl` insertaba con referencia a las filas visibles del filtro, no a las filas reales del destino.
+
+Adicionalmente, las columnas D (`Nro Aplica`) y E (`Nro Pedido`) mostraban notación científica en Excel ("4,6E10", "9,1E12") cuando el ancho de columna era angosto — causando que `canal_derco_auto.py` no pudiera cruzar correctamente las OPs.
+
+| Fix | Función | Detalle |
+|-----|---------|---------|
+| Limpieza de filtros al inicio | `limpiar_filtros_y_ocultos(ws, log_path)` | Remueve `AutoFilter` completamente (ref + filterColumn), muestra todas las filas y columnas ocultas. Se llama **antes** de cualquier lectura de template o inserción de filas |
+| Validación del template | `validar_formula_template(ws, formula_end_col, log_path)` | Verifica que las fórmulas de la fila 2 (cols AA–AU) referencien fila 2 con referencias relativas. Loguea advertencia si alguna referencia apunta a otra fila (indica corrupción previa) |
+| Formato entero Nro Aplica/Pedido | `COLS_FORMATO_ENTERO = (4, 5)` en loop de escritura | Aplica `number_format = "0"` a cols D y E al escribir cada fila. Previene que Excel muestre notación científica sin importar el ancho de columna |
+| Eliminación cleanup tardío | `update_sharepoint_workbook` | Removido el `filterColumn = []` que se aplicaba al final (después de todas las operaciones) — ya no es necesario ni suficiente |
+
+### Orden de operaciones después del fix
+
+```python
+# update_sharepoint_workbook() — orden correcto:
+limpiar_filtros_y_ocultos(target_sheet, log_path)          # 1. Filtros fuera PRIMERO
+validar_formula_template(target_sheet, formula_end_col)     # 2. Validar templates
+corte_col_idx = ensure_corte_column(...)                    # 3. Columna corte
+formula_templates = copy_formula_templates(...)             # 4. Leer templates (ya limpios)
+# ... inserción de filas ... (todas las rows, sin filtros activos)
+```
+
+**Constantes nuevas en `fillrate_utils.py`:**
+```python
+APLICA_COLUMN_INDEX = 4   # col D — Nro Aplica (OP)
+COLS_FORMATO_ENTERO = (APLICA_COLUMN_INDEX, ORDER_COLUMN_INDEX)  # D y E → format "0"
+```
+
+**Impacto validado (run 2026-05-17 sobre data Derco.xlsx):**
+- AutoFilter activo detectado y eliminado antes de toda operación
+- 34.979 filas actualizadas en canal_derco_auto.py post-fix (GT: 3.947→747, redistribuido a AP_R/AP_E/CAP/MY/CES/SG)
+- Fórmulas AA–AT generadas con referencias correctas a la fila destino
+
+---
 
 ## Filas vacías masivas en archivos procesados (2026-05-15)
 `data Runo Tradicional.xlsx` y `data Derco.xlsx` arrastran miles de filas vacías intercaladas (no solo trailing): Runo tenía 1042 filas huérfanas con datos parciales 2025 (sin Empresa ni Nro Aplica) + 729 vacías totales entre los bloques de datos válidos; Derco tiene ~35.226 vacías de 69.975 totales. La lógica de trim en `fillrate_utils.py:update_sharepoint_workbook` solo elimina vacías trailing, no las intermedias. El usuario corrige manualmente cuando aparecen.

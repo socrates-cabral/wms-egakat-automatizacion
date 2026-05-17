@@ -3,6 +3,23 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-05-17] update | FillRate + CanalDerco — filtros AutoFilter + notación científica + bot TDZ fix
+
+**Tipo:** Fixes producción
+
+**Páginas actualizadas:**
+- `wiki/proyectos/fillrate-automatizacion.md` — sección "Fixes 2026-05-17": limpiar_filtros_y_ocultos(), validar_formula_template(), COLS_FORMATO_ENTERO
+- `wiki/proyectos/canal-derco-auto.md` — sección "Fix 2026-05-17": preparar_excel(), op_str() notación científica española, flujo main reestructurado
+- `wiki/proyectos/kpi-ops.md` — sección "Fix productividad × operario × cliente — TDZ bug (2026-05-16)"
+
+**Fixes aplicados:**
+1. **Bot TDZ**: `_porUsuarioClienteMensualGlobal` declarado en scope incorrecto (~1336) → movido al inicio del script (línea 115). Bot ya responde "productividad Barentz/Unilever/Daikin por operador mes mayo" ✓
+2. **FillRate filtros**: `limpiar_filtros_y_ocultos()` llama antes de cualquier operación en `update_sharepoint_workbook()`. Evita que AutoFilter activo en data Derco corrompa referencias de fórmulas AA–AT
+3. **FillRate notación científica**: `COLS_FORMATO_ENTERO = (4, 5)` fuerza `number_format = "0"` en Nro Aplica y Nro Pedido al escribir cada fila
+4. **canal_derco_auto `op_str()`**: reemplaza `,→.` antes del float() para manejar "4,6E10" español. 34.979 filas recalculadas, GT redistribuido correctamente (3.947→747)
+
+---
+
 ## [2026-05-15] update | FillRate — rename histórico columna y reconciliación Quilicura
 
 **Tipo:** Hallazgo + reconciliación manual

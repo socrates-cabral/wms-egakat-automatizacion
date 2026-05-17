@@ -3,7 +3,7 @@ title: Canal Derco Auto — Automatización columna Canal en data Derco.xlsx
 type: proyecto
 sources: [WMS_Automatizacion/canal_derco_auto.py, WMS_Automatizacion/canal_derco_utils.py, WMS_Automatizacion/generar_resumen_kpi_ops.py, FillRate_Automatizacion/run_fillrate.bat]
 related: [fillrate-automatizacion, kpi-ops, bot-ops-egakat, wms-automatizacion]
-updated: 2026-05-15
+updated: 2026-05-17
 confidence: high
 ---
 
@@ -214,6 +214,60 @@ Solo 9 líneas (0,008%) se reclasificaron de Rack→Est. Total AP conservado. Ca
 - pandas, openpyxl
 - OneDrive sincronizado (rutas absolutas a Datos para Dashboard - *)
 - `fillrate_descarga.py` debe correr antes (refresca filas de data Derco)
+
+---
+
+## Fix 2026-05-17 — `preparar_excel()` + `op_str` notación científica
+
+**Problema:** data Derco.xlsx tenía AutoFilter activo con filas/columnas ocultas. Cuando `canal_derco_auto.py` leía el archivo directamente, las OPs en las cols D y E llegaban como strings "4,6E10" (notación científica con coma decimal española), impidiendo el cruce correcto contra MovDerco.
+
+### Nueva función `preparar_excel(path_dd)`
+
+Ejecutada como **paso [1/5]** del `main()`, antes de cualquier lectura de datos:
+
+```python
+def preparar_excel(path_dd):
+    ws = wb.active
+    # 1. Eliminar AutoFilter
+    ws.auto_filter.ref = None; ws.auto_filter.filterColumn = []
+    # 2. Mostrar filas/columnas ocultas
+    for rd in ws.row_dimensions.values(): rd.hidden = False
+    for cd in ws.column_dimensions.values(): cd.hidden = False
+    # 3. Formato entero cols D (Nro Aplica) y E (Nro Pedido)
+    for row in ws.iter_rows(min_row=2, min_col=4, max_col=5):
+        for cell in row:
+            if cell.value is not None:
+                cell.number_format = "0"
+    # 4. Validar fórmulas AA–AT (fila template = fila 2)
+    # Loguea advertencia si ref. relativa apunta a fila ≠ 2
+    wb.save(path_dd)
+```
+
+### Mejora `op_str()` — notación científica con coma decimal
+
+```python
+def op_str(v):
+    s = str(v).strip().replace(",", ".")  # "4,6E10" → "4.6E10"
+    try:
+        return str(int(float(s)))         # → "46000000000"
+    except (ValueError, TypeError):
+        return str(v).strip()
+```
+
+Antes el reemplazo `,→.` no existía: "4,6E10" no era interpretable por `float()` y se devolvía como string literal, generando 0 matches contra MovDerco.
+
+### Flujo `main()` reestructurado
+
+```
+[0/5] Backup data Derco.xlsx
+[1/5] preparar_excel() → elimina filtros, formatea D/E, valida AA–AT
+[2/5] Cargar Base CES
+[3/5] Leer MovDerco (todos los archivos .xlsx del año)
+[4/5] Calcular canales
+[5/5] Reescribir columna Canal en data Derco.xlsx
+```
+
+**Validado 2026-05-17:** 34.979 filas actualizadas en 386s. GT redistribuido correctamente: 3.947→747 (−3.200 pedidos que estaban mal asignados por op_str corrupto).
 
 ---
 
