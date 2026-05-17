@@ -58,10 +58,12 @@ DATA_START_ROW = 2
 DATE_COLUMN_INDEX = 9       # columna I — Fecha y hora de Ingreso (para reemplazo de mes)
 STATE_COLUMN_INDEX = 7      # columna G — Estado Pedido
 ORDER_COLUMN_INDEX = 5      # columna E — Nro Pedido
+APLICA_COLUMN_INDEX = 4     # columna D — Nro Aplica (OP)
 FIN_PREP_COLUMN_INDEX = 13  # columna M — Fecha y hora de Fin Preparación (base de Fecha Entrega)
 OBSERVATION_COLUMN_INDEX = 22  # V
 FORMULA_START_COL = 27  # AA
 MAX_SUPPORTED_FORMULA_COL = 47  # AU
+COLS_FORMATO_ENTERO = (APLICA_COLUMN_INDEX, ORDER_COLUMN_INDEX)  # D y E: nunca notacion cientifica
 COL_ENTREGADO_TIEMPO = 40     # "Entregado a tiempo?"
 COL_ENTREGADO_COMPLETO = 41   # "Entregado completo y sin daños?"
 COL_FECHA_ENTREGA = 35        # "Fecha Entrega" (= fecha Remisión para pedidos completados; vacía para pendientes)
@@ -928,6 +930,79 @@ def compute_otif_summary(ws, month: int, year: int) -> Dict[str, Any]:
     }
 
 
+def limpiar_filtros_y_ocultos(ws, log_path: Optional[Path] = None) -> None:
+    """Elimina AutoFilter y muestra filas/columnas ocultas ANTES de operar el archivo.
+
+    Debe llamarse inmediatamente tras load_workbook() y get_target_sheet().
+    Si el archivo tiene filtros activos con filas ocultas y se insertan/borran filas
+    sin limpiarlos primero, los templates de formula pueden quedar corridos.
+    """
+    cambios: List[str] = []
+
+    if ws.auto_filter.ref:
+        ws.auto_filter.ref = None
+        ws.auto_filter.filterColumn = []
+        cambios.append("AutoFilter eliminado")
+
+    filas_ocultas = sum(1 for rd in ws.row_dimensions.values() if rd.hidden)
+    if filas_ocultas:
+        for rd in ws.row_dimensions.values():
+            rd.hidden = False
+        cambios.append(f"{filas_ocultas} fila(s) ocultas mostradas")
+
+    cols_ocultas = sum(1 for cd in ws.column_dimensions.values() if cd.hidden)
+    if cols_ocultas:
+        for cd in ws.column_dimensions.values():
+            cd.hidden = False
+        cambios.append(f"{cols_ocultas} columna(s) ocultas mostradas")
+
+    if cambios:
+        log(f"[SP] Filtros/ocultos limpiados: {'; '.join(cambios)}", log_path)
+    else:
+        log("[SP] Filtros/ocultos: ninguno activo ✓", log_path)
+
+
+def validar_formula_template(ws, formula_end_col: int, log_path: Optional[Path] = None) -> None:
+    """Valida que las formulas del template row (fila 2) en cols AA-AU referencien la fila 2.
+
+    Si una formula apunta a otra fila, ajustar_formula() la copiara mal a todas las filas
+    nuevas. Se reporta como advertencia; no bloquea la ejecucion.
+    """
+    errores: List[str] = []
+    re_ref = re.compile(r"\$?[A-Z]{1,3}(\$?)(\d+)", re.IGNORECASE)
+
+    for col in range(FORMULA_START_COL, formula_end_col + 1):
+        c = ws.cell(row=FORMULA_TEMPLATE_ROW, column=col)
+        if not (isinstance(c.value, str) and c.value.startswith("=")):
+            continue
+        for m in re_ref.finditer(c.value):
+            fila_abs = m.group(1) == "$"
+            fila_ref = int(m.group(2))
+            if fila_abs or fila_ref == 1:
+                continue  # referencia absoluta o encabezado: intencional
+            if fila_ref != FORMULA_TEMPLATE_ROW:
+                errores.append(
+                    f"col {c.column_letter}: referencia relativa a fila {fila_ref} "
+                    f"(esperado {FORMULA_TEMPLATE_ROW}) — {c.value[:60]}"
+                )
+                break  # un error por columna es suficiente
+
+    if errores:
+        log(
+            f"[SP] ADVERTENCIA: {len(errores)} formula(s) en template row tienen "
+            f"referencia de fila incorrecta — las filas insertadas heredaran formulas erroneas:",
+            log_path,
+        )
+        for e in errores:
+            log(f"  {e}", log_path)
+    else:
+        log(
+            f"[SP] Formulas template row (AA-{ws.cell(row=FORMULA_TEMPLATE_ROW, column=formula_end_col).column_letter}): "
+            f"referencias correctas ✓",
+            log_path,
+        )
+
+
 def ajustar_formula(formula_template: str, fila_template: int, fila_nueva: int) -> str:
     if not isinstance(formula_template, str) or not formula_template.startswith("="):
         return formula_template
@@ -1077,8 +1152,18 @@ def update_sharepoint_workbook(
         workbook = load_workbook(local_copy)
         log("[SP] Workbook cargado OK.", log_path)
         target_sheet, used_fallback_sheet = get_target_sheet(workbook, log_path)
-        corte_col_idx = ensure_corte_column(target_sheet, meses_corte, log_path=log_path)
+
+        # Paso 0: limpiar filtros ANTES de cualquier operacion sobre el archivo.
+        # Filtros activos ocultan filas → row_dimensions desincronizadas → formulas
+        # template copiadas a fila incorrecta (causa de las formulas AA-AT corridas).
+        limpiar_filtros_y_ocultos(target_sheet, log_path)
+
         formula_end_col = min(target_sheet.max_column, MAX_SUPPORTED_FORMULA_COL)
+
+        # Validar que las formulas del template row referencien la fila correcta.
+        validar_formula_template(target_sheet, formula_end_col, log_path)
+
+        corte_col_idx = ensure_corte_column(target_sheet, meses_corte, log_path=log_path)
         formula_templates = copy_formula_templates(target_sheet, formula_end_col)
 
         manual_overrides = collect_manual_overrides_for_month(target_sheet, rows_to_delete)
@@ -1136,6 +1221,10 @@ def update_sharepoint_workbook(
                 template_cell = template_cells[col_idx]
                 target_cell = target_sheet.cell(row=row_number, column=col_idx)
                 set_cell_value_like_template(target_cell, template_cell, row_values[col_idx - 1])
+                # Nro Pedido (E) y Nro Aplica (D): forzar formato entero puro.
+                # Evita notacion cientifica (ej: 4,6E+10) en pantalla y al copiar/pegar.
+                if col_idx in COLS_FORMATO_ENTERO and target_cell.value is not None:
+                    target_cell.number_format = "0"
 
             for col_idx in range(FORMULA_START_COL, formula_end_col + 1):
                 template_cell = template_cells[col_idx]
@@ -1158,10 +1247,6 @@ def update_sharepoint_workbook(
                     template_cell = template_cells[col_idx]
                     target_cell = target_sheet.cell(row=row_number, column=col_idx)
                     set_cell_value_like_template(target_cell, template_cell, override_value)
-
-        # Limpiar criterios de filtro activos (mantiene headers de filtro pero quita selecciones)
-        if target_sheet.auto_filter.ref:
-            target_sheet.auto_filter.filterColumn = []
 
         log("[SP] Guardando workbook modificado...", log_path)
         workbook.save(local_copy)

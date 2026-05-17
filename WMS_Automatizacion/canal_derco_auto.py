@@ -204,12 +204,126 @@ def hacer_backup(path_dd: str) -> Path:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     destino = BACKUP_DIR / f"data Derco_BACKUP_{ts}.xlsx"
     shutil.copy2(path_dd, destino)
-    # Conservar solo los ultimos MAX_BACKUPS
     backups = sorted(BACKUP_DIR.glob("data Derco_BACKUP_*.xlsx"))
     for viejo in backups[:-MAX_BACKUPS]:
         viejo.unlink(missing_ok=True)
     log(f"  Backup creado: {destino}")
     return destino
+
+
+def preparar_excel(path_dd: str) -> None:
+    """Paso 0 — pre-vuelo ANTES de leer con pandas.
+
+    1. Elimina AutoFilter y muestra filas/columnas ocultas por filtros.
+       Si el archivo tenia filtros activos, pandas sin esto solo leeria
+       las filas visibles y el calculo de canales seria incorrecto.
+    2. Formatea Nro Pedido y Nro Aplica como entero puro (numero_format '0').
+       Evita notacion cientifica en pantalla y al copiar/pegar valores.
+    3. Valida que las formulas en columnas AA-AT referencien la fila correcta.
+       (Referencias relativas a otra fila = formula desplazada por filtro activo.)
+    Guarda el archivo solo si hubo cambios.
+    """
+    import openpyxl.utils as oxu
+
+    wb = openpyxl.load_workbook(path_dd)
+    ws = wb[HOJA_DD]
+    cambios: list[str] = []
+
+    # -- 1. Filtros ---------------------------------------------------------------
+    if ws.auto_filter.ref:
+        ws.auto_filter.ref = None
+        cambios.append("AutoFilter eliminado")
+
+    filas_ocultas = sum(1 for rd in ws.row_dimensions.values() if rd.hidden)
+    if filas_ocultas:
+        for rd in ws.row_dimensions.values():
+            rd.hidden = False
+        cambios.append(f"{filas_ocultas} fila(s) ocultas (filtro) mostradas")
+
+    cols_ocultas = sum(1 for cd in ws.column_dimensions.values() if cd.hidden)
+    if cols_ocultas:
+        for cd in ws.column_dimensions.values():
+            cd.hidden = False
+        cambios.append(f"{cols_ocultas} columna(s) ocultas mostradas")
+
+    # -- 2. Formato entero en Nro Pedido y Nro Aplica -----------------------------
+    COLS_ENTERO = {"Nro Pedido", "Nro Aplica", "Nro Aplica (OP)"}
+    ANCHO_MINIMO = 18  # suficiente para 12 digitos
+
+    for cell in ws[1]:
+        nombre_col = str(cell.value or "").strip()
+        if nombre_col not in COLS_ENTERO:
+            continue
+        col_letter = cell.column_letter
+        # Ampliar columna si es muy estrecha (raiz de la notacion cientifica visual)
+        ancho_actual = ws.column_dimensions[col_letter].width or 0
+        if ancho_actual < ANCHO_MINIMO:
+            ws.column_dimensions[col_letter].width = ANCHO_MINIMO
+            cambios.append(
+                f"Col '{col_letter}' ({nombre_col}): ancho {ancho_actual:.0f} -> {ANCHO_MINIMO}"
+            )
+        # Formatear celdas de datos como entero puro (no notacion cientifica)
+        formateadas = 0
+        for row in range(2, ws.max_row + 1):
+            c = ws.cell(row=row, column=cell.column)
+            if c.value is not None and c.number_format != "0":
+                c.number_format = "0"
+                formateadas += 1
+        if formateadas:
+            cambios.append(
+                f"Col '{col_letter}' ({nombre_col}): {formateadas} celda(s) -> formato entero puro"
+            )
+
+    # -- 3. Validar formulas en cols AA-AT ----------------------------------------
+    col_aa = oxu.column_index_from_string("AA")
+    col_at = oxu.column_index_from_string("AT")
+
+    # Patron: letra(s) + $ opcional + digito(s)
+    # Captura el $ del row (grupo 1) y el numero de fila (grupo 2).
+    re_ref = re.compile(r"\$?[A-Z]{1,3}(\$?)(\d+)", re.IGNORECASE)
+
+    errores_formula: list[str] = []
+    for row in range(2, ws.max_row + 1):
+        for col in range(col_aa, col_at + 1):
+            c = ws.cell(row=row, column=col)
+            if not (isinstance(c.value, str) and c.value.startswith("=")):
+                continue
+            formula = c.value
+            for m in re_ref.finditer(formula):
+                fila_abs = m.group(1) == "$"   # True -> referencia de fila absoluta (intencional)
+                fila_ref = int(m.group(2))
+                if fila_abs:
+                    continue  # $5 en formula -> lookup table, OK
+                if fila_ref == 1:
+                    continue  # fila de encabezado, OK
+                if fila_ref != row:
+                    errores_formula.append(
+                        f"    Fila {row} col {c.column_letter}: "
+                        f"referencia relativa a fila {fila_ref} "
+                        f"(esperado {row}) — {formula[:80]}"
+                    )
+                    break  # un error por celda es suficiente
+
+    if errores_formula:
+        cambios.append(
+            f"ADVERTENCIA: {len(errores_formula)} formula(s) en cols AA-AT "
+            f"con referencia a fila incorrecta:"
+        )
+        cambios.extend(errores_formula[:30])
+        if len(errores_formula) > 30:
+            cambios.append(f"    ... y {len(errores_formula) - 30} mas")
+    else:
+        cambios.append("Formulas AA-AT: todas las referencias de fila son correctas ✓")
+
+    # -- Guardar si hubo cambios --------------------------------------------------
+    if cambios:
+        wb.save(path_dd)
+        log("[PREP] Preparacion data Derco:")
+        for c in cambios:
+            log(f"  {c}")
+    else:
+        log("[PREP] data Derco: sin cambios de preparacion necesarios")
+    wb.close()
 
 
 def reescribir_canal(path_dd: str, nuevos_canales: list) -> int:
@@ -255,30 +369,50 @@ def main() -> None:
         + ("  [DRY-RUN: no se escribe nada]" if dry_run else ""))
     log("=" * 70)
 
-    log("\n[1/4] Cargando Base CES...")
+    # Backup primero — antes de cualquier modificacion al archivo
+    t = time.perf_counter()
+    if not dry_run:
+        log("\n[0/5] Backup de data Derco...")
+        hacer_backup(DATA_DERCO)
+    else:
+        log("\n[0/5] [DRY-RUN] Backup omitido")
+    tiempos["backup_escritura"] = time.perf_counter() - t  # se rellena luego
+
+    # Preparar el Excel: remover filtros, formatear columnas, validar formulas
+    log("\n[1/5] Preparando data Derco (filtros, formatos, formulas)...")
+    t = time.perf_counter()
+    if not dry_run:
+        preparar_excel(DATA_DERCO)
+    else:
+        log("  [DRY-RUN] preparar_excel omitido")
+    tiempos["preparar_excel"] = time.perf_counter() - t
+
+    log("\n[2/5] Cargando Base CES...")
     t = time.perf_counter()
     ces_set, matcher = cargar_ces(BASE_CES)
     tiempos["base_ces"] = time.perf_counter() - t
 
-    log("\n[2/4] Cargando MovDerco (todos los meses)...")
+    log("\n[3/5] Cargando MovDerco (todos los meses)...")
     t = time.perf_counter()
     mov = cargar_movderco(MOV_GLOB)
     tiempos["movderco"] = time.perf_counter() - t
 
-    log("\n[3/4] Calculando canales por OP...")
+    log("\n[4/5] Calculando canales por OP...")
     t = time.perf_counter()
     resumen = construir_resumen_op(mov, matcher)
     tiempos["resumen_op"] = time.perf_counter() - t
 
-    log("\n[4/4] Actualizando data Derco...")
+    log("\n[5/5] Actualizando data Derco...")
     t = time.perf_counter()
     dd = fix_cols(pd.read_excel(DATA_DERCO, sheet_name=HOJA_DD))
     if COL_OP not in dd.columns or COL_CANAL not in dd.columns:
         raise ValueError(f"data Derco no tiene las columnas '{COL_OP}' / '{COL_CANAL}'")
 
     def op_str(v):
+        # Maneja float nativo, "46000000000.0", y notacion cientifica con coma "4,6E10"
+        s = str(v).strip().replace(",", ".")
         try:
-            return str(int(float(str(v).strip())))
+            return str(int(float(s)))
         except (ValueError, TypeError):
             return str(v).strip()
 
@@ -318,15 +452,14 @@ def main() -> None:
         if len(ces_sin_uso) > 30:
             log(f"        ... y {len(ces_sin_uso) - 30} mas")
 
-    # Backup + escritura
+    # Escritura (backup ya fue hecho en paso 0)
     t = time.perf_counter()
     if dry_run:
         log("\n  [DRY-RUN] data Derco NO fue modificado.")
     else:
-        hacer_backup(DATA_DERCO)
         n = reescribir_canal(DATA_DERCO, nuevos)
         log(f"\n  Filas actualizadas en data Derco: {n:,}")
-    tiempos["backup_escritura"] = time.perf_counter() - t
+    tiempos["backup_escritura"] += time.perf_counter() - t  # acumula sobre el backup inicial
 
     total = time.perf_counter() - t0
 
@@ -354,6 +487,7 @@ def main() -> None:
     log(f"    Filas data Derco       : {len(dd):>9,}")
     log(f"    Filas provisionales    : {provisionales:>9,}  (Estado != '{ESTADO_FINAL}', Canal no definitivo)")
     log(f"    Ubic. sin regla explic.: {len(ubic_default):>9,}  (default catch-all -- agregar regla si crece)")
+    log(f"    t Preparar Excel       : {tiempos['preparar_excel']:>8.1f}s")
     log(f"    t Base CES             : {tiempos['base_ces']:>8.1f}s")
     log(f"    t MovDerco (carga)     : {tiempos['movderco']:>8.1f}s")
     log(f"    t Resumen por OP       : {tiempos['resumen_op']:>8.1f}s")
@@ -369,6 +503,7 @@ def main() -> None:
         "filas_data_derco": len(dd),
         "filas_provisionales": provisionales,
         "ubicaciones_sin_regla": len(ubic_default),
+        "t_preparar_excel_s": round(tiempos["preparar_excel"], 1),
         "t_base_ces_s": round(tiempos["base_ces"], 1),
         "t_movderco_s": round(tiempos["movderco"], 1),
         "t_resumen_op_s": round(tiempos["resumen_op"], 1),
