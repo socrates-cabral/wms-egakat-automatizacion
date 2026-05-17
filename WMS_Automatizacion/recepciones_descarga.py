@@ -21,9 +21,12 @@ Notas de selectores (inspeccionados 2026-03-11):
   - Popup JS "2000+ registros": handler registrado en login() — dismiss
 DERCO: descarga particionada en chunks de 5 días + merge pandas (mismo patrón M7)
 Uso:
-  py recepciones_descarga.py                          → mes actual
-  py recepciones_descarga.py --mes 02/2026            → solo febrero 2026
-  py recepciones_descarga.py --mes 02/2026 --mes 03/2026 → ambos meses
+  py recepciones_descarga.py                                           -> mes actual, QUILICURA (igual que antes)
+  py recepciones_descarga.py --mes 02/2026                            -> febrero 2026, QUILICURA
+  py recepciones_descarga.py --sucursal PUDAHUEL --mes 01/2026 --mes 02/2026  -> backfill Pudahuel
+  py recepciones_descarga.py --sucursal "PUDAHUEL UNITARIO" --mes 01/2026     -> Runo SPA
+  py recepciones_descarga.py --sucursal ALL                           -> todas las sucursales
+  py recepciones_descarga.py --forzar                                 -> re-descarga aunque ya exista hoy
 """
 
 import os
@@ -58,15 +61,40 @@ MESES = {
     10: "10 Octubre", 11: "11 Noviembre", 12: "12 Diciembre",
 }
 
-# Empresa WMS → carpeta destino en OneDrive
-# DERCO al final — descarga particionada en chunks de 5 días
-CLIENTES = {
+# Empresa WMS → carpeta destino en OneDrive, agrupados por depósito
+# DERCO al final en QUILICURA — descarga particionada en chunks de 5 días
+CLIENTES_QUILICURA = {
     "CERVECERIA ABI":   "ABINBEV",
     "DAIKIN":           "DAIKIN",
     "MASCOTAS LATINAS": "MASCOTAS LATINAS",
     "POCHTECA":         "POCHTECA",
     "DERCO":            "DERCO",
 }
+
+CLIENTES_PUDAHUEL = {
+    "BARENTZ":           "BARENTZ",
+    "CEPAS CHILE":       "CEPAS CHILE",
+    "COLLICO":           "COLLICO",
+    "DELIBEST":          "DELIBEST",
+    "INTIME":            "INTIME",
+    "NATIVO DRINKS SPA": "NATIVO DRINKS SPA",
+    "OMNITECH":          "OMNITECH",
+    "UNILEVER":          "UNILEVER",
+    # TRES MONTES: cliente nuevo — confirmar empresa_wms en dropdown WMS Pudahuel antes de activar
+}
+
+CLIENTES_PUDAHUEL_UNITARIO = {
+    "RUNO SPA": "RUNO SPA",
+}
+
+CLIENTES_POR_SUCURSAL = {
+    "QUILICURA":         CLIENTES_QUILICURA,
+    "PUDAHUEL":          CLIENTES_PUDAHUEL,
+    "PUDAHUEL UNITARIO": CLIENTES_PUDAHUEL_UNITARIO,
+}
+
+# Alias para backward-compat: run_todos.py invoca sin --sucursal
+CLIENTES = CLIENTES_QUILICURA
 
 TIMEOUT          = 60_000
 TIMEOUT_DESCARGA = 600_000   # 10 min por descarga/chunk (DERCO puede tardar más de 5 min)
@@ -143,7 +171,7 @@ def partir_en_chunks(fd_dt, fh_dt, chunk_dias):
 
 # ── LOGIN ─────────────────────────────────────────────────────────────────────
 
-def login(page):
+def login(page, sucursal="QUILICURA"):
     # Timeout global: evita que select_option/fill usen el default de 30s de Playwright
     page.set_default_timeout(TIMEOUT)
     # Handler de dialogo JS registrado UNA sola vez para toda la sesion
@@ -163,9 +191,9 @@ def login(page):
     page.wait_for_selector("select", timeout=TIMEOUT)
     for s in page.query_selector_all("select"):
         opts = [o.inner_text().strip() for o in s.query_selector_all("option")]
-        if "QUILICURA" in opts:
-            s.select_option(label="QUILICURA")
-            log("  -> Deposito QUILICURA seleccionado")
+        if sucursal in opts:
+            s.select_option(label=sucursal)
+            log(f"  -> Deposito {sucursal} seleccionado")
             break
     page.query_selector("input[value='Aceptar']").click()
     page.wait_for_load_state("load", timeout=TIMEOUT)
@@ -174,7 +202,7 @@ def login(page):
 
 # ── DESCARGA DE UN RANGO (bloque atómico) ─────────────────────────────────────
 
-def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo):
+def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo, sucursal="QUILICURA"):
     """
     Navega al formulario, aplica filtros y descarga el Excel para el rango dado.
     El handler de dialog fue registrado en login() — no se registra aquí.
@@ -182,10 +210,10 @@ def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo):
     page.goto(WMS_URL, wait_until="load", timeout=TIMEOUT)
     page.wait_for_timeout(2000)
 
-    # Sucursal → QUILICURA (dispara carga AJAX de empresas)
-    page.select_option("select[name='vSUCURSAL']", label="QUILICURA")
+    # Sucursal (dispara carga AJAX de empresas)
+    page.select_option("select[name='vSUCURSAL']", label=sucursal)
     page.wait_for_timeout(1500)   # esperar que AJAX pueble el dropdown de empresa
-    log(f"  -> Sucursal: QUILICURA")
+    log(f"  -> Sucursal: {sucursal}")
 
     # Empresa (disponible tras AJAX)
     page.select_option("select[name='vEMPRESA']", label=empresa_wms)
@@ -226,12 +254,12 @@ def _bajar_excel(page, empresa_wms, fd_str, fh_str, ruta_archivo):
 
 # ── DESCARGA CLIENTE NORMAL ────────────────────────────────────────────────────
 
-def descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta):
+def descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta, sucursal="QUILICURA"):
     fd_str = fd_dt.strftime("%d/%m/%Y")
     fh_str = fh_dt.strftime("%d/%m/%Y")
     try:
         archivo_final = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
-        _bajar_excel(page, empresa_wms, fd_str, fh_str, archivo_final)
+        _bajar_excel(page, empresa_wms, fd_str, fh_str, archivo_final, sucursal)
         _asegurar_headers(archivo_final, carpeta_cliente, "Recepciones", "Recepciones Recibidas.xlsx")
         log(f"  -> [OK] Guardado: {archivo_final}")
         return True
@@ -245,7 +273,7 @@ def descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str,
 
 # ── DESCARGA DERCO PARTICIONADA ────────────────────────────────────────────────
 
-def descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta):
+def descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta, sucursal="QUILICURA"):
     chunks = partir_en_chunks(fd_dt, fh_dt, DERCO_CHUNK_DIAS)
     log(f"  -> Particionando en {len(chunks)} chunk(s) de {DERCO_CHUNK_DIAS} dias")
 
@@ -262,7 +290,7 @@ def descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta):
         tmp.close()
 
         try:
-            _bajar_excel(page, "DERCO", fd_str, fh_str, tmp_path)
+            _bajar_excel(page, "DERCO", fd_str, fh_str, tmp_path, sucursal)
             df = pd.read_excel(tmp_path, engine="openpyxl")
             log(f"     {len(df)} filas descargadas")
             dataframes.append(df)
@@ -332,6 +360,9 @@ def run():
                         help="Mes a descargar (repetible). Sin argumento: mes actual.")
     parser.add_argument("--forzar", action="store_true",
                         help="Ignorar checkpoints y re-descargar aunque el archivo exista hoy.")
+    parser.add_argument("--sucursal", default="QUILICURA",
+                        choices=["QUILICURA", "PUDAHUEL", "PUDAHUEL UNITARIO", "ALL"],
+                        help="Deposito WMS a procesar. Default: QUILICURA (comportamiento original).")
     args = parser.parse_args()
 
     meses_arg = args.mes or [None]
@@ -339,6 +370,10 @@ def run():
     FORZAR    = args.forzar
     if FORZAR:
         log(f"[FORZAR] Checkpoints ignorados — re-descarga completa")
+
+    sucursales_a_procesar = (list(CLIENTES_POR_SUCURSAL.keys())
+                             if args.sucursal == "ALL"
+                             else [args.sucursal])
 
     # Graph API init (una sola vez para todos los clientes)
     _sp_token, _sp_drive_id = None, None
@@ -349,79 +384,90 @@ def run():
     except Exception as e:
         log(f"[WARN] Graph API init falló — sin subida SP directa: {e}")
 
-    log(f"Modulo 8 — Recepciones Recibidas | {len(periodos)} periodo(s) | {len(CLIENTES)} clientes")
+    total_clientes = sum(len(CLIENTES_POR_SUCURSAL[s]) for s in sucursales_a_procesar)
+    log(f"Modulo 8 — Recepciones Recibidas | {len(periodos)} periodo(s) | {total_clientes} cliente(s) | sucursales: {sucursales_a_procesar}")
     for fd, fh, ano, mes in periodos:
         log(f"  Periodo: {fd.strftime('%d/%m/%Y')} a {fh.strftime('%d/%m/%Y')}  ->  {ano}/{mes}")
 
     resultados = []
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=0)
-        context = browser.new_context(accept_downloads=True)
-        page    = context.new_page()
+    for sucursal in sucursales_a_procesar:
+        clientes_sucursal = CLIENTES_POR_SUCURSAL[sucursal]
+        if not clientes_sucursal:
+            log(f"\n[SKIP] {sucursal}: sin clientes configurados")
+            continue
 
-        login(page)
+        log(f"\n{'='*55}")
+        log(f"  SUCURSAL: {sucursal} ({len(clientes_sucursal)} clientes)")
+        log(f"{'='*55}")
 
-        for fd_dt, fh_dt, ano_str, mes_carpeta in periodos:
-            log(f"\n{'='*55}")
-            log(f"  PERIODO: {fd_dt.strftime('%d/%m/%Y')} al {fh_dt.strftime('%d/%m/%Y')}  ({mes_carpeta} {ano_str})")
-            log(f"{'='*55}")
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=False, slow_mo=0)
+            context = browser.new_context(accept_downloads=True)
+            page    = context.new_page()
 
-            hoy = datetime.now().date()
-            hoy_str = hoy.strftime("%Y%m%d")
+            login(page, sucursal)
 
-            for empresa_wms, carpeta_cliente in CLIENTES.items():
-                log(f"\n>> {empresa_wms} -> {carpeta_cliente}")
+            for fd_dt, fh_dt, ano_str, mes_carpeta in periodos:
+                log(f"\n{'='*55}")
+                log(f"  PERIODO: {fd_dt.strftime('%d/%m/%Y')} al {fh_dt.strftime('%d/%m/%Y')}  ({mes_carpeta} {ano_str})")
+                log(f"{'='*55}")
 
-                archivo_hoy = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
+                hoy = datetime.now().date()
+                hoy_str = hoy.strftime("%Y%m%d")
 
-                if empresa_wms == "DERCO":
-                    marker_ok = str(Path(__file__).parent.parent / "logs" / f"derco_recepciones_{hoy_str}.ok")
-                    if not FORZAR and os.path.exists(marker_ok):
-                        log(f"  >> [SKIP] DERCO completado hoy (marcador OK)")
-                        resultados.append((empresa_wms, mes_carpeta, True))
-                        continue
-                    if FORZAR and os.path.exists(marker_ok):
-                        os.remove(marker_ok)
-                        log(f"  >> [FORZAR] Marcador eliminado — re-descargando DERCO")
-                    ok = descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta)
-                    if ok:
-                        open(marker_ok, "w").close()
-                        if _sp_token:
+                for empresa_wms, carpeta_cliente in clientes_sucursal.items():
+                    log(f"\n>> {empresa_wms} -> {carpeta_cliente}")
+
+                    archivo_hoy = ruta_destino(carpeta_cliente, ano_str, mes_carpeta)
+
+                    if empresa_wms == "DERCO":
+                        marker_ok = str(Path(__file__).parent.parent / "logs" / f"derco_recepciones_{hoy_str}.ok")
+                        if not FORZAR and os.path.exists(marker_ok):
+                            log(f"  >> [SKIP] DERCO completado hoy (marcador OK)")
+                            resultados.append((empresa_wms, mes_carpeta, sucursal, True))
+                            continue
+                        if FORZAR and os.path.exists(marker_ok):
+                            os.remove(marker_ok)
+                            log(f"  >> [FORZAR] Marcador eliminado — re-descargando DERCO")
+                        ok = descargar_derco(page, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta, sucursal)
+                        if ok:
+                            open(marker_ok, "w").close()
+                            if _sp_token:
+                                try:
+                                    ok_sp = subir_archivo_sp(_sp_token, _sp_drive_id,
+                                        f"Clientes EK/{carpeta_cliente}/Recepciones/{ano_str}/{mes_carpeta}",
+                                        Path(archivo_hoy))
+                                    log(f"  -> [SP] {'OK' if ok_sp else 'WARN'} SharePoint Recepciones DERCO")
+                                except Exception as e_sp:
+                                    log(f"  -> [WARN SP] {e_sp}")
+                    else:
+                        # Clientes normales: solo escriben archivo en éxito → mtime es suficiente
+                        if not FORZAR and os.path.exists(archivo_hoy):
+                            mtime = datetime.fromtimestamp(os.path.getmtime(archivo_hoy)).date()
+                            if mtime == hoy:
+                                log(f"  >> [SKIP] Ya descargado hoy: {empresa_wms}")
+                                resultados.append((empresa_wms, mes_carpeta, sucursal, True))
+                                continue
+                        ok = descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta, sucursal)
+                        if ok and _sp_token:
                             try:
                                 ok_sp = subir_archivo_sp(_sp_token, _sp_drive_id,
                                     f"Clientes EK/{carpeta_cliente}/Recepciones/{ano_str}/{mes_carpeta}",
                                     Path(archivo_hoy))
-                                log(f"  -> [SP] {'OK' if ok_sp else 'WARN'} SharePoint Recepciones DERCO")
+                                log(f"  -> [SP] {'OK' if ok_sp else 'WARN'} SharePoint Recepciones {empresa_wms}")
                             except Exception as e_sp:
                                 log(f"  -> [WARN SP] {e_sp}")
-                else:
-                    # Clientes normales: solo escriben archivo en éxito → mtime es suficiente
-                    if not FORZAR and os.path.exists(archivo_hoy):
-                        mtime = datetime.fromtimestamp(os.path.getmtime(archivo_hoy)).date()
-                        if mtime == hoy:
-                            log(f"  >> [SKIP] Ya descargado hoy: {empresa_wms}")
-                            resultados.append((empresa_wms, mes_carpeta, True))
-                            continue
-                    ok = descargar_cliente(page, empresa_wms, carpeta_cliente, fd_dt, fh_dt, ano_str, mes_carpeta)
-                    if ok and _sp_token:
-                        try:
-                            ok_sp = subir_archivo_sp(_sp_token, _sp_drive_id,
-                                f"Clientes EK/{carpeta_cliente}/Recepciones/{ano_str}/{mes_carpeta}",
-                                Path(archivo_hoy))
-                            log(f"  -> [SP] {'OK' if ok_sp else 'WARN'} SharePoint Recepciones {empresa_wms}")
-                        except Exception as e_sp:
-                            log(f"  -> [WARN SP] {e_sp}")
 
-                resultados.append((empresa_wms, mes_carpeta, ok))
+                    resultados.append((empresa_wms, mes_carpeta, sucursal, ok))
 
-        browser.close()
+            browser.close()
 
     print("\n" + "=" * 55)
     print("RESUMEN MODULO 8 — Recepciones Recibidas")
     print("=" * 55)
-    for empresa, mes, ok in resultados:
-        print(f"  {'[OK]    ' if ok else '[FALLO] '}  {mes:<15}  {empresa}")
+    for empresa, mes, suc, ok in resultados:
+        print(f"  {'[OK]    ' if ok else '[FALLO] '}  {suc:<18}  {mes:<15}  {empresa}")
     exitosos = sum(1 for *_, ok in resultados if ok)
     print(f"\n  {exitosos}/{len(resultados)} descargas OK")
     print("=" * 55)
