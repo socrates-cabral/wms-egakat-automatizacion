@@ -50,6 +50,7 @@ from productividad_usuarios import (
     calcular_por_usuario_canal,
     calcular_por_usuario_cliente,
 )
+from recepciones_kpi import construir_payload_recepciones
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -82,6 +83,7 @@ STAGING_ROOT = _ONEDRIVE_ROOT / "Datos para Dashboard - Stagin IN- OUT"
 POSICIONES_ROOT = _ONEDRIVE_ROOT / "Datos para Dashboard - Consulta de Posiciones"
 INVENTARIO_DIM_ROOT = _ONEDRIVE_ROOT / "datos para Dashboard EK" / "Inventario"
 INVENTARIO_DIM_FILENAME = "Tabla Ubicaciones CDs.xlsx"
+RECEPCIONES_ROOT_OFICIAL = _ONEDRIVE_ROOT / "Datos para Dashboard - Clientes EK"
 CONTEOS_OFICIAL_ROOT = _ONEDRIVE_ROOT / "Datos para Dashboard - Registros de conteos"
 CONTEOS_INVENTARIO_FILENAME = "Registros de conteo ciclico.xlsx"
 CONTEOS_INVENTARIO_VARIANTES = {
@@ -5857,6 +5859,12 @@ def main() -> int:
         fecha_generacion=fecha_generacion,
         ubicaciones_map=ubicaciones_map,
     )
+    recepciones_payload = construir_payload_recepciones(
+        raiz_onedrive=RECEPCIONES_ROOT_OFICIAL,
+        year=args.year,
+        hasta_mes=args.month,
+    )
+    historico_payload["recepciones"] = recepciones_payload
     productividad_payload, fuente_productividad, alertas_prod, recomendaciones_prod = calcular_productividad(
         productividad_fuentes,
         year=args.year,
