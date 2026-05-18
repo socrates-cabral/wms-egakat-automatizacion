@@ -188,7 +188,7 @@
         "sessionIdType": "customKey",
         "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
         "tableName": "egakat_ops_chat_memory",
-        "contextWindowLength": 10
+        "contextWindowLength": 4
       },
       "id": "08ea7409-6529-449f-b551-81e2b4bdea76",
       "name": "Memoria por Chat",
