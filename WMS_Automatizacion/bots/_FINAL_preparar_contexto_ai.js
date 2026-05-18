@@ -760,7 +760,7 @@
     periodoSolicitado.es_ytd
   );
 
-  if ((periodoSolicitadoNoDisponible || solicitudYtdSinHistorico || solicitudComparativaSinHistorico) && !historicoResponde && !esUsuario) {
+  if ((periodoSolicitadoNoDisponible || solicitudYtdSinHistorico || solicitudComparativaSinHistorico) && !historicoResponde && !esUsuario && !esRecepciones) {
     const solicitadoTexto = periodoSolicitado.es_ytd
       ? 'acumulado anual / YTD'
       : periodoSolicitado.es_comparativo
@@ -798,7 +798,7 @@
     return JSON.stringify(contexto);
   }
 
-  if ((periodoSolicitadoNoDisponible || periodoSolicitado.es_ytd || periodoSolicitado.es_comparativo) && historicoResponde && !esUsuario) {
+  if ((periodoSolicitadoNoDisponible || periodoSolicitado.es_ytd || periodoSolicitado.es_comparativo) && historicoResponde && !esUsuario && !esRecepciones) {
     const historicoOut = {
       disponible: $json.disponible,
       fecha_consulta: $json.fecha_consulta,
