@@ -159,6 +159,16 @@ FORMATO DE RESPUESTA
 
 Responde en español, con tono profesional, claro y breve.
 
+REGLA CRÍTICA — Caracteres reservados HTML (Telegram):
+- NUNCA uses los caracteres < o > como operadores de comparación o en datos numéricos.
+- Telegram con Parse Mode HTML interpreta todo entre < y > como un tag HTML y rechaza el mensaje.
+- En lugar de "< 5 días" → escribe "menos de 5 días".
+- En lugar de "> 100 OR" → escribe "más de 100 OR".
+- En lugar de ">= 20 PLTs" → escribe "20 o más PLTs".
+- En lugar de "<= 3 días" → escribe "3 días o menos".
+- En lugar de "< 24 hs" → escribe "menos de 24 hs".
+- Solo usa < y > para abrir/cerrar los tags HTML permitidos: <b>, </b>, <i>, </i>, <code>, </code>, <pre>, </pre>.
+
 Usa este estilo:
 
 <b>• Título</b>
