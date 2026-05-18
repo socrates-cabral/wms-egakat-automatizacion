@@ -43,14 +43,14 @@ ANTISPAM_HS = 4
 # Tareas críticas. max_silencio_hs = cuánto puede pasar sin correr antes de alertar.
 # Para tareas MON-FRI poner 75 (cubre weekend). Para diarias 25-30.
 TAREAS_CRITICAS = [
-    {"nombre": "\\WMS Egakat - Descarga diaria",                       "max_silencio_hs": 25},
-    {"nombre": "\\WMS Egakat - Maestro Articulos Derco",               "max_silencio_hs": 25},
-    {"nombre": "\\WMS Egakat - Watchdog Alerta",                       "max_silencio_hs": 25},
-    {"nombre": "\\Productividad Diario - EGA KAT",                     "max_silencio_hs": 25},
-    {"nombre": "\\Softnet Ventas - Descarga Diaria",                   "max_silencio_hs": 30},
-    {"nombre": "\\VDR Comparador - EGA KAT",                           "max_silencio_hs": 25},
+    {"nombre": "\\WMS Egakat - Descarga diaria",                       "max_silencio_hs": 75},
+    {"nombre": "\\WMS Egakat - Maestro Articulos Derco",               "max_silencio_hs": 75},
+    {"nombre": "\\WMS Egakat - Watchdog Alerta",                       "max_silencio_hs": 75},
+    {"nombre": "\\Productividad Diario - EGA KAT",                     "max_silencio_hs": 75},
+    {"nombre": "\\Softnet Ventas - Descarga Diaria",                   "max_silencio_hs": 75},
+    {"nombre": "\\VDR Comparador - EGA KAT",                           "max_silencio_hs": 75},
     {"nombre": "\\FillRate Egakat - Descarga Diaria",                  "max_silencio_hs": 75},
-    {"nombre": "\\Watchdog Modulos - Productividad y FillRate",        "max_silencio_hs": 25},
+    {"nombre": "\\Watchdog Modulos - Productividad y FillRate",        "max_silencio_hs": 75},
 ]
 
 # Códigos de Task Scheduler que ignoramos como falsos positivos.
@@ -127,6 +127,12 @@ def cargar_estado() -> dict:
 
 
 def guardar_estado(estado: dict):
+    # Purgar entradas más antiguas de 7 días para evitar crecimiento indefinido
+    cutoff = datetime.now() - timedelta(days=7)
+    estado = {
+        k: v for k, v in estado.items()
+        if datetime.fromisoformat(v) > cutoff
+    }
     STATE_FILE.write_text(json.dumps(estado, indent=2, default=str), encoding="utf-8")
 
 
@@ -174,8 +180,10 @@ def evaluar(tarea_cfg: dict, estado: dict) -> list[str]:
             f"Última ejecución: {info.get('ultimo_tiempo_raw', '—')}\n"
             f"Revisar logs."
         )
-        if debe_alertar(nombre, f"fail:{res}", estado):
-            registrar_alerta(nombre, f"fail:{res}", estado)
+        # Clave incluye timestamp: mismo fallo en misma ejecución no se repite
+        fail_key = f"fail:{res}:{info.get('ultimo_tiempo_raw', '')}"
+        if debe_alertar(nombre, fail_key, estado):
+            registrar_alerta(nombre, fail_key, estado)
             alertas.append(msg)
 
     ultima_dt = info.get("ultimo_tiempo")
@@ -187,8 +195,10 @@ def evaluar(tarea_cfg: dict, estado: dict) -> list[str]:
                 f"Sin correr hace {horas_silencio:.1f} h (límite: {max_sil} h)\n"
                 f"Última ejecución: {info.get('ultimo_tiempo_raw', '—')}"
             )
-            if debe_alertar(nombre, "silencio", estado):
-                registrar_alerta(nombre, "silencio", estado)
+            # Clave incluye timestamp: no re-alertar si la tarea sigue sin correr
+        silencio_key = f"silencio:{info.get('ultimo_tiempo_raw', '')}"
+        if debe_alertar(nombre, silencio_key, estado):
+                registrar_alerta(nombre, silencio_key, estado)
                 alertas.append(msg)
 
     return alertas
