@@ -187,17 +187,23 @@
       "parameters": {
         "sessionIdType": "customKey",
         "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "contextWindowLength": 2
+        "tableName": "egakat_ops_chat_memory",
+        "contextWindowLength": 10
       },
       "id": "08ea7409-6529-449f-b551-81e2b4bdea76",
       "name": "Memoria por Chat",
-      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
         1376,
         800
       ],
-      "disabled": true
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Egakat (PostgreSQL)"
+        }
+      }
     },
     {
       "parameters": {
