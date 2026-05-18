@@ -374,6 +374,9 @@
     msg.includes('recepción') || msg.includes('recepciónes') ||
     msg.includes('recibida') || msg.includes('recibidas') ||
     msg.includes('recibido') || msg.includes('recibidos') ||
+    msg.includes('recibio') || msg.includes('recibió') ||
+    msg.includes('recibieron') || msg.includes('recibimos') ||
+    msg.includes('recibe') || msg.includes('reciben') ||
     msg.includes('pallets recibidos') || msg.includes('pallet recibido') ||
     msg.includes('tpr') ||
     msg.includes('inbound') ||
@@ -1788,17 +1791,17 @@
     };
   }
 
-  // Safety net: si ningún bloque específico reemplazó contexto (kpi_ops === kpi completo),
-  // devolver solo metadatos operativos para evitar 460K tokens en el LLM.
+  // Safety net: cualquier output > 30000 chars (~7.5K tokens) se reemplaza por minimo.
+  // Evita que queries no clasificadas envien el kpi_ops crudo (>1MB) al LLM.
   const _rawOut = JSON.stringify(contexto);
-  if (_rawOut.length > 20000 && contexto.kpi_ops === kpi) {
+  if (_rawOut.length > 30000) {
     return JSON.stringify({
       disponible: contexto.disponible,
       fecha_consulta: contexto.fecha_consulta,
       alertas: contexto.alertas,
       pipeline: contexto.pipeline,
       kpi_ops: {
-        _aviso: 'Contexto general omitido por límite de tokens. Usar palabras clave: recepción/recibido, OTIF/pedido, productividad/líneas, inventario/stock, staging.'
+        _aviso: 'Contexto omitido por exceso de tamaño. Reformular con palabras clave: recepcion/recibio, OTIF/pedido, productividad/lineas, inventario/stock, staging.'
       }
     });
   }
