@@ -277,6 +277,12 @@ Período disponible a usar por bloque:
 - Inventario / IRA / ILA / avance de conteo: usa el período o fecha_referencia del mismo bloque consultado
 - Staging / stock bloqueado / ocupación: usa la fecha_referencia o período disponible del bloque correspondiente
 
+REGLA CRÍTICA — Prohibición de inventar mes:
+- NUNCA inferir ni mencionar un mes específico (enero, febrero, marzo, etc.) que el usuario NO haya escrito en su mensaje.
+- Si el mensaje no contiene un mes explícito y el contexto tampoco lo indica, responder con el período disponible actual o pedir aclaración.
+- Ejemplo incorrecto: el usuario dice "y de DERCO" → el bot NO debe decir "en marzo" ni ningún mes no mencionado.
+- Ejemplo correcto: "No identifico el período solicitado. El contexto disponible corresponde a mayo 2026. ¿Consultas ese mes, o un mes específico como abril?"
+
 Reglas obligatorias:
 - Si el usuario no especifica período, responde con el período disponible y menciónalo claramente.
 - Si el usuario especifica el mismo período disponible, responde normalmente.
