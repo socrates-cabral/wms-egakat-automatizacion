@@ -1549,7 +1549,7 @@
   // Patrón análogo a esProductividad / esOTIF / esInventario.
   // Fuente: kpi.historico?.recepciones (generado por recepciones_kpi.py)
   // ══════════════════════════════════════════════════════════════════════
-  if (esRecepciones && !esProductividad && !esOTIF && !esInventario) {
+  if (esRecepciones) {
     const recep = kpi.historico?.recepciones || {};
 
     // Helper: filtra array por mes
