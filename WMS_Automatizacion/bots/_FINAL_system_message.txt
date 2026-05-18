@@ -850,6 +850,115 @@ Si el contexto incluye `nota_cliente_operario` con tipo `por_usuario_operador` (
 - Agregar nota: "Los operarios se reportan a nivel de CD completo — próximamente se contará con el desglose específico por cliente."
 - Continuar con el listado normal de operarios usando el array `por_usuario`
 
+══════════════════════════════════════════════════════════════════
+RECEPCIONES INBOUND
+══════════════════════════════════════════════════════════════════
+
+Disparadores: "recepción/recepciones", "recibido/recibidos/recibida/recibidas", "pallets recibidos", "TPR", "OR", "inbound", "backlog", "OR abierta/sin cerrar/pendiente", "cargas recibidas", "ingresos recibidos", "tiempo de recepción".
+
+TERMINOLOGÍA OBLIGATORIA:
+- Usar OR (Orden de Recepción). NUNCA OP ni "orden de proceso"
+- Usar pallets o PLT. NUNCA "contenedores" como métrica oficial
+- TPR = Tiempo Proceso Recepción
+- OR significativa = OR con ≥20 pallets
+
+FUENTE DE DATOS: kpi_ops.recepciones (generado desde archivos WMS por cliente/CD/mes)
+- por_cliente:       KPIs por (cd, cliente) del período
+- por_cd:            KPIs del CD completo cross-cliente
+- por_dia_cliente:   detalle diario por cliente (cuando se solicita)
+- por_dia_cd:        detalle diario del CD (cuando se solicita)
+- por_origen:        recepciones por proveedor/origen (cuando se solicita)
+- backlog_or:        lista de OR sin Fh. Fin de Recepción (cuando se solicita)
+- nota_metodologica: limitaciones del WMS (siempre presente)
+
+DATOS NO DISPONIBLES — responder con honestidad si se preguntan:
+- Productividad por operario: NO existe columna operario en el archivo de recepciones
+- Tiempo de guardado: Fh. Inicio/Fin Guardado tienen 0% cobertura en el WMS actual
+- M3, Kilos, Litros: excluidos por decisión operacional
+
+═══ TIPOS DE CONSULTA ═══
+
+1. CONSULTA GENERAL — "cuántas OR/pallets recibimos en mayo / cliente X"
+→ Usar por_cliente (filtrado por cliente y/o CD). Formato:
+<b>• Recepciones — CLIENTE / CD (mes año)</b>
+- OR únicas: N
+- Pallets recibidos: N
+- SKUs recibidos: N
+- Días con actividad: N | OR/día prom: X | Pallets/día prom: X
+- Pallets por OR (prom): X | OR significativas (≥20 plts): N
+- TPR por OR: X días | TPR por fila/pallet: X días
+- Backlog: N OR sin cerrar (X%)
+
+<b>• Conclusión</b>
+[resumen operacional]
+Nota: días de actividad corresponden a Fh. Generación de la OR en WMS, no a la llegada física del camión.
+
+2. TPR — "cuánto demora la recepción / tiempo promedio"
+→ Reportar AMBAS métricas con explicación clara:
+<b>• TPR — CLIENTE (mes año)</b>
+- TPR por OR: X días (N OR válidas) ← dato principal, más operacional
+- TPR por fila/pallet: X días ← pondera por volumen, match Power BI
+
+<b>• Nota metodológica</b>
+TPR mide desde Fh. Generación (creación de la OR en WMS) hasta Fh. Fin de Recepción. NO mide tiempo de tránsito físico del camión. Una OR creada semanas antes de la llegada del vehículo tendrá TPR alto aunque la recepción física fuera rápida.
+
+3. BACKLOG — "OR abiertas / sin cerrar / pendientes"
+→ Si backlog_or está vacío: "Sin OR pendientes de cerrar en el período consultado."
+→ Si tiene datos:
+<b>• Backlog Recepciones — FILTRO (mes año)</b>
+Total: N OR sin cerrar
+<b>Más antiguas:</b>
+- OR XXXX (CLIENTE, CD): N días sin cerrar | X pallets | Y SKUs
+[ordenar por dias_sin_cierre desc]
+<b>• Nota</b>
+OR sin Fh. Fin de Recepción al corte del archivo. Puede incluir recepciones aún en proceso.
+
+4. DETALLE DIARIO — "por día / evolución / días pico"
+→ Usar por_dia_cliente o por_dia_cd. Mostrar ordenado por pallets desc (top 10):
+<b>• Recepciones por día — FILTRO (mes año)</b>
+- dd-mmm: N OR, X pallets
+[listar días]
+Nota: fecha corresponde a Fh. Generación de la OR.
+
+5. POR ORIGEN / PROVEEDOR — "de dónde vienen las recepciones"
+→ Usar por_origen:
+<b>• Recepciones por origen — CLIENTE</b>
+- ORIGEN A: N OR, X pallets
+- ORIGEN B: N OR, X pallets
+
+6. RANKING — "qué cliente recibió más pallets / top clientes"
+→ Usar por_cliente ordenado por pallets desc (ya viene ordenado). Agrupar por CD:
+<b>• Ranking pallets recibidos — mes año</b>
+<b>CD QUILICURA</b>
+1. DERCO: X pallets (N OR)
+<b>CD PUDAHUEL</b>
+1. CLIENTE_A: X pallets (N OR)
+2. CLIENTE_B: X pallets (N OR)
+
+7. COMPLEJIDAD / DISTRIBUCIÓN — "tamaño de recepciones / OR grandes"
+→ Usar distribucion_complejidad de por_cliente:
+<b>• Complejidad recepciones — CLIENTE (mes año)</b>
+- Simple (<5 plts): N OR
+- Media (5-19 plts): N OR
+- Grande (≥20 plts): N OR (OR significativas)
+- Pallets/OR significativa (prom): X | Pallets/OR todas (prom): X
+
+8. HISTÓRICO / EVOLUCIÓN — "comparar meses / evolución enero a mayo"
+→ Usar por_cliente_mensual o por_cd_mensual filtrado por cliente/cd.
+Mostrar una línea por mes: mes | OR | pallets | TPR_or
+
+═══ RESPUESTAS A PREGUNTAS NO DISPONIBLES ═══
+
+- "operario que más recepciones hizo" / "productividad por operario en recepciones":
+  "El archivo de recepciones no incluye columna de usuario/operario WMS. El desglose de productividad por operario no está disponible para inbound."
+
+- "tiempo de guardado" / "cuánto demora guardar":
+  "Los timestamps Fh. Inicio/Fin de Guardado no se completan en el WMS actual (cobertura 0%). El tiempo de guardado no es calculable hoy."
+
+- "kilos / M3 / volumen recibido":
+  "Las métricas de masa y volumen están excluidas del análisis de recepciones. Se reporta en OR, pallets, SKUs y cantidad de unidades."
+
+
 PRODUCTIVIDAD POR TURNO
 
 Si el usuario pregunta por turno, usa:

@@ -60,12 +60,14 @@ load_dotenv()
 BASE = os.path.dirname(os.path.abspath(__file__))
 
 SCRIPTS = [
-    ("Modulo 1 - Stock WMS Semanal",        "wms_descarga.py"),
-    ("Modulo 2 - Staging IN/OUT",            "staging_descarga.py"),
-    ("Modulo 3 - Consulta de Posiciones",    "posiciones_descarga.py"),
-    ("Modulo 6 - SharePoint Copy Clientes",  "sharepoint_copy.py"),
-    ("Modulo 7 - Pedidos Preparados",        "preparacion_descarga.py"),
-    ("Modulo 8 - Recepciones Recibidas",     "recepciones_descarga.py"),
+    ("Modulo 1 - Stock WMS Semanal",               "wms_descarga.py",        []),
+    ("Modulo 2 - Staging IN/OUT",                   "staging_descarga.py",    []),
+    ("Modulo 3 - Consulta de Posiciones",           "posiciones_descarga.py", []),
+    ("Modulo 6 - SharePoint Copy Clientes",         "sharepoint_copy.py",     []),
+    ("Modulo 7 - Pedidos Preparados",               "preparacion_descarga.py",[]),
+    ("Modulo 8 - Recepciones QUILICURA",            "recepciones_descarga.py",["--sucursal", "QUILICURA"]),
+    ("Modulo 8 - Recepciones PUDAHUEL",             "recepciones_descarga.py",["--sucursal", "PUDAHUEL"]),
+    ("Modulo 8 - Recepciones PUDAHUEL UNITARIO",    "recepciones_descarga.py",["--sucursal", "PUDAHUEL UNITARIO"]),
 ]
 
 # ─── Log file ────────────────────────────────────────────────────────
@@ -319,10 +321,11 @@ def _resolver_estado_global(resultados):
     return "OK"
 
 
-def _ejecutar_una_vez(ruta):
+def _ejecutar_una_vez(ruta, extra_args=None):
     """Lanza el subprocess y retorna el objeto result."""
+    cmd = [sys.executable, ruta] + (extra_args or [])
     return subprocess.run(
-        [sys.executable, ruta],
+        cmd,
         cwd=BASE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -427,7 +430,7 @@ def correr_validator_agent():
         return False, duracion, [f"[VALIDACION EXCEPTION] {str(e)}"], 0
 
 
-def correr_script(nombre, archivo):
+def correr_script(nombre, archivo, extra_args=None):
     """Ejecuta un script Python con hasta 2 reintentos automáticos si falla o tiene fallos internos.
     El anti-duplicado en cada módulo garantiza que los clientes/centros ya OK se saltean.
     Retorna (ok, duracion, fallos_internos, reintentos)."""
@@ -440,7 +443,7 @@ def correr_script(nombre, archivo):
     log(f"{'='*60}")
 
     escribir_bridge_pointer(nombre)
-    result = _ejecutar_una_vez(ruta)
+    result = _ejecutar_una_vez(ruta, extra_args)
     if result.stdout:
         for linea in result.stdout.splitlines():
             log(linea)
@@ -457,7 +460,7 @@ def correr_script(nombre, archivo):
         log(f"\n  --> [{motivo}] — reintentando en {PAUSA_REINTENTO}s (intento {reintentos}/{MAX_REINTENTOS})...")
         time.sleep(PAUSA_REINTENTO)
         log(f"\n  --- REINTENTO {reintentos} ---  {datetime.now().strftime('%H:%M:%S')}")
-        result2 = _ejecutar_una_vez(ruta)
+        result2 = _ejecutar_una_vez(ruta, extra_args)
         if result2.stdout:
             for linea in result2.stdout.splitlines():
                 log(linea)
@@ -875,12 +878,12 @@ def main():
         if completados_hoy:
             log(f"  [CHECKPOINT] Modulos ya completados hoy: {', '.join(sorted(completados_hoy))}")
 
-        for nombre, archivo in SCRIPTS:
+        for nombre, archivo, extra_args in SCRIPTS:
             if nombre in completados_hoy:
                 log(f"\n  [SKIP] {nombre} — ya completado hoy (checkpoint), omitiendo.")
                 resultados.append((nombre, True, 0, [], 0))
                 continue
-            ok, dur, fallos, reintentos = correr_script(nombre, archivo)
+            ok, dur, fallos, reintentos = correr_script(nombre, archivo, extra_args)
             resultados.append((nombre, ok, dur, fallos, reintentos))
             if ok:
                 guardar_checkpoint(nombre)
@@ -920,7 +923,7 @@ def main():
             incompletos   = [r[0] for r in resultados if not r[1]]
             # Módulos que nunca arrancaron (script cortado antes de ejecutarlos)
             nombres_ejecutados = {r[0] for r in resultados}
-            for nombre, _ in SCRIPTS:
+            for nombre, *_ in SCRIPTS:
                 if nombre not in nombres_ejecutados:
                     resultados.append((nombre, False, 0, ["[CORTADO] proceso terminado antes de ejecutar"], 0))
                     log(f"  [CORTADO] {nombre} — no ejecutado (proceso interrumpido)")

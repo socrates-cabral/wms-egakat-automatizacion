@@ -368,6 +368,86 @@
       msg.includes('diferencias')
     );
 
+  // ── DETECCIÓN RECEPCIONES INBOUND ─────────────────────────────────────
+  const esRecepciones =
+    msg.includes('recepcion') || msg.includes('recepciones') ||
+    msg.includes('recepción') || msg.includes('recepciónes') ||
+    msg.includes('recibida') || msg.includes('recibidas') ||
+    msg.includes('recibido') || msg.includes('recibidos') ||
+    msg.includes('pallets recibidos') || msg.includes('pallet recibido') ||
+    msg.includes('tpr') ||
+    msg.includes('inbound') ||
+    msg.includes('backlog') ||
+    msg.includes('or abierta') || msg.includes('or abiertas') ||
+    msg.includes('or sin cerrar') || msg.includes('or sin cierre') ||
+    msg.includes('or pendiente') || msg.includes('or pendientes') ||
+    msg.includes('cargas recibidas') || msg.includes('carga recibida') ||
+    msg.includes('ingresos recibidos') || msg.includes('ingreso recibido') ||
+    msg.includes('tiempo recepcion') || msg.includes('tiempo de recepcion') ||
+    msg.includes('tiempo recepción') || msg.includes('tiempo de recepción') ||
+    msg.includes('cuanto demora la recepcion') || msg.includes('cuánto demora la recepción');
+
+  const pideBacklog = esRecepciones && (
+    msg.includes('abierta') || msg.includes('abiertas') ||
+    msg.includes('sin cerrar') || msg.includes('sin cierre') ||
+    msg.includes('pendiente') || msg.includes('pendientes') ||
+    msg.includes('backlog')
+  );
+
+  const pideOrigenRecep = esRecepciones && (
+    msg.includes('origen') || msg.includes('proveedor') || msg.includes('proveedores') ||
+    msg.includes('de donde') || msg.includes('de dónde') ||
+    msg.includes('viene de') || msg.includes('vienen de')
+  );
+
+  const pidePorDiaRecep = esRecepciones && (
+    msg.includes('por dia') || msg.includes('por día') ||
+    msg.includes('diario') || msg.includes('diaria') ||
+    msg.includes('que dia') || msg.includes('qué día') ||
+    msg.includes('por fecha') ||
+    msg.includes('dia pico') || msg.includes('día pico') ||
+    msg.includes('dias pico') || msg.includes('días pico')
+  );
+
+  const pideTPR = esRecepciones && (
+    msg.includes('tpr') ||
+    msg.includes('tiempo recepcion') || msg.includes('tiempo de recepcion') ||
+    msg.includes('tiempo recepción') || msg.includes('tiempo de recepción') ||
+    msg.includes('cuanto demora') || msg.includes('cuánto demora') ||
+    msg.includes('duracion recepcion') || msg.includes('duración recepción')
+  );
+
+  const pideComplejidadRecep = esRecepciones && (
+    msg.includes('complejidad') || msg.includes('tamaño') ||
+    msg.includes('grandes') || msg.includes('pequeñas') || msg.includes('pequenas') ||
+    msg.includes('significativas') || msg.includes('simples')
+  );
+
+  const pideRankingRecep = esRecepciones && (
+    msg.includes('ranking') || msg.includes('top') ||
+    msg.includes('mas pallets') || msg.includes('más pallets') ||
+    msg.includes('mas or') || msg.includes('más or') ||
+    msg.includes('cual cliente') || msg.includes('cuál cliente') ||
+    msg.includes('que cliente') || msg.includes('qué cliente')
+  );
+
+  // Pregunta sobre lo no-disponible: operario en recepciones, guardado, M3/KGs
+  const pideOperarioRecep = esRecepciones && (
+    msg.includes('operario') || msg.includes('operador') ||
+    msg.includes('usuario') || msg.includes('trabajador')
+  );
+  const pideGuardado = esRecepciones && (
+    msg.includes('guardado') || msg.includes('guardar')
+  );
+  const pideVolumenFisico = esRecepciones && (
+    msg.includes(' m3') || msg.includes(' m³') ||
+    msg.includes('metros cubicos') || msg.includes('metros cúbicos') ||
+    msg.includes('kilos') || msg.includes(' kg') ||
+    msg.includes('peso') || msg.includes('toneladas')
+  );
+
+
+
   function cdFromMsg(text) {
     const t = normText(text);
     if (t.includes('QUILICURA')) return 'QUILICURA';
@@ -1445,6 +1525,130 @@
         productividad: prodCompacta
       }
     };
+  }
+
+
+  // ══════════════════════════════════════════════════════════════════════
+  // RECEPCIONES INBOUND
+  // Patrón análogo a esProductividad / esOTIF / esInventario.
+  // Fuente: kpi.historico?.recepciones (generado por recepciones_kpi.py)
+  // ══════════════════════════════════════════════════════════════════════
+  if (esRecepciones && !esProductividad && !esOTIF && !esInventario) {
+    const recep = kpi.historico?.recepciones || {};
+
+    // Helper: filtra array por mes
+    const _filtMs = (arr, mes) =>
+      Array.isArray(arr) && mes
+        ? arr.filter(x => Number(x.mes) === mes)
+        : (Array.isArray(arr) ? arr : []);
+
+    // Helper: filtra por cliente
+    const _filtCli = (arr, cli) =>
+      cli ? arr.filter(x => (x.cliente || '').toUpperCase() === cli) : arr;
+
+    // Helper: filtra por CD
+    const _filtCd = (arr, cd) => {
+      if (!cd) return arr;
+      const target = 'CD ' + cd.toUpperCase();
+      return arr.filter(x => (x.cd || '').toUpperCase() === target);
+    };
+
+    // Período objetivo (mes solicitado o mes actual disponible)
+    const mesObjetivoRec = periodoSolicitado.mes || recep.periodo?.hasta_mes || null;
+    const cdsDisponiblesRecep = recep.cds_detectados || [];
+    const clientesDisponiblesRecep = recep.clientes_detectados || [];
+
+    // ── por_cliente (agregación principal) ────────────────────────────
+    let _porClienteRec = _filtMs(recep.por_cliente_mensual, mesObjetivoRec);
+    _porClienteRec = _filtCli(_porClienteRec, clienteSolicitado);
+    _porClienteRec = _filtCd(_porClienteRec, cdSolicitado);
+
+    // ── por_cd (cross-cliente) ─────────────────────────────────────────
+    let _porCdRec = _filtMs(recep.por_cd_mensual, mesObjetivoRec);
+    _porCdRec = _filtCd(_porCdRec, cdSolicitado);
+
+    const recepCompacta = {
+      disponible: recep.disponible,
+      periodo: recep.periodo,
+      cds_detectados: cdsDisponiblesRecep,
+      clientes_detectados: clientesDisponiblesRecep,
+      por_cliente: _porClienteRec,
+      por_cd: _porCdRec,
+    };
+
+    // ── Detalle diario (solo si se pide) ──────────────────────────────
+    if (pidePorDiaRecep) {
+      let _pdCli = _filtMs(recep.por_dia_cliente_mensual, mesObjetivoRec);
+      _pdCli = _filtCli(_pdCli, clienteSolicitado);
+      _pdCli = _filtCd(_pdCli, cdSolicitado);
+      recepCompacta.por_dia_cliente = _pdCli;
+
+      let _pdCd = _filtMs(recep.por_dia_cd_mensual, mesObjetivoRec);
+      _pdCd = _filtCd(_pdCd, cdSolicitado);
+      recepCompacta.por_dia_cd = _pdCd;
+    }
+
+    // ── Por origen / proveedor ─────────────────────────────────────────
+    if (pideOrigenRecep) {
+      let _porOrigen = _filtMs(recep.por_origen_mensual, mesObjetivoRec);
+      _porOrigen = _filtCli(_porOrigen, clienteSolicitado);
+      _porOrigen = _filtCd(_porOrigen, cdSolicitado);
+      recepCompacta.por_origen = _porOrigen;
+    }
+
+    // ── Backlog detallado ──────────────────────────────────────────────
+    if (pideBacklog) {
+      let _blMs = _filtMs(recep.backlog_or_mensual, mesObjetivoRec);
+      _blMs = _filtCli(_blMs, clienteSolicitado);
+      _blMs = _filtCd(_blMs, cdSolicitado);
+      recepCompacta.backlog_or = _blMs;
+      recepCompacta.backlog_total = _blMs.length;
+    }
+
+    // ── Nota metodológica (siempre presente) ──────────────────────────
+    recepCompacta.nota_metodologica = recep.nota_metodologica || {};
+
+    // ── Consulta resuelta (instrucciones al AI) ────────────────────────
+    recepCompacta.consulta_resuelta = {
+      tipo: 'recepciones',
+      cd: cdSolicitado ? 'CD ' + cdSolicitado : 'TODOS',
+      cliente: clienteSolicitado || 'TODOS',
+      mes: mesObjetivoRec || 'todos',
+      sub_query: {
+        backlog:        pideBacklog,
+        origen:         pideOrigenRecep,
+        por_dia:        pidePorDiaRecep,
+        tpr:            pideTPR,
+        complejidad:    pideComplejidadRecep,
+        ranking:        pideRankingRecep,
+        operario:       pideOperarioRecep,
+        guardado:       pideGuardado,
+        volumen_fisico: pideVolumenFisico,
+      },
+      regla: [
+        'TERMINOLOGIA: usar OR (Orden de Recepción). Usar pallets o PLT. NUNCA OP.',
+        'NO mencionar: operario (sin columna en archivo), tiempo guardado (0% cobertura WMS), M3/Kilos/Litros (excluidos).',
+        'Si sub_query.operario=true: indicar "el archivo de recepciones no incluye columna de operario WMS".',
+        'Si sub_query.guardado=true: indicar "los timestamps de guardado no se completan en el WMS actual".',
+        'Si sub_query.volumen_fisico=true: indicar "métricas de masa/volumen están excluidas del análisis".',
+        'TPR: reportar tpr_dias_por_or como dato principal (más operacional). tpr_dias_por_fila como referencia Power BI.',
+        'TPR NOTA OBLIGATORIA: mide desde Fh. Generación (creación OR) hasta Fh. Fin Recepción. No mide tránsito físico.',
+        'Días actividad = Fh. Generación, NO fecha llegada física del camión.',
+        'Si backlog_or vacío para el filtro: "Sin OR pendientes en el período consultado."',
+        'OR significativa = >= 20 pallets (criterio operacional match Power BI).',
+        'Si !recep.disponible o arrays vacíos: indicar que recepciones no están disponibles para el período/cliente.',
+      ].join(' ')
+    };
+
+    contexto = {
+      disponible: $json.disponible,
+      fecha_consulta: $json.fecha_consulta,
+      kpi_ops: {
+        recepciones: recepCompacta
+      }
+    };
+
+    return JSON.stringify(contexto);
   }
 
   if (esOTIF && !esProductividad) {
