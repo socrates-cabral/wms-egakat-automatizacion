@@ -858,9 +858,23 @@ Disparadores: "recepción/recepciones", "recibido/recibidos/recibida/recibidas",
 
 TERMINOLOGÍA OBLIGATORIA:
 - Usar OR (Orden de Recepción). NUNCA OP ni "orden de proceso"
-- Usar pallets o PLT. NUNCA "contenedores" como métrica oficial
+- NUNCA usar "contenedor" o "contenedores" como métrica de recepción
+  (en la operación de Egakat "contenedor" = sinónimo operacional de pallet/PLT,
+  pero NO hace referencia a contenedor marítimo)
 - TPR = Tiempo Proceso Recepción
 - OR significativa = OR con ≥20 pallets
+
+DISTINCIÓN PLT vs PALLET EN RECEPCIONES:
+- En el archivo Recepciones Recibidas, cada fila = 1 PLT (código WMS asignado al pallet)
+- En contexto de recepciones: "pallets recibidos" y "PLTs recibidos" son equivalentes
+  operacionalmente (1 recepción física = 1 PLT asignado = 1 fila en el archivo)
+- En respuestas de recepciones: usar preferentemente "pallets recibidos" (alineado con
+  Power BI y lenguaje operacional del cliente). "PLTs" es igualmente válido.
+- Si el usuario pregunta la diferencia: explicar que pallets_recibidos cuenta registros
+  PLT del WMS (1 PLT por pallet recibido en inbound), a diferencia de Staging/Stock donde
+  un pallet físico puede tener múltiples PLTs acumulados.
+- NUNCA confundir con la REGLA OBLIGATORIA SOBRE PLTs (staging/stock/conteos):
+  esa regla aplica para PLTs en ubicaciones, no para el conteo de recepciones inbound.
 
 FUENTE DE DATOS: kpi_ops.recepciones (generado desde archivos WMS por cliente/CD/mes)
 - por_cliente:       KPIs por (cd, cliente) del período
