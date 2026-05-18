@@ -648,7 +648,7 @@
   };
 
   // ── Helpers de historico ─────────────────────────────────────────────────
-  const maxContextLength = 60000;
+  const maxContextLength = 20000;
   const principalClients = new Set(['DERCO', 'DAIKIN', 'POCHTECA', 'UNILEVER', 'BARENTZ', 'RUNO']);
   const normClienteHist = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
   const filtrarRows = (rows) => Array.isArray(rows)
@@ -1788,6 +1788,20 @@
     };
   }
 
-  return JSON.stringify(contexto);
+  // Safety net: si ningún bloque específico reemplazó contexto (kpi_ops === kpi completo),
+  // devolver solo metadatos operativos para evitar 460K tokens en el LLM.
+  const _rawOut = JSON.stringify(contexto);
+  if (_rawOut.length > 20000 && contexto.kpi_ops === kpi) {
+    return JSON.stringify({
+      disponible: contexto.disponible,
+      fecha_consulta: contexto.fecha_consulta,
+      alertas: contexto.alertas,
+      pipeline: contexto.pipeline,
+      kpi_ops: {
+        _aviso: 'Contexto general omitido por límite de tokens. Usar palabras clave: recepción/recibido, OTIF/pedido, productividad/líneas, inventario/stock, staging.'
+      }
+    });
+  }
+  return _rawOut;
 })()
 }}
