@@ -147,7 +147,7 @@
           "parameters": [
             {
               "name": "X-API-Key",
-              "value": "={{ $env.API_OPS_SECRET }}"
+              "value": ""
             }
           ]
         },

@@ -153,7 +153,7 @@
           "parameters": [
             {
               "name": "X-API-Key",
-              "value": "={{ $env.API_COBRANZA_SECRET }}"
+              "value": ""
             }
           ]
         },
@@ -177,7 +177,7 @@
           "parameters": [
             {
               "name": "X-API-Key",
-              "value": "={{ $env.API_COBRANZA_SECRET }}"
+              "value": ""
             }
           ]
         },
