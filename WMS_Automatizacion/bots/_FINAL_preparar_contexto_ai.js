@@ -374,9 +374,6 @@
     msg.includes('recepción') || msg.includes('recepciónes') ||
     msg.includes('recibida') || msg.includes('recibidas') ||
     msg.includes('recibido') || msg.includes('recibidos') ||
-    msg.includes('recibio') || msg.includes('recibió') ||
-    msg.includes('recibieron') || msg.includes('recibimos') ||
-    msg.includes('recibe') || msg.includes('reciben') ||
     msg.includes('pallets recibidos') || msg.includes('pallet recibido') ||
     msg.includes('tpr') ||
     msg.includes('inbound') ||
@@ -651,7 +648,7 @@
   };
 
   // ── Helpers de historico ─────────────────────────────────────────────────
-  const maxContextLength = 20000;
+  const maxContextLength = 60000;
   const principalClients = new Set(['DERCO', 'DAIKIN', 'POCHTECA', 'UNILEVER', 'BARENTZ', 'RUNO']);
   const normClienteHist = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
   const filtrarRows = (rows) => Array.isArray(rows)
@@ -760,7 +757,7 @@
     periodoSolicitado.es_ytd
   );
 
-  if ((periodoSolicitadoNoDisponible || solicitudYtdSinHistorico || solicitudComparativaSinHistorico) && !historicoResponde && !esUsuario && !esRecepciones) {
+  if ((periodoSolicitadoNoDisponible || solicitudYtdSinHistorico || solicitudComparativaSinHistorico) && !historicoResponde && !esUsuario) {
     const solicitadoTexto = periodoSolicitado.es_ytd
       ? 'acumulado anual / YTD'
       : periodoSolicitado.es_comparativo
@@ -798,7 +795,7 @@
     return JSON.stringify(contexto);
   }
 
-  if ((periodoSolicitadoNoDisponible || periodoSolicitado.es_ytd || periodoSolicitado.es_comparativo) && historicoResponde && !esUsuario && !esRecepciones) {
+  if ((periodoSolicitadoNoDisponible || periodoSolicitado.es_ytd || periodoSolicitado.es_comparativo) && historicoResponde && !esUsuario) {
     const historicoOut = {
       disponible: $json.disponible,
       fecha_consulta: $json.fecha_consulta,
@@ -832,20 +829,7 @@
         regla: 'Mostrar desglose líneas/unidades por canal DERCO desde derco_canales_historico.canales. Si CES aparece como canal, reportarlo (corresponde a MY con destino concesionario, mismo criterio que FillRate). La conclusión debe señalar el canal con mayor carga operativa del período.'
       };
     }
-    // Safety net específico: historicoOut puede llegar a 700KB con todo el detalle mensual.
-    // Si supera 30K chars, devolver solo metadata + consulta_historico + aviso de filtrado.
-    const _hOut = JSON.stringify(historicoOut);
-    if (_hOut.length > 30000) {
-      return JSON.stringify({
-        disponible: historicoOut.disponible,
-        fecha_consulta: historicoOut.fecha_consulta,
-        consulta_historico: historicoOut.consulta_historico,
-        kpi_ops: {
-          _aviso: 'Historico completo supera limite de tokens. Reformular consulta con cliente especifico (ej: Barentz) + KPI especifico (fillrate/otif/productividad) + mes (ej: abril) para filtrado dinamico.'
-        }
-      });
-    }
-    return _hOut;
+    return JSON.stringify(historicoOut);
   }
 
   if (esConsultaUbicacionesLayout && !esConsultaConteoCiclico && !esProductividad && !esOTIF) {
@@ -1549,7 +1533,7 @@
   // Patrón análogo a esProductividad / esOTIF / esInventario.
   // Fuente: kpi.historico?.recepciones (generado por recepciones_kpi.py)
   // ══════════════════════════════════════════════════════════════════════
-  if (esRecepciones) {
+  if (esRecepciones && !esProductividad && !esOTIF && !esInventario) {
     const recep = kpi.historico?.recepciones || {};
 
     // Helper: filtra array por mes
@@ -1804,20 +1788,6 @@
     };
   }
 
-  // Safety net: cualquier output > 30000 chars (~7.5K tokens) se reemplaza por minimo.
-  // Evita que queries no clasificadas envien el kpi_ops crudo (>1MB) al LLM.
-  const _rawOut = JSON.stringify(contexto);
-  if (_rawOut.length > 30000) {
-    return JSON.stringify({
-      disponible: contexto.disponible,
-      fecha_consulta: contexto.fecha_consulta,
-      alertas: contexto.alertas,
-      pipeline: contexto.pipeline,
-      kpi_ops: {
-        _aviso: 'Contexto omitido por exceso de tamaño. Reformular con palabras clave: recepcion/recibio, OTIF/pedido, productividad/lineas, inventario/stock, staging.'
-      }
-    });
-  }
-  return _rawOut;
+  return JSON.stringify(contexto);
 })()
 }}
