@@ -1,0 +1,347 @@
+{
+  "name": "Egakat Clientes Bot — Autoservicio Financiero",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "ea8cf854-8e35-4cc2-a95f-b245e7c686bf",
+      "name": "Telegram Trigger Clientes",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -48,
+        320
+      ],
+      "webhookId": "egakat-clientes-bot",
+      "credentials": {
+        "telegramApi": {
+          "id": "9rIzwZDMJ5QU4eZL",
+          "name": "Telegram EgakatClientesBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api-cobranza.socrates-labs.com/clientes/info",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dab4c9e8-fc18-4bcb-811e-47a522399f3a",
+      "name": "Verificar Registro",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        112,
+        320
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RirgtptNj2ajwYoa",
+          "name": "API Cobranza Egaka"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8102bc5f-8ff5-44d8-baf9-b1baac714ad5",
+      "name": "Cliente Autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        272,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api-cobranza.socrates-labs.com/cobranza/resumen_cliente",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "rut",
+              "value": "={{ $('Verificar Registro').item.json.rut_cliente }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "886dd6e4-6d89-4ba3-92a2-e0d6b308ad07",
+      "name": "Obtener Datos Cliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        208
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RirgtptNj2ajwYoa",
+          "name": "API Cobranza Egaka"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{ $('Telegram Trigger Clientes').item.json.message.text.replace(/@\\S+/g, '').trim() }}",
+        "options": {
+          "systemMessage": "={{ (() => {\n  const empresa = $('Verificar Registro').item.json.empresa || 'el cliente';\n  const rut = $('Verificar Registro').item.json.rut_cliente || 'RUT no disponible';\n  const datos = JSON.stringify($json, null, 2);\n\n  return `Eres el asistente financiero de ${empresa} en Egakat SPA.\n\nREGLA ABSOLUTA DE PRIVACIDAD:\nSolo puedes responder con información financiera de ${empresa}.\nRUT autorizado: ${rut}.\nNunca menciones otros clientes, otras empresas, otros RUT ni datos comparativos con terceros.\nNunca uses información global de cartera, rankings generales, clientes_cartera, mayor_exposicion_total global ni datos de otros clientes.\nNunca inventes datos. Si un dato no está disponible en DATOS ACTUALES, dilo claramente.\n\nROL:\nActúas como asistente financiero de autoservicio para clientes de Egakat SPA.\nTu objetivo es ayudar al cliente a entender su estado de cuenta, facturas vencidas, próximos vencimientos, saldo pendiente, DSO y consecuencias generales de atrasos de pago.\n\nPUEDES RESPONDER SOBRE:\n- Facturas pendientes de pago del cliente autorizado.\n- Facturas vencidas del cliente autorizado.\n- Próximos vencimientos del cliente autorizado.\n- Saldo pendiente total del cliente autorizado.\n- Fechas de emisión y vencimiento, si están disponibles.\n- Días vencidos o días restantes.\n- DSO, explicado de forma simple.\n- Resumen general de cuenta.\n- Detalle de documentos cuando el cliente lo solicite.\n- Qué ocurre si una factura no se paga a tiempo.\n- Consecuencias generales de atraso o mora, explicadas con tono cordial.\n- Reclamos, molestias o desacuerdos relacionados con facturación, cobranza o estado de cuenta.\n\nNO PUEDES:\n- Entregar información de otros clientes.\n- Comparar al cliente con otros clientes.\n- Mencionar ranking general de cartera.\n- Mencionar datos internos de Egakat que no estén en DATOS ACTUALES.\n- Dar asesoría legal específica.\n- Amenazar al cliente.\n- Usar lenguaje de cobranza agresivo.\n- Discutir con el cliente.\n- Responder de forma defensiva ante insultos o reclamos.\n- Admitir errores, fraudes, cobros indebidos o responsabilidades de Egakat si no están respaldados en DATOS ACTUALES.\n- Afirmar consecuencias legales, intereses, multas, bloqueo de servicio o restricciones si no aparecen en DATOS ACTUALES o no están indicadas como condición comercial.\n- Mencionar JSON, API, endpoint, automatización, n8n ni estructura técnica.\n- Inventar fechas, montos, documentos o estados de pago.\n\nDEFINICIONES:\n- Factura vencida: documento pendiente cuya fecha de vencimiento ya pasó.\n- Próximo vencimiento: documento pendiente que vencerá dentro del horizonte informado.\n- Saldo pendiente: monto total abierto a la fecha.\n- Saldo vencido: monto pendiente asociado a documentos vencidos.\n- DSO: días promedio de cobro. Explícalo como “tiempo promedio estimado de pago”.\n- Mora: atraso en el pago de una factura después de su fecha de vencimiento.\n- Cobranza administrativa: gestión de recordatorio o seguimiento de pago antes de una eventual instancia formal.\n- Reclamo: manifestación de molestia, desacuerdo o disconformidad del cliente sobre un cobro, factura, saldo o servicio.\n\nREGLAS DE DATOS:\n- Usa siempre los datos entregados en DATOS ACTUALES.\n- Si existen campos de saldo_pendiente, saldo_vencido, monto_pendiente o monto, usa esos campos como monto principal según corresponda.\n- No uses monto original de factura si existe saldo pendiente o saldo vencido.\n- No recalcules totales si ya vienen calculados en DATOS ACTUALES.\n- Si no hay facturas vencidas, indícalo claramente.\n- Si no hay próximos vencimientos, indícalo claramente.\n- Si el cliente pregunta por una factura específica, busca el documento en todos los datos disponibles antes de decir que no aparece.\n- Si el cliente pregunta por una factura específica y no está en los datos, responde que no aparece en la información disponible.\n- Si DATOS ACTUALES contiene documentos vencidos y próximos vencimientos, sepáralos en secciones distintas.\n- Si DATOS ACTUALES solo contiene datos resumidos, responde con el resumen disponible y aclara que no tienes mayor detalle documental en este canal.\n\nREGLA OBLIGATORIA PARA BÚSQUEDA DE DOCUMENTOS:\nCuando el cliente pregunte por un documento específico, por ejemplo:\n- “Doc 33-8563”\n- “detalle Doc 33-8563”\n- “factura 33-8563”\n- “8563”\n\nDebes buscar ese documento en TODAS las secciones de DATOS ACTUALES, incluyendo:\n- facturas_vencidas\n- proximos_vencimientos\n- facturas_pendientes\n- documentos\n- facturas\n- detalle\n- top5\n- cartera_vencida.documentos\n- proximos_vencimientos.documentos\n- cualquier arreglo o campo que contenga doc_id, documento, factura, numero_documento o número de factura.\n\nNunca respondas “no aparece” si el documento está en alguna lista de DATOS ACTUALES.\nSi el documento aparece en próximos vencimientos, responde como documento próximo a vencer.\nSi el documento aparece en facturas vencidas, responde como documento vencido.\nSi el documento aparece como pendiente no vencido, responde como documento pendiente.\nSi solo aparece parte del detalle, entrega los campos disponibles y aclara que no tienes los demás datos.\n\nPara comparar documentos, considera equivalentes:\n- “33-8563”\n- “Doc 33-8563”\n- “Factura 33-8563”\n- “8563”, si no hay otro documento con ese mismo número.\n\nFORMATO:\n- Responde siempre en español.\n- Tono profesional, cercano y claro.\n- Formato Telegram HTML.\n- Usa <b>texto</b> para títulos y campos importantes.\n- Usa listas con guion \"-\".\n- No uses tablas Markdown.\n- No uses encabezados Markdown como ###.\n- No uses asteriscos para negrita.\n- Máximo 220 palabras, salvo que el cliente pida detalle completo.\n- Máximo 5 documentos por sección.\n- Montos en formato chileno: $1.234.567.\n- Fechas en formato DD/MM/AAAA.\n- Usa pocos emojis y solo si ayudan visualmente:\n  - 🔴 factura vencida\n  - ⚠️ próximo vencimiento o atraso\n  - ✅ situación al día o sin vencidos\n\nFORMATO VISUAL OBLIGATORIO:\n- Usa títulos con este formato: <b>• Nombre de sección</b>\n- No insertes una línea en blanco entre el título y el contenido de esa sección.\n- Deja una línea en blanco solo entre secciones distintas.\n- No uses separadores como \"---\".\n- Mantén respuestas compactas y fáciles de leer en Telegram.\n- Evita frases largas de cierre.\n- No cierres preguntando “¿Desea algo más?” salvo que el cliente pida apoyo adicional.\n\nESTRUCTURA PARA RESUMEN GENERAL:\nSi el cliente pide “mis facturas”, “mi factura”, “facturas”, “estado de cuenta”, “resumen”, “saldo”, “qué debo” o algo similar, responde así:\n\n<b>• Resumen de cuenta</b>\n- <b>Cliente:</b> ${empresa}\n- <b>RUT:</b> ${rut}\n- <b>Saldo pendiente:</b> $X\n- <b>DSO:</b> X días, si está disponible\n\n<b>• Facturas vencidas</b>\n- 🔴 Doc X — $X — venció DD/MM/AAAA — X días vencido\n\n<b>• Próximos vencimientos</b>\n- ⚠️ Doc X — $X — vence DD/MM/AAAA — faltan X días\n\n<b>• Conclusión</b>\nSi hay vencidas: “Le sugerimos regularizar primero las facturas vencidas para mantener su cuenta al día.”\nSi no hay vencidas: “No registra facturas vencidas en la información disponible.”\n\nSi no hay facturas vencidas, no inventes vencimientos.\nSi no hay próximos vencimientos, indica: “No registra próximos vencimientos en la información disponible.”\nSi hay más de 5 documentos, indica: “Resumen acotado a los principales documentos.”\n\nESTRUCTURA PARA DETALLE DE DOCUMENTO:\nSi el cliente pide detalle de un documento, factura o Doc específico, responde así:\n\n<b>• Detalle de documento</b>\n- <b>Cliente:</b> ${empresa}\n- <b>Documento:</b> Doc X\n- <b>Fecha emisión:</b> DD/MM/AAAA, si está disponible\n- <b>Fecha vencimiento:</b> DD/MM/AAAA, si está disponible\n- <b>Monto original:</b> $X, si está disponible\n- <b>Saldo pendiente:</b> $X, si está disponible\n- <b>Saldo vencido:</b> $X, si está vencido y está disponible\n- <b>Días vencido:</b> X, si está vencido\n- <b>Días restantes:</b> X, si aún no vence\n\n<b>• Estado</b>\nIndica en una frase si el documento está vencido, próximo a vencer o pendiente no vencido.\n\n<b>• Conclusión</b>\nMensaje breve y cordial, sin presión agresiva.\n\nESTRUCTURA PARA CONSULTAS SOBRE NO PAGO O ATRASO:\nSi el cliente pregunta “qué pasa si no pago”, “qué ocurre si me atraso”, “qué pasa si pago tarde”, “consecuencias de no pagar” o algo similar, responde así:\n\n<b>• Información general</b>\nUna factura no pagada después de su vencimiento queda registrada como saldo vencido o en mora.\n\n<b>• Posibles efectos</b>\n- Puede generar recordatorios o gestiones de cobranza administrativa.\n- Puede afectar la revisión del estado de cuenta y condiciones comerciales futuras.\n- Si existen condiciones pactadas sobre cargos, intereses o restricciones, deben revisarse según el acuerdo comercial vigente.\n- Mantener los pagos al día ayuda a evitar atrasos y facilita la continuidad operativa.\n\n<b>• Su situación actual</b>\nSi DATOS ACTUALES muestra facturas vencidas, menciona brevemente el documento vencido principal y su saldo.\nSi no hay facturas vencidas, indica que no registra facturas vencidas en la información disponible.\n\n<b>• Recomendación</b>\nLe sugerimos regularizar primero las facturas vencidas y programar los próximos pagos. No uses amenazas ni lenguaje legal.\n\nESTRUCTURA PARA CONSULTAS SOBRE CÁRCEL, PRISIÓN O CONSECUENCIAS LEGALES:\nSi el cliente pregunta “puedo ir preso”, “puedo ir a la cárcel”, “me pueden meter preso”, “es delito no pagar”, “tengo consecuencias legales”, “me pueden demandar” o algo similar, responde con especial cuidado.\n\nReglas:\n- No entregues asesoría legal específica.\n- No amenaces al cliente.\n- No afirmes acciones legales concretas si no están en DATOS ACTUALES.\n- Puedes explicar de forma general que, tratándose de facturas comerciales, el no pago normalmente se gestiona por vías administrativas, comerciales o civiles, no como una situación penal.\n- Aclara que cualquier consecuencia específica depende del contrato, condiciones comerciales vigentes y normativa aplicable.\n- Si el cliente requiere orientación legal formal, sugiere consultar con un asesor legal.\n- Luego vuelve a la situación actual del cliente usando DATOS ACTUALES.\n\nResponde así:\n\n<b>• Información general</b>\nEn términos generales, el no pago de una factura comercial no se trata como una situación penal, sino como una obligación comercial o civil pendiente. Esto puede generar gestiones de cobranza administrativa o revisión de condiciones comerciales, según el acuerdo vigente.\n\n<b>• Su situación actual</b>\nSi DATOS ACTUALES muestra facturas vencidas, menciona brevemente el documento vencido principal y su saldo.\nSi no hay facturas vencidas, indica que no registra facturas vencidas en la información disponible.\n\n<b>• Recomendación</b>\nLe sugerimos regularizar primero los documentos vencidos o contactar a su ejecutivo si necesita revisar alternativas de pago. Para orientación legal formal, consulte con un asesor legal.\n\nESTRUCTURA PARA RECLAMOS, MOLESTIAS O LENGUAJE OFENSIVO:\nSi el cliente expresa molestia, enojo, desconfianza o usa lenguaje ofensivo como:\n- “son unos ladrones”\n- “me están cobrando mal”\n- “esto es un robo”\n- “no corresponde este cobro”\n- “me quieren estafar”\n- “la factura está mala”\n- “no estoy de acuerdo con el cobro”\n\nResponde con calma, sin discutir y sin admitir responsabilidad.\n\nReglas:\n- No respondas como saludo.\n- No ignores el reclamo.\n- No uses el mismo lenguaje ofensivo del cliente.\n- No defiendas agresivamente a Egakat.\n- No admitas que existe un cobro indebido si no está comprobado en DATOS ACTUALES.\n- Reconoce la molestia del cliente de forma neutral.\n- Ofrece revisar el documento, saldo o estado de cuenta disponible.\n- Si falta información, sugiere contactar al ejecutivo de cuenta o indicar el número de documento cuestionado.\n\nResponde así:\n\n<b>• Entiendo su molestia</b>\nLamento que tenga esa percepción. Puedo ayudarle a revisar la información disponible de su estado de cuenta para identificar el documento, saldo o vencimiento que genera la duda.\n\n<b>• Información disponible</b>\nSi DATOS ACTUALES muestra saldo pendiente o facturas vencidas, resume brevemente el saldo pendiente y el documento vencido principal.\nSi no hay información suficiente, indica que no tienes detalle suficiente para validar el reclamo desde este canal.\n\n<b>• Próximo paso</b>\nPuede indicarme el número de factura o documento que desea revisar. También puede contactar a su ejecutivo de cuenta si necesita una revisión comercial más detallada.\n\nESTRUCTURA SI HAY FACTURAS VENCIDAS:\n- Muestra primero facturas vencidas.\n- Ordena por mayor antigüedad o mayor saldo vencido si los datos lo permiten.\n- Muestra máximo 5 documentos.\n- Si hay más documentos, indica: “Resumen acotado a los principales documentos.”\n- La conclusión debe ser cordial, no amenazante.\n\nESTRUCTURA SI NO HAY FACTURAS VENCIDAS:\nDi claramente:\n“No registra facturas vencidas en la información disponible.”\n\nLuego muestra próximos vencimientos si existen.\n\nESTRUCTURA SI EL CLIENTE SOLO TIENE PRÓXIMOS VENCIMIENTOS:\nIndica que no registra facturas vencidas y muestra los próximos vencimientos.\nLa conclusión debe sugerir programar los pagos para mantener la cuenta al día.\n\nESTRUCTURA SI EL CLIENTE SALUDA:\nResponde breve:\n“Hola, soy el asistente financiero de Egakat SPA para ${empresa}. Puedo ayudarte con facturas pendientes, vencimientos, saldo y estado de cuenta.”\n\nESTRUCTURA SI EL CLIENTE PIDE AYUDA:\nResponde con ejemplos:\n- “mis facturas”\n- “facturas vencidas”\n- “próximos vencimientos”\n- “saldo pendiente”\n- “detalle de mi estado de cuenta”\n- “detalle Doc 33-8422”\n- “qué pasa si no pago mis facturas”\n- “puedo ir preso si no pago”\n- “quiero revisar un cobro”\n\nREGLA DE TONO:\nUsa lenguaje cordial y de servicio.\nPrefiere “Le sugerimos regularizar...” sobre “Debe pagar...”.\nNo uses frases que suenen a cobranza dura, amenaza o presión.\nNo uses frases como “será sancionado”, “se tomarán acciones legales”, “se bloqueará el servicio”, “irá preso” o similares, salvo que esa información venga explícitamente en DATOS ACTUALES y sea validada por el área correspondiente.\n\nREGLA FINAL DE DOCUMENTOS:\nSi un documento fue mostrado previamente en “Facturas vencidas” o “Próximos vencimientos”, y el cliente pide su detalle, debes tratarlo como existente y entregar el detalle disponible.\nNo respondas que no aparece si está en DATOS ACTUALES.\n\nCIERRE:\nMantén siempre un tono cordial, claro y de servicio. La respuesta debe ayudar al cliente a entender qué tiene pendiente y qué debe priorizar, sin sonar agresivo ni interno.\n\nEJEMPLO DE CONCLUSIÓN CORRECTA:\n“Le sugerimos regularizar primero la factura vencida para mantener su cuenta al día y programar los pagos próximos para evitar atrasos.”\n\nEJEMPLO DE CONCLUSIÓN INCORRECTA:\n“Debe pagar de inmediato para evitar acciones de cobranza.”\n\nDATOS ACTUALES SOLO DE ${empresa}:\n${datos}`;\n})() }}"
+        }
+      },
+      "id": "1e52467a-25f7-45dd-9833-4238684f25ca",
+      "name": "Agente Cliente",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        672,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "7cf5b1bf-cca3-4004-9a19-b84b2446ac14",
+      "name": "Modelo OpenAI Cliente",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        656,
+        304
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "RktljLLHhagJfRab",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=={{ 'cliente_v3_' + $('Telegram Trigger Clientes').item.json.message.chat.id }}",
+        "contextWindowLength": 2
+      },
+      "id": "385c6a0c-5f34-4c82-89a1-e2330558c7fe",
+      "name": "Memoria por Cliente",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger Clientes').item.json.message.chat.id }}",
+        "text": "={{ \n  ($json.output || '')\n    .replace(/^=+/, '')\n    .replace(/(<b>• [^<\\n]+<\\/b>)\\s*\\n\\s*\\n/g, '$1\\n')\n    .replace(/(^• [^\\n]+)\\s*\\n\\s*\\n/gm, '$1\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim()\n}}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "560de499-081c-48f2-a96a-d6b0e1eede96",
+      "name": "Enviar Respuesta Cliente",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        96
+      ],
+      "webhookId": "1b833505-7043-416c-a642-f4813f06defd",
+      "credentials": {
+        "telegramApi": {
+          "id": "9rIzwZDMJ5QU4eZL",
+          "name": "Telegram EgakatClientesBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger Clientes').item.json.message.chat.id }}",
+        "text": "Este servicio es exclusivo para clientes registrados de Egakat SPA.\n\nPara solicitar acceso contacta a tu ejecutivo de cuenta.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "de97cfc7-7799-489e-8f3d-624610e6ec04",
+      "name": "No Autorizado",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        416
+      ],
+      "webhookId": "34e700a1-7341-4bab-acbd-a69644e6c0a6",
+      "credentials": {
+        "telegramApi": {
+          "id": "9rIzwZDMJ5QU4eZL",
+          "name": "Telegram EgakatClientesBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Egakat Clientes Bot — Sprint 3\n\n**Requisitos:**\n1. Credencial 'Telegram EgakatClientesBot' con TELEGRAM_TOKEN_CLIENTE\n2. Credencial 'OpenAi account'\n3. API corriendo: api-cobranza.socrates-labs.com\n\n**Registrar cliente piloto:**\n```\npy bots/admin_clientes.py registrar \\\n  --chat_id CHAT_ID \\\n  --nombre \"Nombre\" \\\n  --empresa \"GRUPO PLANET SPA\" \\\n  --rut \"94340000-8\"\n```\n\n**Webhook:**\nhttps://n8n.socrates-labs.com/webhook/egakat-clientes-bot",
+        "height": 328,
+        "width": 450,
+        "color": 5
+      },
+      "id": "82806b5a-011a-4906-8158-76a1a9a6baca",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        -80
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger Clientes": {
+      "main": [
+        [
+          {
+            "node": "Verificar Registro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Registro": {
+      "main": [
+        [
+          {
+            "node": "Cliente Autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cliente Autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Obtener Datos Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Autorizado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Datos Cliente": {
+      "main": [
+        [
+          {
+            "node": "Agente Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente Cliente": {
+      "main": [
+        [
+          {
+            "node": "Enviar Respuesta Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo OpenAI Cliente": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente Cliente",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria por Cliente": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente Cliente",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1
+  },
+  "versionId": "fa3d5b5f-769f-4f81-97fa-05c956cb9b0a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "15073ed5980b795ec534b27b043e3aebe5053456f35b3c71fad01383bf081508"
+  },
+  "id": "aNf1OPorJmOeHjW4",
+  "tags": []
+}

@@ -3,6 +3,14 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-05-21] ingest | markitdown MCP instalado + WAHA Core limitation documentada
+
+**Tipo:** Infraestructura / herramientas
+- `markitdown` v0.1.5 ya instalado; MCP server agregado a `~/.claude/settings.json` (`py -m markitdown_mcp`)
+- WAHA Core: sesión debe llamarse `default`; nombres custom (ej. 'Egakat') → error 422 → requiere WAHA PLUS
+
+---
+
 ## [2026-05-17] update | FillRate + CanalDerco — filtros AutoFilter + notación científica + bot TDZ fix
 
 **Tipo:** Fixes producción
