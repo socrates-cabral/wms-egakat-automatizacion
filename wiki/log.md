@@ -3,6 +3,15 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-05-21] update | Crypto Bot go-live + markitdown fix + SessionStart hook removido
+
+**Tipo:** Infraestructura / decisión
+- Crypto Bot: decisión go-live $300 ($200 BTC + $100 ETH). Paper trading 34 días = +310.73 USDT (+15.5% ROI). Pendiente cuenta Crypto.com.
+- markitdown-mcp: fix 0.0.1a1→0.0.1a4 (0.0.1a1 era alpha vacía sin `__main__.py`)
+- SessionStart hook removido de `~/.claude/settings.json` (stats agente apuestas ya cumplió su cometido)
+
+---
+
 ## [2026-05-21] ingest | markitdown MCP instalado + WAHA Core limitation documentada
 
 **Tipo:** Infraestructura / herramientas

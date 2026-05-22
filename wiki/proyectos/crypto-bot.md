@@ -3,14 +3,32 @@ title: Crypto Bot — Grid Trading + EMA 200
 type: proyecto
 sources: []
 related: [wiki/decisiones/, wiki/entidades/]
-updated: 2026-04-17
+updated: 2026-05-21
 confidence: high
 ---
 
 # Crypto Bot — Grid Trading + EMA 200
 
 ## Estado
-**Fase 1 — Paper Trading** (iniciado 2026-04-17). Mínimo 30 días antes de capital real.
+**Decisión go-live: 2026-05-21** — $300 USD real ($200 BTC + $100 ETH). Pendiente crear cuenta Crypto.com.
+
+### PnL paper trading (34 días, al 2026-05-21)
+| Par | Trades | PnL |
+|-----|--------|-----|
+| BTC_USDT | 187 | **+194.58 USDT** |
+| ETH_USDT | 63 | **+116.16 USDT** |
+| **Total** | 250 | **+310.73 USDT** (+15.5% ROI) |
+
+Última op BTC: 2026-05-21 SELL @ $77,000 (+2.60 USDT). ETH: posición abierta @ $2,160.
+
+### Checklist go-live (pendiente)
+- [ ] Crear cuenta Crypto.com Exchange (exchange.crypto.com) + KYC
+- [ ] Activar 2FA (Authenticator, no SMS)
+- [ ] Depositar $300 USDT (TRC-20 recomendado)
+- [ ] API Key: Spot Trading ON, Withdrawal OFF
+- [ ] `.env`: `CRYPTO_COM_API_KEY`, `CRYPTO_COM_API_SECRET`, `BTC_CAPITAL=200`, `ETH_CAPITAL=100`
+- [ ] `config.py` L12: `MODO_PAPER_TRADING = False`
+- [ ] VPS Hetzner CX22 (~€4/mes) — recomendado antes de escalar a $1,000+
 
 ## Estrategia
 Grid Trading clásico con filtro de tendencia EMA 200:
@@ -19,17 +37,16 @@ Grid Trading clásico con filtro de tendencia EMA 200:
 - Cruce precio hacia arriba → SELL en ese nivel (si tiene BTC)
 - Si precio < EMA 200 → solo sells, no nuevas compras
 
-## Parámetros actuales
-| Param | Valor |
-|-------|-------|
-| Par | BTC_USDT |
-| Rango | $65,000 – $85,000 (ajustado 2026-04-17) |
-| Niveles | 20 (step $1,000) |
-| Capital | $1,000 USDT simulado |
-| Capital/nivel | $50 USDT |
-| EMA filter | Desactivado en paper trading |
-| Ciclo | cada 5 min (Task Scheduler via run_bot.bat) |
-| Drawdown max | 10% |
+## Parámetros actuales (post sesión 2026-05-06)
+| Param | BTC_USDT | ETH_USDT |
+|-------|----------|----------|
+| Rango | $65,000 – $85,000 | $1,800 – $2,700 |
+| Niveles | 10 (step $2,000) | 10 (step $90) |
+| Capital paper | $1,000 USDT | $1,000 USDT |
+| Capital real | **$200 USDT** | **$100 USDT** |
+| EMA filter | Auto (desactivado en paper) | Auto |
+| Ciclo | cada 5 min (Task Scheduler) | cada 5 min |
+| Drawdown max | 10% | 10% |
 
 ## Arquitectura
 ```
@@ -76,19 +93,21 @@ C:\ClaudeWork\crypto_bot\
 - Cada ciclo BUY+SELL en $79k: $1,000 step × 0.00063291 BTC = +$0.63 USDT
 - Error SSL al final: error de red, no de lógica — ahora reporta como CONECTIVIDAD
 
-## Próximas fases
-| Fase | Cuándo | Condición |
+## Roadmap
+| Fase | Estado | Condición |
 |------|--------|-----------|
-| Paper trading | Activo | 30 días mínimo |
-| Capital real pequeño | +30 días | P&L paper > 0, sin crashes |
-| Escala | +60 días | Consistencia confirmada |
+| Paper trading | ✅ Completado (34 días, +15.5% ROI) | — |
+| Capital real $300 | **Pendiente** (cuenta Crypto.com) | Checklist arriba |
+| VPS Hetzner | Pendiente | Antes de escalar |
+| Escala a $1,000 | Futuro | VPS activo + 1 mes real estable |
 
 ## Variables .env requeridas
 ```
-CRYPTO_COM_API_KEY=
-CRYPTO_COM_API_SECRET=
-KRAKEN_API_KEY=       # ya existe
-KRAKEN_API_SECRET=    # ya existe
-USDT_CAPITAL=1000
+CRYPTO_COM_API_KEY=          # pendiente (API Crypto.com)
+CRYPTO_COM_API_SECRET=       # pendiente
+BTC_CAPITAL=200              # USDT real BTC
+ETH_CAPITAL=100              # USDT real ETH
+KRAKEN_API_KEY=              # ya existe (alternativa)
+KRAKEN_API_SECRET=           # ya existe
 ```
 Telegram ya configurado (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID).
