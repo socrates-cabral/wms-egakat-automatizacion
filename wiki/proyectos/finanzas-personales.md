@@ -3,7 +3,7 @@ title: Finanzas Personales — App Streamlit con migración a Supabase
 type: proyecto
 sources: []
 related: [inversiones-ia, hackea-metabolismo, decision-haiku-modelo]
-updated: 2026-05-14
+updated: 2026-05-24
 confidence: high
 ---
 
@@ -67,6 +67,13 @@ AFP y Previsión (inc. AFC) · Deudas · Importar Banco · Simulador Financiero 
 ## Estado
 - **Sprint 5 completo (2026-05-14):** Supabase + RLS + migración + login + deploy. App en producción.
 - Migración validada en paridad: 348 transacciones + 69 categorías + 22 config, Excel == Supabase.
+- **Validación Control_gastos (2026-05-24):** 372 registros gastos Jan–May, $12,837,306 — coincidencia exacta Excel ↔ Supabase en todos los grupos y conceptos.
+
+## Arquitectura Ingresos: Excel vs Supabase
+Excel registra ingresos en **celdas de resumen F4/F5** (totales), sin filas individuales.
+Supabase mejora esto con **filas granulares por concepto**: sueldo, arriendo, anticipo, ingresos variables, Amipass, otros.
+- Grupo `Ingresos` en Supabase = 30 registros (Jan–May) — no tienen equivalente de fila en Excel (solo celda suma).
+- **Política de integridad**: comparaciones Excel ↔ Supabase excluyen `grupo = 'Ingresos'` por diseño.
 
 ## Pendientes / follow-ups
 - `config_manager.py` lee config de `os.getenv()`+DEFAULTS, no de la tabla `config_usuario`
