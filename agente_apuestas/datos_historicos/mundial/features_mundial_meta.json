@@ -1,0 +1,38 @@
+{
+  "feature_cols": [
+    "pi_home",
+    "pi_away",
+    "pi_diff",
+    "pi_exp_home",
+    "pi_diff_abs",
+    "fifa_rank_home",
+    "fifa_rank_away",
+    "fifa_rank_diff",
+    "goles_favor_5_home",
+    "goles_contra_5_home",
+    "puntos_5_home",
+    "gd_5_home",
+    "n_partidos_home",
+    "goles_favor_5_away",
+    "goles_contra_5_away",
+    "puntos_5_away",
+    "gd_5_away",
+    "n_partidos_away",
+    "h2h_wins_home",
+    "h2h_wins_away",
+    "h2h_draws",
+    "h2h_n",
+    "is_knockout",
+    "confederacion_home",
+    "confederacion_away",
+    "misma_confederacion"
+  ],
+  "n_partidos": 351,
+  "generado": "2026-05-25T16:44:41.617099",
+  "torneos": {
+    "UEFA_QUALIFIERS_2024": 204,
+    "WC_2022": 64,
+    "EURO_2024": 51,
+    "COPA_AMERICA_2024": 32
+  }
+}

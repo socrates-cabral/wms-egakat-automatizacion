@@ -106,6 +106,14 @@ try:
 except ImportError:
     pass
 
+# ── MiroFish bridge (simulación multiagente) ─────────────────────────────────
+MIROFISH_DISPONIBLE = False
+try:
+    from mirofish_bridge import lanzar_simulacion_async as _mirofish_lanzar
+    MIROFISH_DISPONIBLE = True
+except ImportError:
+    pass
+
 # ── Predictor ML (Sprint 10) ──────────────────────────────────────────────────
 ML_DISPONIBLE = False
 try:
@@ -780,6 +788,20 @@ def _notificar_y_registrar(partidos_analizados: list[dict], riesgo: dict) -> int
                         enviar_recomendacion(fixture, rec, bankroll)
                     except Exception as e:
                         log.warning(f"  [AVISO] Telegram enviar_recomendacion: {e}")
+
+                    # MiroFish: confirmación multiagente para bets de alta confianza
+                    if (MIROFISH_DISPONIBLE
+                            and rec.get("tipo_apuesta") in ("1", "local", "home")
+                            and rec.get("confianza", 0) >= 65
+                            and rec.get("tiene_value")):
+                        try:
+                            _mirofish_lanzar(
+                                fixture,
+                                prob_xgboost=rec.get("probabilidad", 0.5),
+                                cuota=rec.get("cuota", 2.0),
+                            )
+                        except Exception as _mf_err:
+                            log.warning(f"  [MIROFISH] No se pudo lanzar: {_mf_err}")
 
                 elif monto_kelly <= lim_perm:
                     # Requiere permiso
