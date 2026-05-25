@@ -1,5 +1,5 @@
 # Wiki Index — ClaudeWork
-Última compilación: 2026-05-15
+Última compilación: 2026-05-25
 
 ## Proyectos
 
@@ -17,6 +17,7 @@
 - [[decisiones/code-review-bots-telegram]] — Code review Codex 2026-05-01: 18 archivos, 4500 LOC. Multi-LLM fallback, SQLite historial, aislamiento RUT. 2 críticos, 5 altos. Seguro prod con optimizaciones.
 - [[decisiones/security-remediation-agente-apuestas-2026-05-01]] — Remediación 2026-05-01: .footystats_profile eliminado del tracking e historial, GOOGLE_API_KEY validada desde .env raíz y repo limpio publicado en idx/main.
 - [[proyecto-agente-apuestas]] — Agente ML XGBoost para value bets deportivos. Sprint 17 completo (Tavily enricher activo, umbrales adaptativos). Serie A activa.
+- [[proyectos/agente-apuestas-modelos-ml]] — Inventario modelos multi-deporte 2026-05-25: Tenis v1/v2, NBA, NFL, Clubes v2, MLB. AUCs 0.67-0.70. Leakage detectado/corregido en tenis y clubes.
 - [[proyectos/agente-apuestas-fixes-2026-04-29]] — Fixes críticos sesgo Under (83%→target <60%), lambda floor bug, re-entrenamiento XGBoost. Grid ROI: umbral 0.60 = +9.82%. Parámetros: MIN_CONFIDENCE=60, umbrales=0.65.
 - [[proyectos/fillrate-automatizacion]] — Módulo independiente Fill Rate: 13 clientes, Graph API SharePoint, lock file, 3 reintentos Graph API. Corrió OK 10/04 en 47 min.
 - [[proyectos/agente-apuestas-orquestador]] — run_agent.py: flujo 7 pasos, control riesgo stop-loss 15%/25%, MAX_FIXTURES=6, módulos opcionales graceful import.
