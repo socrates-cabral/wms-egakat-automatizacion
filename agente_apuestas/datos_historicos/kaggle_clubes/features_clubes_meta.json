@@ -1,0 +1,41 @@
+{
+  "feature_cols": [
+    "pi_home",
+    "pi_away",
+    "pi_diff",
+    "pi_exp_home",
+    "pi_diff_abs",
+    "liga_encoded",
+    "prob_imp_home",
+    "prob_imp_draw",
+    "prob_imp_away",
+    "margen_book",
+    "fifa_home",
+    "fifa_away",
+    "fifa_diff",
+    "goles_favor_5_home",
+    "goles_contra_5_home",
+    "puntos_5_home",
+    "gd_5_home",
+    "n_partidos_home",
+    "goles_favor_5_away",
+    "goles_contra_5_away",
+    "puntos_5_away",
+    "gd_5_away",
+    "n_partidos_away",
+    "h2h_wins_home",
+    "h2h_wins_away",
+    "h2h_draws",
+    "h2h_n"
+  ],
+  "n_partidos": 14585,
+  "ligas": {
+    "Ligue_1": 3040,
+    "Premier_League": 3040,
+    "La_Liga": 3040,
+    "Serie_A": 3017,
+    "Bundesliga": 2448
+  },
+  "generado": "2026-05-25T17:30:34.621505",
+  "nota": "prob_imp_home/draw/away son market odds — NO incluir en predicción real-time (data leakage). Usar solo para evaluar ROI histórico."
+}
