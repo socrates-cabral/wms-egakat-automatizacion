@@ -1,5510 +1,3983 @@
 {
-  "Acasuso J.": {
-    "elo": 1630.1,
-    "last_seen": "2011-02-19"
-  },
-  "Adaktusson J.": {
-    "elo": 1500.0,
-    "last_seen": "2006-01-17"
-  },
-  "Added D.": {
-    "elo": 1500.0,
-    "last_seen": "2025-11-05"
-  },
-  "Agamenone F.": {
-    "elo": 1551.9,
-    "last_seen": "2022-07-30"
-  },
-  "Agassi A.": {
-    "elo": 1637.5,
-    "last_seen": "2006-09-01"
-  },
-  "Agostinelli B.": {
-    "elo": 1500.0,
-    "last_seen": "2009-08-10"
-  },
-  "Aguilar J.": {
-    "elo": 1485.5,
-    "last_seen": "2013-02-13"
-  },
-  "Ahouda A.": {
-    "elo": 1492.0,
-    "last_seen": "2018-04-10"
-  },
-  "Ajdukovic D.": {
-    "elo": 1514.6,
-    "last_seen": "2024-07-23"
-  },
-  "Al Ghareeb M.": {
-    "elo": 1480.0,
-    "last_seen": "2009-02-24"
-  },
-  "Al-Ghareeb M.": {
-    "elo": 1500.0,
-    "last_seen": "2008-03-03"
-  },
-  "Albot R.": {
-    "elo": 1492.2,
-    "last_seen": "2025-04-01"
-  },
-  "Alcaide G.": {
-    "elo": 1500.0,
-    "last_seen": "2010-06-22"
-  },
-  "Alcaraz C.": {
-    "elo": 2177.8,
-    "last_seen": "2025-09-07"
-  },
-  "Aldi F.": {
-    "elo": 1474.9,
-    "last_seen": "2006-09-25"
-  },
-  "Almagro N.": {
-    "elo": 1674.5,
-    "last_seen": "2018-07-24"
-  },
-  "Altamirano C.": {
-    "elo": 1500.0,
-    "last_seen": "2018-08-27"
-  },
-  "Altmaier D.": {
-    "elo": 1525.6,
-    "last_seen": "2026-04-14"
-  },
-  "Alund M.": {
-    "elo": 1546.0,
-    "last_seen": "2014-02-11"
-  },
-  "Alvarez Valdes L.C.": {
-    "elo": 1515.6,
-    "last_seen": "2025-07-17"
-  },
-  "Alvarez Varona N.": {
-    "elo": 1506.0,
-    "last_seen": "2022-10-12"
-  },
-  "Alves M.": {
-    "elo": 1500.0,
-    "last_seen": "2023-02-22"
-  },
-  "Alves T.": {
-    "elo": 1420.7,
-    "last_seen": "2011-01-31"
-  },
-  "Amritraj P.": {
-    "elo": 1500.5,
-    "last_seen": "2013-07-10"
-  },
-  "Ancic M.": {
-    "elo": 1752.7,
-    "last_seen": "2010-05-04"
-  },
-  "Anderson A.": {
-    "elo": 1500.0,
-    "last_seen": "2009-02-02"
-  },
-  "Anderson K.": {
-    "elo": 1630.3,
-    "last_seen": "2023-08-01"
-  },
-  "Anderson O.": {
-    "elo": 1500.0,
-    "last_seen": "2016-01-05"
-  },
-  "Andreev A.": {
-    "elo": 1495.2,
-    "last_seen": "2021-09-27"
-  },
-  "Andreev I.": {
-    "elo": 1546.7,
-    "last_seen": "2013-06-24"
-  },
-  "Andreozzi G.": {
-    "elo": 1474.7,
-    "last_seen": "2024-07-22"
-  },
-  "Androic T.": {
-    "elo": 1488.9,
-    "last_seen": "2015-07-21"
-  },
-  "Andujar P.": {
-    "elo": 1515.9,
-    "last_seen": "2023-04-17"
-  },
-  "Aragone J.": {
-    "elo": 1495.8,
-    "last_seen": "2018-07-17"
-  },
-  "Aragone J.C.": {
-    "elo": 1500.0,
-    "last_seen": "2021-01-08"
-  },
-  "Aragone JC": {
-    "elo": 1500.0,
-    "last_seen": "2019-06-24"
-  },
-  "Aranguren J.M.": {
-    "elo": 1484.0,
-    "last_seen": "2010-02-02"
-  },
-  "Arevalo M.": {
-    "elo": 1482.9,
-    "last_seen": "2019-02-12"
-  },
-  "Arguello F.": {
-    "elo": 1381.7,
-    "last_seen": "2019-07-16"
-  },
-  "Armando H.": {
-    "elo": 1471.7,
-    "last_seen": "2008-04-17"
-  },
-  "Arnaboldi A.": {
-    "elo": 1488.0,
-    "last_seen": "2021-01-07"
-  },
-  "Arnaldi M.": {
-    "elo": 1566.7,
-    "last_seen": "2026-03-20"
-  },
-  "Arseneault N.": {
-    "elo": 1514.5,
-    "last_seen": "2025-07-29"
-  },
-  "Arthurs W.": {
-    "elo": 1535.8,
-    "last_seen": "2007-07-02"
-  },
-  "Artunedo Martinavarro A.": {
-    "elo": 1500.0,
-    "last_seen": "2014-02-04"
-  },
-  "Arvidsson I.": {
-    "elo": 1500.0,
-    "last_seen": "2016-07-11"
-  },
-  "Ascione T.": {
-    "elo": 1370.0,
-    "last_seen": "2010-09-22"
-  },
-  "Atmane T.": {
-    "elo": 1592.9,
-    "last_seen": "2026-04-14"
-  },
-  "Auckland J.": {
-    "elo": 1532.1,
-    "last_seen": "2006-09-29"
-  },
-  "Auger-Aliassime F.": {
-    "elo": 1916.4,
-    "last_seen": "2026-04-10"
-  },
-  "Authom M.": {
-    "elo": 1482.1,
-    "last_seen": "2013-01-14"
-  },
-  "Avidzba A.": {
-    "elo": 1516.0,
-    "last_seen": "2019-10-17"
-  },
-  "Awadhy O.": {
-    "elo": 1500.0,
-    "last_seen": "2011-02-22"
-  },
-  "Azzaro L.": {
-    "elo": 1467.4,
-    "last_seen": "2006-07-25"
-  },
-  "Baadi T.": {
-    "elo": 1505.7,
-    "last_seen": "2026-04-01"
-  },
-  "Bachinger M.": {
-    "elo": 1591.1,
-    "last_seen": "2019-07-31"
-  },
-  "Baez S.": {
-    "elo": 1622.3,
-    "last_seen": "2026-04-14"
-  },
-  "Baghdatis M.": {
-    "elo": 1601.0,
-    "last_seen": "2019-07-04"
-  },
-  "Bagnis F.": {
-    "elo": 1521.6,
-    "last_seen": "2025-07-29"
-  },
-  "Bahrouzyan O.": {
-    "elo": 1500.0,
-    "last_seen": "2007-02-26"
-  },
-  "Bai Y.": {
-    "elo": 1496.3,
-    "last_seen": "2019-09-23"
-  },
-  "Bailly G.": {
-    "elo": 1489.6,
-    "last_seen": "2024-10-16"
-  },
-  "Bailly G.A.": {
-    "elo": 1519.7,
-    "last_seen": "2025-10-15"
-  },
-  "Baker B.": {
-    "elo": 1527.6,
-    "last_seen": "2016-08-29"
-  },
-  "Baker J.": {
-    "elo": 1404.4,
-    "last_seen": "2013-06-10"
-  },
-  "Balazs A.": {
-    "elo": 1559.2,
-    "last_seen": "2023-04-17"
-  },
-  "Baldi F.": {
-    "elo": 1477.6,
-    "last_seen": "2019-07-23"
-  },
-  "Ball C.": {
-    "elo": 1526.1,
-    "last_seen": "2011-01-18"
-  },
-  "Balleret B.": {
-    "elo": 1467.4,
-    "last_seen": "2015-04-14"
-  },
-  "Baluda V.": {
-    "elo": 1500.0,
-    "last_seen": "2014-10-15"
-  },
-  "Bangoura S.": {
-    "elo": 1500.0,
-    "last_seen": "2017-07-31"
-  },
-  "Barranco Cosano J.": {
-    "elo": 1500.0,
-    "last_seen": "2024-05-20"
-  },
-  "Barrena A.": {
-    "elo": 1484.6,
-    "last_seen": "2026-02-23"
-  },
-  "Barrere G.": {
-    "elo": 1533.9,
-    "last_seen": "2025-01-27"
-  },
-  "Barrientos N.": {
-    "elo": 1462.2,
-    "last_seen": "2015-07-20"
-  },
-  "Barrios M.": {
-    "elo": 1420.8,
-    "last_seen": "2026-03-20"
-  },
-  "Barrios Vera M.T.": {
-    "elo": 1516.3,
-    "last_seen": "2020-02-26"
-  },
-  "Barton M.": {
-    "elo": 1560.2,
-    "last_seen": "2017-01-11"
-  },
-  "Basavareddy N.": {
-    "elo": 1543.7,
-    "last_seen": "2026-04-02"
-  },
-  "Basic M.": {
-    "elo": 1506.5,
-    "last_seen": "2022-09-27"
-  },
-  "Basilashvili N.": {
-    "elo": 1485.6,
-    "last_seen": "2026-03-31"
-  },
-  "Basso A.": {
-    "elo": 1500.0,
-    "last_seen": "2019-05-14"
-  },
-  "Bastl G.": {
-    "elo": 1416.8,
-    "last_seen": "2009-02-19"
-  },
-  "Bautista Agut R.": {
-    "elo": 1612.4,
-    "last_seen": "2026-03-20"
-  },
-  "Bautista R.": {
-    "elo": 1862.3,
-    "last_seen": "2016-03-30"
-  },
-  "Beck A.": {
-    "elo": 1410.7,
-    "last_seen": "2016-05-16"
-  },
-  "Beck K.": {
-    "elo": 1377.2,
-    "last_seen": "2012-08-28"
-  },
-  "Becker B.": {
-    "elo": 1471.3,
-    "last_seen": "2017-03-23"
-  },
-  "Becroft I.": {
-    "elo": 1500.0,
-    "last_seen": "2025-01-06"
-  },
-  "Bedene A.": {
-    "elo": 1537.3,
-    "last_seen": "2022-08-30"
-  },
-  "Bega A.": {
-    "elo": 1500.0,
-    "last_seen": "2017-08-02"
-  },
-  "Behrend T.": {
-    "elo": 1393.2,
-    "last_seen": "2006-07-17"
-  },
-  "Belic L.": {
-    "elo": 1475.1,
-    "last_seen": "2008-07-15"
-  },
-  "Bellier A.": {
-    "elo": 1533.4,
-    "last_seen": "2023-02-07"
-  },
-  "Bellotti R.": {
-    "elo": 1500.0,
-    "last_seen": "2017-05-01"
-  },
-  "Bellucci M.": {
-    "elo": 1548.2,
-    "last_seen": "2026-04-01"
-  },
-  "Bellucci T.": {
-    "elo": 1489.1,
-    "last_seen": "2023-02-22"
-  },
-  "Belyaev I.": {
-    "elo": 1500.0,
-    "last_seen": "2010-10-19"
-  },
-  "Bemelmans R.": {
-    "elo": 1474.8,
-    "last_seen": "2019-07-01"
-  },
-  "Benchetrit E.": {
-    "elo": 1444.5,
-    "last_seen": "2025-04-01"
-  },
-  "Bennani K.": {
-    "elo": 1519.7,
-    "last_seen": "2026-04-01"
-  },
-  "Bennani R.": {
-    "elo": 1500.0,
-    "last_seen": "2026-03-31"
-  },
-  "Benneteau J.": {
-    "elo": 1664.2,
-    "last_seen": "2018-08-30"
-  },
-  "Berankis R.": {
-    "elo": 1564.9,
-    "last_seen": "2023-06-13"
-  },
-  "Berdych T.": {
-    "elo": 1752.2,
-    "last_seen": "2019-08-20"
-  },
-  "Bergs Z.": {
-    "elo": 1673.2,
-    "last_seen": "2026-04-15"
-  },
-  "Berlocq C.": {
-    "elo": 1474.1,
-    "last_seen": "2019-04-09"
-  },
-  "Bernet H.": {
-    "elo": 1500.0,
-    "last_seen": "2025-10-20"
-  },
-  "Berrer M.": {
-    "elo": 1477.0,
-    "last_seen": "2016-10-17"
-  },
-  "Berrettini J.": {
-    "elo": 1500.0,
-    "last_seen": "2023-03-02"
-  },
-  "Berrettini M.": {
-    "elo": 1717.4,
-    "last_seen": "2026-04-09"
-  },
-  "Bertola R.": {
-    "elo": 1500.0,
-    "last_seen": "2025-10-20"
-  },
-  "Bester P.": {
-    "elo": 1454.1,
-    "last_seen": "2015-08-10"
-  },
-  "Betov S.": {
-    "elo": 1500.0,
-    "last_seen": "2012-09-19"
-  },
-  "Bhambri Y.": {
-    "elo": 1489.8,
-    "last_seen": "2022-02-03"
-  },
-  "Biryukov M.": {
-    "elo": 1484.6,
-    "last_seen": "2013-09-17"
-  },
-  "Bjorkman J.": {
-    "elo": 1511.4,
-    "last_seen": "2008-10-07"
-  },
-  "Blake J.": {
-    "elo": 1564.9,
-    "last_seen": "2013-08-29"
-  },
-  "Blancaneaux G.": {
-    "elo": 1443.6,
-    "last_seen": "2023-02-21"
-  },
-  "Blanch D.": {
-    "elo": 1488.3,
-    "last_seen": "2024-04-25"
-  },
-  "Blanch Dar.": {
-    "elo": 1508.6,
-    "last_seen": "2026-03-20"
-  },
-  "Blanch U.": {
-    "elo": 1500.0,
-    "last_seen": "2020-09-01"
-  },
-  "Blanchet U.": {
-    "elo": 1494.3,
-    "last_seen": "2026-02-05"
-  },
-  "Blanco G.": {
-    "elo": 1494.5,
-    "last_seen": "2006-04-25"
-  },
-  "Blockx A.": {
-    "elo": 1516.7,
-    "last_seen": "2026-04-15"
-  },
-  "Bloomfield R.": {
-    "elo": 1472.5,
-    "last_seen": "2011-07-05"
-  },
-  "Blumberg W.": {
-    "elo": 1500.0,
-    "last_seen": "2022-07-12"
-  },
-  "Bogaerts R.": {
-    "elo": 1500.0,
-    "last_seen": "2013-08-18"
-  },
-  "Bogdanovic A.": {
-    "elo": 1422.3,
-    "last_seen": "2011-07-05"
-  },
-  "Bogomolov A.": {
-    "elo": 1502.4,
-    "last_seen": "2014-04-08"
-  },
-  "Bohli S.": {
-    "elo": 1395.9,
-    "last_seen": "2013-06-17"
-  },
-  "Boitan G.A.": {
-    "elo": 1500.0,
-    "last_seen": "2026-03-31"
-  },
-  "Bolelli S.": {
-    "elo": 1613.0,
-    "last_seen": "2019-05-28"
-  },
-  "Bolt A.": {
-    "elo": 1534.9,
-    "last_seen": "2026-04-01"
-  },
-  "Bonadio R.": {
-    "elo": 1506.3,
-    "last_seen": "2023-04-04"
-  },
-  "Bonzi B.": {
-    "elo": 1640.2,
-    "last_seen": "2026-03-07"
-  },
-  "Boogaard T.": {
-    "elo": 1500.0,
-    "last_seen": "2026-02-11"
-  },
-  "Bopanna R.": {
-    "elo": 1462.3,
-    "last_seen": "2011-03-11"
-  },
-  "Borg L.": {
-    "elo": 1482.1,
-    "last_seen": "2025-10-15"
-  },
-  "Borges N.": {
-    "elo": 1593.1,
-    "last_seen": "2026-04-15"
-  },
-  "Borvanov R.": {
-    "elo": 1500.0,
-    "last_seen": "2011-02-07"
-  },
-  "Bossel A.": {
-    "elo": 1482.6,
-    "last_seen": "2015-07-14"
-  },
-  "Bourchier H.": {
-    "elo": 1514.9,
-    "last_seen": "2021-02-03"
-  },
-  "Bourgeois L.": {
-    "elo": 1500.0,
-    "last_seen": "2007-01-09"
-  },
-  "Bourgue M.": {
-    "elo": 1490.6,
-    "last_seen": "2023-11-06"
-  },
-  "Bowles C.": {
-    "elo": 1500.0,
-    "last_seen": "2008-02-11"
-  },
-  "Boyer T.": {
-    "elo": 1504.7,
-    "last_seen": "2025-08-28"
-  },
-  "Bozoljac I.": {
-    "elo": 1436.8,
-    "last_seen": "2013-10-15"
-  },
-  "Bracciali D.": {
-    "elo": 1472.4,
-    "last_seen": "2007-05-30"
-  },
-  "Brancaccio R.": {
-    "elo": 1500.0,
-    "last_seen": "2021-05-25"
-  },
-  "Brands D.": {
-    "elo": 1502.7,
-    "last_seen": "2019-02-07"
-  },
-  "Britton D.": {
-    "elo": 1484.1,
-    "last_seen": "2010-02-10"
-  },
-  "Brizzi A.": {
-    "elo": 1500.0,
-    "last_seen": "2008-07-14"
-  },
-  "Broady L.": {
-    "elo": 1546.0,
-    "last_seen": "2024-07-01"
-  },
-  "Brooksby J.": {
-    "elo": 1717.7,
-    "last_seen": "2026-03-06"
-  },
-  "Broom C.": {
-    "elo": 1486.3,
-    "last_seen": "2024-07-01"
-  },
-  "Brouwer G.": {
-    "elo": 1563.2,
-    "last_seen": "2024-06-24"
-  },
-  "Brown D.": {
-    "elo": 1581.2,
-    "last_seen": "2021-06-08"
-  },
-  "Brugues-Davi A.": {
-    "elo": 1492.9,
-    "last_seen": "2013-02-07"
-  },
-  "Bryde T.": {
-    "elo": 1500.0,
-    "last_seen": "2021-07-28"
-  },
-  "Brzezicki J.P.": {
-    "elo": 1406.1,
-    "last_seen": "2011-02-17"
-  },
-  "Bu Y.": {
-    "elo": 1520.0,
-    "last_seen": "2026-01-19"
-  },
-  "Bubka S.": {
-    "elo": 1494.3,
-    "last_seen": "2012-07-18"
-  },
-  "Bublik A.": {
-    "elo": 1857.1,
-    "last_seen": "2026-04-10"
-  },
-  "Buchanan C.": {
-    "elo": 1495.4,
-    "last_seen": "2014-08-11"
-  },
-  "Budkov Kjaer N.": {
-    "elo": 1475.0,
-    "last_seen": "2026-02-09"
-  },
-  "Burgsmuller L.": {
-    "elo": 1411.5,
-    "last_seen": "2007-04-11"
-  },
-  "Burniol G.": {
-    "elo": 1500.0,
-    "last_seen": "2006-04-10"
-  },
-  "Burquier G.": {
-    "elo": 1500.0,
-    "last_seen": "2014-09-23"
-  },
-  "Burruchaga R.": {
-    "elo": 1572.1,
-    "last_seen": "2026-04-05"
-  },
-  "Buse I.": {
-    "elo": 1535.3,
-    "last_seen": "2026-04-13"
-  },
-  "Cabal J.S.": {
-    "elo": 1500.0,
-    "last_seen": "2012-02-28"
-  },
-  "Cachin P.": {
-    "elo": 1467.0,
-    "last_seen": "2024-07-16"
-  },
-  "Cacic N.": {
-    "elo": 1519.3,
-    "last_seen": "2016-07-20"
-  },
-  "Cakl T.": {
-    "elo": 1434.4,
-    "last_seen": "2008-01-08"
-  },
-  "Calatrava A.": {
-    "elo": 1460.2,
-    "last_seen": "2006-07-26"
-  },
-  "Calleri A.": {
-    "elo": 1460.4,
-    "last_seen": "2009-06-22"
-  },
-  "Canas G.": {
-    "elo": 1493.5,
-    "last_seen": "2009-06-24"
-  },
-  "Capdeville P.": {
-    "elo": 1366.8,
-    "last_seen": "2013-02-14"
-  },
-  "Carballes Baena R.": {
-    "elo": 1539.1,
-    "last_seen": "2025-08-24"
-  },
-  "Carlsen K.": {
-    "elo": 1476.5,
-    "last_seen": "2007-10-10"
-  },
-  "Carraz G.": {
-    "elo": 1453.5,
-    "last_seen": "2006-01-03"
-  },
-  "Carreno Busta P.": {
-    "elo": 1604.5,
-    "last_seen": "2026-02-25"
-  },
-  "Carreno-Busta P.": {
-    "elo": 1587.5,
-    "last_seen": "2016-03-12"
-  },
-  "Caruana L.": {
-    "elo": 1500.0,
-    "last_seen": "2018-01-09"
-  },
-  "Caruso S.": {
-    "elo": 1430.0,
-    "last_seen": "2022-01-17"
-  },
-  "Casanova H.": {
-    "elo": 1500.0,
-    "last_seen": "2022-07-25"
-  },
-  "Cassone M.": {
-    "elo": 1500.0,
-    "last_seen": "2025-07-21"
-  },
-  "Catarina L.": {
-    "elo": 1469.9,
-    "last_seen": "2022-04-12"
-  },
-  "Cazaux A.": {
-    "elo": 1626.5,
-    "last_seen": "2026-03-21"
-  },
-  "Cecchinato M.": {
-    "elo": 1517.4,
-    "last_seen": "2023-08-28"
-  },
-  "Celikbilek A.": {
-    "elo": 1518.0,
-    "last_seen": "2022-10-13"
-  },
-  "Cermak F.": {
-    "elo": 1514.5,
-    "last_seen": "2010-10-26"
-  },
-  "Cerundolo F.": {
-    "elo": 1804.1,
-    "last_seen": "2026-04-17"
-  },
-  "Cerundolo J.M.": {
-    "elo": 1554.9,
-    "last_seen": "2026-04-14"
-  },
-  "Cervantes I.": {
-    "elo": 1484.6,
-    "last_seen": "2017-02-27"
-  },
-  "Cervenak P.": {
-    "elo": 1555.5,
-    "last_seen": "2012-07-25"
-  },
-  "Chadaj A.": {
-    "elo": 1515.3,
-    "last_seen": "2005-08-04"
-  },
-  "Chaen T.": {
-    "elo": 1500.0,
-    "last_seen": "2006-10-03"
-  },
-  "Chaki R.": {
-    "elo": 1483.3,
-    "last_seen": "2009-04-07"
-  },
-  "Chappell N.": {
-    "elo": 1483.3,
-    "last_seen": "2023-03-01"
-  },
-  "Chardy J.": {
-    "elo": 1605.9,
-    "last_seen": "2023-07-04"
-  },
-  "Chekov P.": {
-    "elo": 1500.0,
-    "last_seen": "2007-10-23"
-  },
-  "Chela J.": {
-    "elo": 1515.1,
-    "last_seen": "2006-05-25"
-  },
-  "Chela J.I.": {
-    "elo": 1497.1,
-    "last_seen": "2012-06-25"
-  },
-  "Chen T.": {
-    "elo": 1468.5,
-    "last_seen": "2007-09-27"
-  },
-  "Chidekh C.": {
-    "elo": 1481.6,
-    "last_seen": "2025-02-11"
-  },
-  "Childs L.": {
-    "elo": 1500.0,
-    "last_seen": "2007-06-26"
-  },
-  "Chiudinelli M.": {
-    "elo": 1433.2,
-    "last_seen": "2017-10-23"
-  },
-  "Choinski J.": {
-    "elo": 1451.5,
-    "last_seen": "2026-02-16"
-  },
-  "Chrysochos P.": {
-    "elo": 1500.0,
-    "last_seen": "2017-08-20"
-  },
-  "Chung H.": {
-    "elo": 1699.8,
-    "last_seen": "2019-10-24"
-  },
-  "Chung Y.": {
-    "elo": 1487.4,
-    "last_seen": "2023-07-18"
-  },
-  "Chvojka E.": {
-    "elo": 1492.3,
-    "last_seen": "2012-04-24"
-  },
-  "Cilic M.": {
-    "elo": 1713.0,
-    "last_seen": "2026-04-08"
-  },
-  "Cina F.": {
-    "elo": 1492.3,
-    "last_seen": "2026-03-31"
-  },
-  "Ciorcila P.": {
-    "elo": 1500.0,
-    "last_seen": "2014-04-21"
-  },
-  "Cipolla F.": {
-    "elo": 1430.0,
-    "last_seen": "2013-04-23"
-  },
-  "Clarke J.": {
-    "elo": 1424.8,
-    "last_seen": "2025-07-01"
-  },
-  "Clayton A.": {
-    "elo": 1500.0,
-    "last_seen": "2005-08-02"
-  },
-  "Clemens T.": {
-    "elo": 1518.7,
-    "last_seen": "2006-10-25"
-  },
-  "Clement A.": {
-    "elo": 1511.5,
-    "last_seen": "2012-05-31"
-  },
-  "Clezar G.": {
-    "elo": 1407.0,
-    "last_seen": "2018-03-01"
-  },
-  "Cobolli F.": {
-    "elo": 1738.2,
-    "last_seen": "2026-04-19"
-  },
-  "Collarini A.": {
-    "elo": 1484.0,
-    "last_seen": "2024-07-22"
-  },
-  "Collignon R.": {
-    "elo": 1605.6,
-    "last_seen": "2026-03-22"
-  },
-  "Comesana F.": {
-    "elo": 1525.4,
-    "last_seen": "2026-04-06"
-  },
-  "Copil M.": {
-    "elo": 1548.8,
-    "last_seen": "2022-09-27"
-  },
-  "Coppejans K.": {
-    "elo": 1420.7,
-    "last_seen": "2023-09-22"
-  },
-  "Coria F.": {
-    "elo": 1474.2,
-    "last_seen": "2026-02-10"
-  },
-  "Coria G.": {
-    "elo": 1511.5,
-    "last_seen": "2008-07-08"
-  },
-  "Coric B.": {
-    "elo": 1464.6,
-    "last_seen": "2025-08-24"
-  },
-  "Corrie E.": {
-    "elo": 1500.0,
-    "last_seen": "2013-06-10"
-  },
-  "Costa A.": {
-    "elo": 1480.7,
-    "last_seen": "2006-04-27"
-  },
-  "Couacaud E.": {
-    "elo": 1501.4,
-    "last_seen": "2023-07-03"
-  },
-  "Cox D.": {
-    "elo": 1438.0,
-    "last_seen": "2014-06-23"
-  },
-  "Crawford O.": {
-    "elo": 1500.0,
-    "last_seen": "2025-06-30"
-  },
-  "Cressy M.": {
-    "elo": 1480.9,
-    "last_seen": "2024-07-29"
-  },
-  "Crivoi V.": {
-    "elo": 1401.5,
-    "last_seen": "2013-07-23"
-  },
-  "Cruciat A.": {
-    "elo": 1482.6,
-    "last_seen": "2008-09-11"
-  },
-  "Crugnola M.": {
-    "elo": 1483.9,
-    "last_seen": "2011-01-17"
-  },
-  "Cuadrado C.": {
-    "elo": 1529.7,
-    "last_seen": "2006-04-26"
-  },
-  "Cuevas P.": {
-    "elo": 1510.7,
-    "last_seen": "2022-05-22"
-  },
-  "Cui J.": {
-    "elo": 1500.0,
-    "last_seen": "2023-09-21"
-  },
-  "Dabul B.": {
-    "elo": 1430.5,
-    "last_seen": "2011-07-04"
-  },
-  "Damm M.": {
-    "elo": 1536.3,
-    "last_seen": "2026-03-31"
-  },
-  "Dancevic F.": {
-    "elo": 1495.5,
-    "last_seen": "2017-07-19"
-  },
-  "Daniel M.": {
-    "elo": 1352.4,
-    "last_seen": "2011-04-26"
-  },
-  "Daniel T.": {
-    "elo": 1463.5,
-    "last_seen": "2025-09-21"
-  },
-  "Darcis S.": {
-    "elo": 1523.7,
-    "last_seen": "2019-10-15"
-  },
-  "Darderi L.": {
-    "elo": 1693.8,
-    "last_seen": "2026-02-15"
-  },
-  "Dasnieres de Veigy J.": {
-    "elo": 1472.6,
-    "last_seen": "2012-05-27"
-  },
-  "Davidovich Fokina A.": {
-    "elo": 1749.1,
-    "last_seen": "2026-03-08"
-  },
-  "Davletshin V.": {
-    "elo": 1500.0,
-    "last_seen": "2005-10-24"
-  },
-  "Davydenko N.": {
-    "elo": 1596.1,
-    "last_seen": "2014-05-26"
-  },
-  "Davydenko P.": {
-    "elo": 1502.9,
-    "last_seen": "2014-07-10"
-  },
-  "De Bakker T.": {
-    "elo": 1495.6,
-    "last_seen": "2019-06-11"
-  },
-  "De Chaunac S.": {
-    "elo": 1540.0,
-    "last_seen": "2009-09-22"
-  },
-  "De Greef A.": {
-    "elo": 1513.1,
-    "last_seen": "2017-05-29"
-  },
-  "De Heart R.": {
-    "elo": 1515.9,
-    "last_seen": "2008-08-29"
-  },
-  "De Jong J.": {
-    "elo": 1572.6,
-    "last_seen": "2026-03-30"
-  },
-  "De Loore J.": {
-    "elo": 1485.4,
-    "last_seen": "2018-05-23"
-  },
-  "De Minaur A.": {
-    "elo": 1932.9,
-    "last_seen": "2026-02-15"
-  },
-  "De Paula F.": {
-    "elo": 1500.0,
-    "last_seen": "2014-07-22"
-  },
-  "De Schepper K.": {
-    "elo": 1450.8,
-    "last_seen": "2018-09-18"
-  },
-  "De Voest R.": {
-    "elo": 1402.7,
-    "last_seen": "2013-02-13"
-  },
-  "Decoud S.": {
-    "elo": 1529.5,
-    "last_seen": "2011-07-05"
-  },
-  "Dedura D.": {
-    "elo": 1489.4,
-    "last_seen": "2026-04-14"
-  },
-  "Dedura-Palomero D.": {
-    "elo": 1500.0,
-    "last_seen": "2025-04-17"
-  },
-  "Deen Heshaam A.": {
-    "elo": 1500.0,
-    "last_seen": "2012-09-24"
-  },
-  "Deheart R.": {
-    "elo": 1497.8,
-    "last_seen": "2010-09-28"
-  },
-  "Del Bonis F.": {
-    "elo": 1532.7,
-    "last_seen": "2012-02-03"
-  },
-  "Del Potro J.": {
-    "elo": 1517.7,
-    "last_seen": "2008-05-01"
-  },
-  "Del Potro J. M.": {
-    "elo": 1521.3,
-    "last_seen": "2017-06-03"
-  },
-  "Del Potro J.M.": {
-    "elo": 1956.1,
-    "last_seen": "2022-02-08"
-  },
-  "Delbonis F.": {
-    "elo": 1505.9,
-    "last_seen": "2023-02-09"
-  },
-  "Delgado J.": {
-    "elo": 1498.9,
-    "last_seen": "2006-06-29"
-  },
-  "Delgado R.": {
-    "elo": 1442.1,
-    "last_seen": "2010-06-21"
-  },
-  "Delic A.": {
-    "elo": 1472.4,
-    "last_seen": "2012-03-09"
-  },
-  "Delic M.": {
-    "elo": 1460.9,
-    "last_seen": "2015-07-20"
-  },
-  "Dell'Acqua M.": {
-    "elo": 1518.4,
-    "last_seen": "2008-06-17"
-  },
-  "Dellien H.": {
-    "elo": 1438.5,
-    "last_seen": "2026-02-12"
-  },
-  "Demoliner M.": {
-    "elo": 1514.3,
-    "last_seen": "2015-07-23"
-  },
-  "Den Ouden G.": {
-    "elo": 1523.4,
-    "last_seen": "2026-02-12"
-  },
-  "Denolly C.": {
-    "elo": 1513.4,
-    "last_seen": "2025-04-03"
-  },
-  "Dent T.": {
-    "elo": 1568.0,
-    "last_seen": "2010-10-28"
-  },
-  "Desein N.": {
-    "elo": 1476.0,
-    "last_seen": "2015-07-14"
-  },
-  "Dev Varman S.": {
-    "elo": 1467.2,
-    "last_seen": "2007-09-26"
-  },
-  "Devilder N.": {
-    "elo": 1400.1,
-    "last_seen": "2012-06-01"
-  },
-  "Devvarman S.": {
-    "elo": 1459.1,
-    "last_seen": "2015-01-06"
-  },
-  "Di Mauro A.": {
-    "elo": 1500.0,
-    "last_seen": "2010-05-05"
-  },
-  "Diallo G.": {
-    "elo": 1625.0,
-    "last_seen": "2026-04-16"
-  },
-  "Diaz Acosta F.": {
-    "elo": 1547.0,
-    "last_seen": "2026-02-10"
-  },
-  "Diez S.": {
-    "elo": 1454.1,
-    "last_seen": "2022-04-05"
-  },
-  "Dimitrov G.": {
-    "elo": 1767.8,
-    "last_seen": "2026-04-07"
-  },
-  "Djere L.": {
-    "elo": 1566.0,
-    "last_seen": "2026-01-06"
-  },
-  "Djokovic M.": {
-    "elo": 1470.3,
-    "last_seen": "2012-04-30"
-  },
-  "Djokovic N.": {
-    "elo": 2074.7,
-    "last_seen": "2026-02-01"
-  },
-  "Djuric B.": {
-    "elo": 1500.0,
-    "last_seen": "2024-11-04"
-  },
-  "Dlouhy L.": {
-    "elo": 1417.1,
-    "last_seen": "2009-01-09"
-  },
-  "Do M.Q.": {
-    "elo": 1500.0,
-    "last_seen": "2005-09-26"
-  },
-  "Dodig I.": {
-    "elo": 1559.4,
-    "last_seen": "2017-07-22"
-  },
-  "Dodig M.": {
-    "elo": 1505.3,
-    "last_seen": "2025-07-20"
-  },
-  "Dolgopolov A.": {
-    "elo": 1467.8,
-    "last_seen": "2017-05-16"
-  },
-  "Dolgopolov O.": {
-    "elo": 1716.7,
-    "last_seen": "2018-05-14"
-  },
-  "Domingues J.": {
-    "elo": 1525.1,
-    "last_seen": "2020-02-20"
-  },
-  "Donaldson J.": {
-    "elo": 1572.9,
-    "last_seen": "2019-03-11"
-  },
-  "Donati M.": {
-    "elo": 1520.4,
-    "last_seen": "2015-05-12"
-  },
-  "Donski A.": {
-    "elo": 1500.0,
-    "last_seen": "2018-02-06"
-  },
-  "Donskoy E.": {
-    "elo": 1467.3,
-    "last_seen": "2021-10-19"
-  },
-  "Dorsch B.": {
-    "elo": 1481.3,
-    "last_seen": "2008-02-18"
-  },
-  "Dostanic S.": {
-    "elo": 1505.7,
-    "last_seen": "2025-08-24"
-  },
-  "Dougaz A.": {
-    "elo": 1469.6,
-    "last_seen": "2025-02-24"
-  },
-  "Draper J.": {
-    "elo": 1943.1,
-    "last_seen": "2026-03-13"
-  },
-  "Draxl L.": {
-    "elo": 1473.1,
-    "last_seen": "2026-03-19"
-  },
-  "Droguet T.": {
-    "elo": 1575.0,
-    "last_seen": "2026-04-03"
-  },
-  "Dubrivnyy A.": {
-    "elo": 1500.0,
-    "last_seen": "2019-10-15"
-  },
-  "Duckworth J.": {
-    "elo": 1548.4,
-    "last_seen": "2026-02-11"
-  },
-  "Duclos P.L.": {
-    "elo": 1497.0,
-    "last_seen": "2012-06-19"
-  },
-  "Dupuis A.": {
-    "elo": 1519.9,
-    "last_seen": "2007-07-12"
-  },
-  "Durasovic V.": {
-    "elo": 1493.7,
-    "last_seen": "2022-01-11"
-  },
-  "Dustov F.": {
-    "elo": 1444.1,
-    "last_seen": "2014-07-14"
-  },
-  "Dutra Da Silva D.": {
-    "elo": 1500.0,
-    "last_seen": "2022-07-25"
-  },
-  "Dutra Da Silva R.": {
-    "elo": 1500.0,
-    "last_seen": "2011-09-02"
-  },
-  "Dutra Silva R.": {
-    "elo": 1453.6,
-    "last_seen": "2019-02-11"
-  },
-  "Dzumhur D.": {
-    "elo": 1507.3,
-    "last_seen": "2026-04-07"
-  },
-  "Eaton C.": {
-    "elo": 1511.7,
-    "last_seen": "2008-06-26"
-  },
-  "Ebden M.": {
-    "elo": 1547.9,
-    "last_seen": "2022-06-07"
-  },
-  "Ebelthite C.": {
-    "elo": 1500.0,
-    "last_seen": "2009-01-20"
-  },
-  "Echagaray B.": {
-    "elo": 1467.9,
-    "last_seen": "2009-02-24"
-  },
-  "Echargui M.": {
-    "elo": 1484.4,
-    "last_seen": "2026-02-23"
-  },
-  "Economidis K.": {
-    "elo": 1400.8,
-    "last_seen": "2008-01-15"
-  },
-  "Edmund K.": {
-    "elo": 1563.4,
-    "last_seen": "2023-05-10"
-  },
-  "Ehrat S.": {
-    "elo": 1463.9,
-    "last_seen": "2021-07-19"
-  },
-  "Eitzinger R.": {
-    "elo": 1479.1,
-    "last_seen": "2008-05-19"
-  },
-  "El Aarej M.": {
-    "elo": 1500.0,
-    "last_seen": "2006-04-24"
-  },
-  "El Amrani R.": {
-    "elo": 1491.3,
-    "last_seen": "2017-04-12"
-  },
-  "El Aynaoui Y.": {
-    "elo": 1517.6,
-    "last_seen": "2008-05-19"
-  },
-  "Eleskovic E.": {
-    "elo": 1485.0,
-    "last_seen": "2010-07-15"
-  },
-  "Elgin M.": {
-    "elo": 1468.5,
-    "last_seen": "2013-09-18"
-  },
-  "Elias G.": {
-    "elo": 1511.5,
-    "last_seen": "2018-07-02"
-  },
-  "Elseneer G.": {
-    "elo": 1484.0,
-    "last_seen": "2005-08-29"
-  },
-  "Elsner D.": {
-    "elo": 1516.0,
-    "last_seen": "2005-09-28"
-  },
-  "Emmrich M.": {
-    "elo": 1500.0,
-    "last_seen": "2010-06-14"
-  },
-  "Engel J.": {
-    "elo": 1504.2,
-    "last_seen": "2026-04-14"
-  },
-  "Enqvist T.": {
-    "elo": 1499.8,
-    "last_seen": "2005-10-26"
-  },
-  "Eriksson M.": {
-    "elo": 1450.0,
-    "last_seen": "2015-07-20"
-  },
-  "Erler A.": {
-    "elo": 1522.8,
-    "last_seen": "2021-07-28"
-  },
-  "Eschauer W.": {
-    "elo": 1367.4,
-    "last_seen": "2008-07-15"
-  },
-  "Escobar G.": {
-    "elo": 1484.0,
-    "last_seen": "2016-02-02"
-  },
-  "Escobedo E.": {
-    "elo": 1459.1,
-    "last_seen": "2024-02-27"
-  },
-  "Escoffier A.": {
-    "elo": 1500.0,
-    "last_seen": "2024-01-30"
-  },
-  "Estrella Burgos V.": {
-    "elo": 1435.8,
-    "last_seen": "2018-07-17"
-  },
-  "Estrella V.": {
-    "elo": 1500.0,
-    "last_seen": "2008-07-29"
-  },
-  "Etcheverry T.": {
-    "elo": 1744.7,
-    "last_seen": "2026-04-09"
-  },
-  "Etcheverry T. M.": {
-    "elo": 1500.0,
-    "last_seen": "2025-10-28"
-  },
-  "Eubanks C.": {
-    "elo": 1533.7,
-    "last_seen": "2025-07-01"
-  },
-  "Evans B.": {
-    "elo": 1467.2,
-    "last_seen": "2010-06-23"
-  },
-  "Evans D.": {
-    "elo": 1612.1,
-    "last_seen": "2025-07-24"
-  },
-  "Eysseric J.": {
-    "elo": 1459.5,
-    "last_seen": "2017-08-21"
-  },
-  "Fabbiano T.": {
-    "elo": 1461.3,
-    "last_seen": "2022-02-14"
-  },
-  "Falla A.": {
-    "elo": 1511.0,
-    "last_seen": "2017-02-09"
-  },
-  "Fancutt T.": {
-    "elo": 1500.0,
-    "last_seen": "2021-02-02"
-  },
-  "Fanselow S.": {
-    "elo": 1500.0,
-    "last_seen": "2024-05-21"
-  },
-  "Farah R.": {
-    "elo": 1513.9,
-    "last_seen": "2012-05-03"
-  },
-  "Faria J.": {
-    "elo": 1512.5,
-    "last_seen": "2026-02-20"
-  },
-  "Faurel J.C.": {
-    "elo": 1474.8,
-    "last_seen": "2006-08-01"
-  },
-  "Fearnley J.": {
-    "elo": 1521.1,
-    "last_seen": "2026-03-08"
-  },
-  "Federer R.": {
-    "elo": 2108.1,
-    "last_seen": "2020-01-30"
-  },
-  "Ferreira Silva F.": {
-    "elo": 1488.4,
-    "last_seen": "2021-02-08"
-  },
-  "Ferreiro F.": {
-    "elo": 1522.8,
-    "last_seen": "2009-05-25"
-  },
-  "Ferrer D.": {
-    "elo": 1677.0,
-    "last_seen": "2019-05-08"
-  },
-  "Ferrero J.C.": {
-    "elo": 1646.3,
-    "last_seen": "2012-10-23"
-  },
-  "Fery A.": {
-    "elo": 1498.4,
-    "last_seen": "2026-03-19"
-  },
-  "Ficovich J.P.": {
-    "elo": 1529.0,
-    "last_seen": "2025-07-29"
-  },
-  "Fidirko N.": {
-    "elo": 1500.0,
-    "last_seen": "2012-09-19"
-  },
-  "Fils A.": {
-    "elo": 1910.6,
-    "last_seen": "2026-04-19"
-  },
-  "Fischer M.": {
-    "elo": 1348.3,
-    "last_seen": "2015-04-28"
-  },
-  "Fish A.": {
-    "elo": 1500.0,
-    "last_seen": "2006-10-09"
-  },
-  "Fish M.": {
-    "elo": 1790.2,
-    "last_seen": "2015-09-02"
-  },
-  "Fleishman Z.": {
-    "elo": 1480.2,
-    "last_seen": "2008-08-04"
-  },
-  "Fleming C.": {
-    "elo": 1484.4,
-    "last_seen": "2011-06-13"
-  },
-  "Fognini F.": {
-    "elo": 1489.8,
-    "last_seen": "2025-06-30"
-  },
-  "Fonseca J.": {
-    "elo": 1764.7,
-    "last_seen": "2026-04-17"
-  },
-  "Forbes M.": {
-    "elo": 1500.0,
-    "last_seen": "2024-08-27"
-  },
-  "Forejtek J.": {
-    "elo": 1524.2,
-    "last_seen": "2020-11-11"
-  },
-  "Fornell M.": {
-    "elo": 1500.0,
-    "last_seen": "2007-04-10"
-  },
-  "Fraile G.": {
-    "elo": 1417.1,
-    "last_seen": "2012-07-10"
-  },
-  "Fratangelo B.": {
-    "elo": 1491.4,
-    "last_seen": "2023-08-01"
-  },
-  "Friberg K.": {
-    "elo": 1500.0,
-    "last_seen": "2023-10-16"
-  },
-  "Fritz T.": {
-    "elo": 1871.1,
-    "last_seen": "2026-01-26"
-  },
-  "Fruttero J.P.": {
-    "elo": 1500.0,
-    "last_seen": "2005-09-26"
-  },
-  "Fucsovics M.": {
-    "elo": 1679.1,
-    "last_seen": "2026-04-05"
-  },
-  "Furness E.": {
-    "elo": 1500.0,
-    "last_seen": "2022-09-21"
-  },
-  "Fyrstenberg M.": {
-    "elo": 1485.5,
-    "last_seen": "2005-09-14"
-  },
-  "Gabashvili T.": {
-    "elo": 1466.2,
-    "last_seen": "2017-10-16"
-  },
-  "Gaio F.": {
-    "elo": 1419.2,
-    "last_seen": "2022-01-31"
-  },
-  "Gakhov I.": {
-    "elo": 1500.4,
-    "last_seen": "2025-05-19"
-  },
-  "Galan D.": {
-    "elo": 1539.3,
-    "last_seen": "2020-10-03"
-  },
-  "Galan D.E.": {
-    "elo": 1463.2,
-    "last_seen": "2025-08-25"
-  },
-  "Galarneau A.": {
-    "elo": 1505.2,
-    "last_seen": "2026-03-05"
-  },
-  "Galdon P.": {
-    "elo": 1500.0,
-    "last_seen": "2011-02-15"
-  },
-  "Galimberti G.": {
-    "elo": 1515.3,
-    "last_seen": "2006-02-28"
-  },
-  "Gallardo Valles M.": {
-    "elo": 1500.0,
-    "last_seen": "2006-02-28"
-  },
-  "Galovic V.": {
-    "elo": 1502.6,
-    "last_seen": "2019-06-11"
-  },
-  "Galvani S.": {
-    "elo": 1423.6,
-    "last_seen": "2011-01-31"
-  },
-  "Gambill J.M.": {
-    "elo": 1487.3,
-    "last_seen": "2007-04-10"
-  },
-  "Gao X.": {
-    "elo": 1500.0,
-    "last_seen": "2014-09-22"
-  },
-  "Garanganga T.": {
-    "elo": 1500.0,
-    "last_seen": "2018-07-31"
-  },
-  "Garcia A.": {
-    "elo": 1428.2,
-    "last_seen": "2007-09-10"
-  },
-  "Garcia-Lopez G.": {
-    "elo": 1506.6,
-    "last_seen": "2019-08-27"
-  },
-  "Gard C.": {
-    "elo": 1500.0,
-    "last_seen": "2007-09-11"
-  },
-  "Garin C.": {
-    "elo": 1579.1,
-    "last_seen": "2026-04-08"
-  },
-  "Garza D.": {
-    "elo": 1456.1,
-    "last_seen": "2015-02-24"
-  },
-  "Gasquet R.": {
-    "elo": 1508.0,
-    "last_seen": "2025-05-29"
-  },
-  "Gaston H.": {
-    "elo": 1452.3,
-    "last_seen": "2026-03-31"
-  },
-  "Gaubas V.": {
-    "elo": 1560.6,
-    "last_seen": "2026-03-31"
-  },
-  "Gaudio G.": {
-    "elo": 1426.4,
-    "last_seen": "2010-02-16"
-  },
-  "Gea A.": {
-    "elo": 1494.5,
-    "last_seen": "2026-02-06"
-  },
-  "Geerts M.": {
-    "elo": 1500.0,
-    "last_seen": "2022-10-19"
-  },
-  "Gensse A.": {
-    "elo": 1493.7,
-    "last_seen": "2011-08-29"
-  },
-  "Gerasimov E.": {
-    "elo": 1561.3,
-    "last_seen": "2024-10-02"
-  },
-  "Ghedin R.": {
-    "elo": 1471.3,
-    "last_seen": "2013-06-11"
-  },
-  "Ghem A.": {
-    "elo": 1472.4,
-    "last_seen": "2016-07-19"
-  },
-  "Giannessi A.": {
-    "elo": 1450.7,
-    "last_seen": "2023-04-03"
-  },
-  "Gicquel M.": {
-    "elo": 1460.2,
-    "last_seen": "2014-02-07"
-  },
-  "Gigante M.": {
-    "elo": 1575.8,
-    "last_seen": "2025-07-30"
-  },
-  "Gigounon G.": {
-    "elo": 1500.0,
-    "last_seen": "2015-05-26"
-  },
-  "Gil F.": {
-    "elo": 1536.9,
-    "last_seen": "2012-07-12"
-  },
-  "Gimelstob J.": {
-    "elo": 1393.1,
-    "last_seen": "2007-10-23"
-  },
-  "Gimeno Valero C.": {
-    "elo": 1500.0,
-    "last_seen": "2022-05-02"
-  },
-  "Gimeno-Traver D.": {
-    "elo": 1487.9,
-    "last_seen": "2018-05-01"
-  },
-  "Ginepri R.": {
-    "elo": 1546.4,
-    "last_seen": "2014-08-18"
-  },
-  "Giraldo S.": {
-    "elo": 1471.9,
-    "last_seen": "2019-08-27"
-  },
-  "Giron M.": {
-    "elo": 1639.1,
-    "last_seen": "2026-03-07"
-  },
-  "Giustino L.": {
-    "elo": 1466.5,
-    "last_seen": "2023-04-18"
-  },
-  "Goffin D.": {
-    "elo": 1572.2,
-    "last_seen": "2025-10-21"
-  },
-  "Gojo B.": {
-    "elo": 1483.0,
-    "last_seen": "2025-05-19"
-  },
-  "Gojowczyk P.": {
-    "elo": 1519.2,
-    "last_seen": "2022-08-30"
-  },
-  "Golding O.": {
-    "elo": 1464.4,
-    "last_seen": "2012-06-25"
-  },
-  "Goldstein P.": {
-    "elo": 1488.5,
-    "last_seen": "2007-08-01"
-  },
-  "Golubev A.": {
-    "elo": 1467.3,
-    "last_seen": "2015-09-23"
-  },
-  "Gombos N.": {
-    "elo": 1507.2,
-    "last_seen": "2025-07-23"
-  },
-  "Gomez A.": {
-    "elo": 1524.3,
-    "last_seen": "2015-07-24"
-  },
-  "Gomez E.": {
-    "elo": 1469.3,
-    "last_seen": "2023-07-31"
-  },
-  "Gomez F.": {
-    "elo": 1502.1,
-    "last_seen": "2024-09-21"
-  },
-  "Gomez F.A.": {
-    "elo": 1504.9,
-    "last_seen": "2026-03-31"
-  },
-  "Gomez L.": {
-    "elo": 1457.6,
-    "last_seen": "2019-07-30"
-  },
-  "Gomez-Herrera C.": {
-    "elo": 1500.0,
-    "last_seen": "2012-05-01"
-  },
-  "Gong M.X.": {
-    "elo": 1475.9,
-    "last_seen": "2013-10-08"
-  },
-  "Gonzalez A.": {
-    "elo": 1377.2,
-    "last_seen": "2016-07-25"
-  },
-  "Gonzalez F.": {
-    "elo": 1666.6,
-    "last_seen": "2012-03-21"
-  },
-  "Gonzalez M.": {
-    "elo": 1419.4,
-    "last_seen": "2017-04-13"
-  },
-  "Gonzalez S.": {
-    "elo": 1438.7,
-    "last_seen": "2011-02-24"
-  },
-  "Goodall J.": {
-    "elo": 1423.5,
-    "last_seen": "2012-06-25"
-  },
-  "Goransson T.": {
-    "elo": 1481.3,
-    "last_seen": "2008-07-08"
-  },
-  "Granollers G.": {
-    "elo": 1500.0,
-    "last_seen": "2013-04-22"
-  },
-  "Granollers M.": {
-    "elo": 1531.8,
-    "last_seen": "2019-09-17"
-  },
-  "Granollers Pujol G.": {
-    "elo": 1500.0,
-    "last_seen": "2011-04-05"
-  },
-  "Granollers-Pujol G.": {
-    "elo": 1487.4,
-    "last_seen": "2012-04-23"
-  },
-  "Granollers-Pujol M.": {
-    "elo": 1500.0,
-    "last_seen": "2006-04-24"
-  },
-  "Gray A.": {
-    "elo": 1503.0,
-    "last_seen": "2022-06-30"
-  },
-  "Gregorc L.": {
-    "elo": 1538.1,
-    "last_seen": "2009-06-22"
-  },
-  "Gremelmayr D.": {
-    "elo": 1449.0,
-    "last_seen": "2012-01-04"
-  },
-  "Grenier H.": {
-    "elo": 1468.3,
-    "last_seen": "2026-02-10"
-  },
-  "Greul S.": {
-    "elo": 1524.4,
-    "last_seen": "2011-04-20"
-  },
-  "Griekspoor T.": {
-    "elo": 1708.1,
-    "last_seen": "2026-02-27"
-  },
-  "Grigelis L.": {
-    "elo": 1500.0,
-    "last_seen": "2011-07-27"
-  },
-  "Grosjean S.": {
-    "elo": 1494.3,
-    "last_seen": "2010-02-23"
-  },
-  "Groth S.": {
-    "elo": 1516.5,
-    "last_seen": "2017-07-19"
-  },
-  "Guccione A.": {
-    "elo": 1516.0,
-    "last_seen": "2007-06-28"
-  },
-  "Guccione C.": {
-    "elo": 1445.4,
-    "last_seen": "2014-06-16"
-  },
-  "Guez D.": {
-    "elo": 1405.8,
-    "last_seen": "2016-02-17"
-  },
-  "Guillen Meza A.": {
-    "elo": 1500.0,
-    "last_seen": "2025-07-21"
-  },
-  "Guinard M.": {
-    "elo": 1508.2,
-    "last_seen": "2025-02-11"
-  },
-  "Gulbis E.": {
-    "elo": 1529.3,
-    "last_seen": "2021-07-26"
-  },
-  "Gunneswaran P.": {
-    "elo": 1430.8,
-    "last_seen": "2022-01-31"
-  },
-  "Gutierrez-Ferrol S.": {
-    "elo": 1494.3,
-    "last_seen": "2012-04-13"
-  },
-  "Guzman J.": {
-    "elo": 1500.0,
-    "last_seen": "2007-06-26"
-  },
-  "Guzman J.P.": {
-    "elo": 1441.3,
-    "last_seen": "2007-08-27"
-  },
-  "Haas T.": {
-    "elo": 1601.2,
-    "last_seen": "2017-08-01"
-  },
-  "Haase R.": {
-    "elo": 1536.0,
-    "last_seen": "2023-01-11"
-  },
-  "Habib H.": {
-    "elo": 1476.0,
-    "last_seen": "2026-02-17"
-  },
-  "Hadad A.": {
-    "elo": 1512.6,
-    "last_seen": "2005-09-14"
-  },
-  "Haehnel J.": {
-    "elo": 1427.0,
-    "last_seen": "2009-10-27"
-  },
-  "Haider-Mauer A.": {
-    "elo": 1500.6,
-    "last_seen": "2007-10-08"
-  },
-  "Haider-Maurer A.": {
-    "elo": 1459.7,
-    "last_seen": "2018-05-28"
-  },
-  "Hajek J.": {
-    "elo": 1482.0,
-    "last_seen": "2013-07-31"
-  },
-  "Halebian A.": {
-    "elo": 1500.0,
-    "last_seen": "2017-07-31"
-  },
-  "Halys Q.": {
-    "elo": 1585.3,
-    "last_seen": "2026-03-25"
-  },
-  "Hamou M.": {
-    "elo": 1475.8,
-    "last_seen": "2017-05-29"
-  },
-  "Hanescu V.": {
-    "elo": 1558.7,
-    "last_seen": "2015-03-15"
-  },
-  "Hanfmann Y.": {
-    "elo": 1705.4,
-    "last_seen": "2026-03-01"
-  },
-  "Hank T.": {
-    "elo": 1479.6,
-    "last_seen": "2016-08-10"
-  },
-  "Hardt N.": {
-    "elo": 1505.0,
-    "last_seen": "2024-07-16"
-  },
-  "Harris A.": {
-    "elo": 1512.4,
-    "last_seen": "2021-02-03"
-  },
-  "Harris B.": {
-    "elo": 1510.0,
-    "last_seen": "2025-09-18"
-  },
-  "Harris L.": {
-    "elo": 1564.4,
-    "last_seen": "2025-08-27"
-  },
-  "Harrison C.": {
-    "elo": 1515.5,
-    "last_seen": "2022-06-28"
-  },
-  "Harrison R.": {
-    "elo": 1564.8,
-    "last_seen": "2021-01-07"
-  },
-  "Hartfield D.": {
-    "elo": 1458.8,
-    "last_seen": "2008-04-16"
-  },
-  "Hassan B.": {
-    "elo": 1442.7,
-    "last_seen": "2026-02-23"
-  },
-  "Healey N.": {
-    "elo": 1477.0,
-    "last_seen": "2007-01-10"
-  },
-  "Heide G.": {
-    "elo": 1482.8,
-    "last_seen": "2026-02-16"
-  },
-  "Hemery C.": {
-    "elo": 1432.5,
-    "last_seen": "2025-07-15"
-  },
-  "Henman T.": {
-    "elo": 1539.0,
-    "last_seen": "2007-08-31"
-  },
-  "Herbert P-H.": {
-    "elo": 1500.0,
-    "last_seen": "2014-09-29"
-  },
-  "Herbert P.": {
-    "elo": 1471.9,
-    "last_seen": "2026-02-16"
-  },
-  "Herbert P.H": {
-    "elo": 1596.7,
-    "last_seen": "2016-04-12"
-  },
-  "Herbert P.H.": {
-    "elo": 1581.9,
-    "last_seen": "2024-11-06"
-  },
-  "Hernandez A.": {
-    "elo": 1509.9,
-    "last_seen": "2025-07-17"
-  },
-  "Hernandez O.": {
-    "elo": 1406.9,
-    "last_seen": "2010-05-24"
-  },
-  "Hernandez-Fernandez J": {
-    "elo": 1500.0,
-    "last_seen": "2018-05-21"
-  },
-  "Hernandez-Fernandez J.": {
-    "elo": 1500.0,
-    "last_seen": "2017-07-26"
-  },
-  "Hernych J.": {
-    "elo": 1594.4,
-    "last_seen": "2016-06-20"
-  },
-  "Heuberger I.": {
-    "elo": 1484.0,
-    "last_seen": "2005-09-12"
-  },
-  "Hewitt L.": {
-    "elo": 1569.2,
-    "last_seen": "2016-01-21"
-  },
-  "Hijikata R.": {
-    "elo": 1577.8,
-    "last_seen": "2026-04-03"
-  },
-  "Hoang A.": {
-    "elo": 1498.6,
-    "last_seen": "2021-09-22"
-  },
-  "Hocevar R.": {
-    "elo": 1445.3,
-    "last_seen": "2011-02-01"
-  },
-  "Holmgren A.": {
-    "elo": 1537.2,
-    "last_seen": "2025-10-01"
-  },
-  "Holt B.": {
-    "elo": 1414.9,
-    "last_seen": "2025-08-26"
-  },
-  "Hong S.": {
-    "elo": 1516.8,
-    "last_seen": "2024-08-01"
-  },
-  "Horansky F.": {
-    "elo": 1456.7,
-    "last_seen": "2021-07-20"
-  },
-  "Hormazabal G.": {
-    "elo": 1500.0,
-    "last_seen": "2006-01-30"
-  },
-  "Horna L.": {
-    "elo": 1486.4,
-    "last_seen": "2008-08-25"
-  },
-  "Hossam K.": {
-    "elo": 1500.0,
-    "last_seen": "2013-12-31"
-  },
-  "Hrbaty D.": {
-    "elo": 1434.3,
-    "last_seen": "2010-02-02"
-  },
-  "Hsu Y.": {
-    "elo": 1552.3,
-    "last_seen": "2023-10-08"
-  },
-  "Huesler M.": {
-    "elo": 1500.0,
-    "last_seen": "2026-04-13"
-  },
-  "Huesler M.A.": {
-    "elo": 1433.9,
-    "last_seen": "2024-12-31"
-  },
-  "Humbert U.": {
-    "elo": 1741.0,
-    "last_seen": "2026-04-07"
-  },
-  "Hurkacz H.": {
-    "elo": 1730.3,
-    "last_seen": "2026-04-09"
-  },
-  "Hussey G.": {
-    "elo": 1521.6,
-    "last_seen": "2024-06-26"
-  },
-  "Huta Galung J.": {
-    "elo": 1353.7,
-    "last_seen": "2015-02-11"
-  },
-  "Ianni S.": {
-    "elo": 1500.0,
-    "last_seen": "2006-07-27"
-  },
-  "Idmbarek Y.": {
-    "elo": 1483.1,
-    "last_seen": "2015-04-07"
-  },
-  "Ignatik U.": {
-    "elo": 1500.0,
-    "last_seen": "2008-08-11"
-  },
-  "Ilhan M.": {
-    "elo": 1375.1,
-    "last_seen": "2021-01-08"
-  },
-  "Ilkel C.": {
-    "elo": 1411.7,
-    "last_seen": "2023-11-09"
-  },
-  "Im K.T.": {
-    "elo": 1500.0,
-    "last_seen": "2010-02-10"
-  },
-  "Inglot D.": {
-    "elo": 1500.0,
-    "last_seen": "2013-09-17"
-  },
-  "Ionita V.": {
-    "elo": 1483.2,
-    "last_seen": "2006-09-11"
-  },
-  "Isner J.": {
-    "elo": 1624.7,
-    "last_seen": "2023-08-31"
-  },
-  "Istomin D.": {
-    "elo": 1525.1,
-    "last_seen": "2022-02-16"
-  },
-  "Ito T.": {
-    "elo": 1461.7,
-    "last_seen": "2020-01-22"
-  },
-  "Ito Y.": {
-    "elo": 1500.0,
-    "last_seen": "2008-09-30"
-  },
-  "Ittogi T.": {
-    "elo": 1500.0,
-    "last_seen": "2005-10-03"
-  },
-  "Ivanov I.": {
-    "elo": 1500.0,
-    "last_seen": "2025-11-04"
-  },
-  "Ivashka I.": {
-    "elo": 1577.4,
-    "last_seen": "2023-08-28"
-  },
-  "Iwabuchi S.": {
-    "elo": 1462.3,
-    "last_seen": "2008-09-29"
-  },
-  "Iwami T.": {
-    "elo": 1500.0,
-    "last_seen": "2005-10-03"
-  },
-  "Jacquet K.": {
-    "elo": 1512.2,
-    "last_seen": "2026-01-18"
-  },
-  "Janowicz J.": {
-    "elo": 1645.8,
-    "last_seen": "2017-10-19"
-  },
-  "Janvier M.": {
-    "elo": 1454.5,
-    "last_seen": "2024-07-01"
-  },
-  "Jarry N.": {
-    "elo": 1552.9,
-    "last_seen": "2026-02-23"
-  },
-  "Jasika O.": {
-    "elo": 1486.5,
-    "last_seen": "2025-01-12"
-  },
-  "Jaziri M.": {
-    "elo": 1433.6,
-    "last_seen": "2023-02-27"
-  },
-  "Jelenic P.": {
-    "elo": 1514.6,
-    "last_seen": "2010-02-04"
-  },
-  "Jenkins S.": {
-    "elo": 1444.6,
-    "last_seen": "2009-04-09"
-  },
-  "Jeong S.Y.": {
-    "elo": 1500.0,
-    "last_seen": "2013-09-25"
-  },
-  "Jianu F.C.": {
-    "elo": 1501.5,
-    "last_seen": "2026-03-31"
-  },
-  "Jodar R.": {
-    "elo": 1667.2,
-    "last_seen": "2026-04-18"
-  },
-  "Johansson J.": {
-    "elo": 1621.3,
-    "last_seen": "2013-10-17"
-  },
-  "Johansson T.": {
-    "elo": 1537.0,
-    "last_seen": "2008-10-08"
-  },
-  "Johnson S.": {
-    "elo": 1538.7,
-    "last_seen": "2024-02-06"
-  },
-  "Jones A.": {
-    "elo": 1474.7,
-    "last_seen": "2008-01-17"
-  },
-  "Jones G.": {
-    "elo": 1464.2,
-    "last_seen": "2013-01-09"
-  },
-  "Jones G.D.": {
-    "elo": 1500.0,
-    "last_seen": "2008-01-07"
-  },
-  "Jorda Sanchis D.": {
-    "elo": 1516.0,
-    "last_seen": "2024-04-04"
-  },
-  "Jouan R.": {
-    "elo": 1491.5,
-    "last_seen": "2011-08-29"
-  },
-  "Jubb P.": {
-    "elo": 1511.5,
-    "last_seen": "2024-07-02"
-  },
-  "Jun W.": {
-    "elo": 1500.0,
-    "last_seen": "2007-01-10"
-  },
-  "Jun W.S.": {
-    "elo": 1443.9,
-    "last_seen": "2008-07-30"
-  },
-  "Junaid R.": {
-    "elo": 1487.3,
-    "last_seen": "2010-06-14"
-  },
-  "Jung J.": {
-    "elo": 1491.6,
-    "last_seen": "2023-08-03"
-  },
-  "Junqueira D.": {
-    "elo": 1399.0,
-    "last_seen": "2012-05-01"
-  },
-  "Kachmazov A.": {
-    "elo": 1508.7,
-    "last_seen": "2025-07-15"
-  },
-  "Kadhe A.": {
-    "elo": 1459.0,
-    "last_seen": "2022-02-01"
-  },
-  "Kamke T.": {
-    "elo": 1527.1,
-    "last_seen": "2019-08-27"
-  },
-  "Karanusic R.": {
-    "elo": 1412.3,
-    "last_seen": "2009-06-23"
-  },
-  "Karatsev A.": {
-    "elo": 1604.1,
-    "last_seen": "2024-10-16"
-  },
-  "Karlovic I.": {
-    "elo": 1493.6,
-    "last_seen": "2021-08-30"
-  },
-  "Karlovskiy E.": {
-    "elo": 1500.0,
-    "last_seen": "2018-10-15"
-  },
-  "Kasnikowski M.": {
-    "elo": 1500.0,
-    "last_seen": "2024-08-26"
-  },
-  "Kavcic B.": {
-    "elo": 1444.1,
-    "last_seen": "2018-06-27"
-  },
-  "Kecmanovic M.": {
-    "elo": 1572.8,
-    "last_seen": "2026-04-14"
-  },
-  "Kendrick R.": {
-    "elo": 1431.5,
-    "last_seen": "2012-02-21"
-  },
-  "Kern R.": {
-    "elo": 1477.2,
-    "last_seen": "2013-07-09"
-  },
-  "Khachanov K.": {
-    "elo": 1734.9,
-    "last_seen": "2026-02-19"
-  },
-  "Khaddari H.": {
-    "elo": 1500.0,
-    "last_seen": "2014-04-08"
-  },
-  "Khalfan S.": {
-    "elo": 1500.0,
-    "last_seen": "2007-01-01"
-  },
-  "Kicker N.": {
-    "elo": 1514.7,
-    "last_seen": "2022-02-21"
-  },
-  "Kiefer N.": {
-    "elo": 1668.5,
-    "last_seen": "2010-06-22"
-  },
-  "Kim K": {
-    "elo": 1500.0,
-    "last_seen": "2008-06-23"
-  },
-  "Kim K.": {
-    "elo": 1357.3,
-    "last_seen": "2010-08-02"
-  },
-  "Kimmich M.": {
-    "elo": 1500.0,
-    "last_seen": "2006-01-16"
-  },
-  "Kindlmann D.": {
-    "elo": 1438.0,
-    "last_seen": "2010-05-24"
-  },
-  "King D.": {
-    "elo": 1470.9,
-    "last_seen": "2023-08-21"
-  },
-  "King E.": {
-    "elo": 1504.6,
-    "last_seen": "2018-03-09"
-  },
-  "King K.": {
-    "elo": 1478.9,
-    "last_seen": "2021-01-08"
-  },
-  "King P.": {
-    "elo": 1467.4,
-    "last_seen": "2007-09-26"
-  },
-  "King-Turner D.": {
-    "elo": 1435.9,
-    "last_seen": "2013-01-08"
-  },
-  "Kirchheimer S.": {
-    "elo": 1488.5,
-    "last_seen": "2024-08-19"
-  },
-  "Kirillov E.": {
-    "elo": 1483.4,
-    "last_seen": "2011-06-14"
-  },
-  "Kirkin E.": {
-    "elo": 1486.6,
-    "last_seen": "2021-01-08"
-  },
-  "Klaasen R.": {
-    "elo": 1513.6,
-    "last_seen": "2011-01-31"
-  },
-  "Klahn B.": {
-    "elo": 1425.1,
-    "last_seen": "2023-07-31"
-  },
-  "Klec I.": {
-    "elo": 1443.1,
-    "last_seen": "2013-01-09"
-  },
-  "Klein B.": {
-    "elo": 1461.0,
-    "last_seen": "2017-08-02"
-  },
-  "Klein L.": {
-    "elo": 1542.5,
-    "last_seen": "2025-01-13"
-  },
-  "Klizan M.": {
-    "elo": 1538.5,
-    "last_seen": "2025-04-01"
-  },
-  "Kloer S.": {
-    "elo": 1500.0,
-    "last_seen": "2009-05-05"
-  },
-  "Knittel B.": {
-    "elo": 1491.6,
-    "last_seen": "2013-06-24"
-  },
-  "Koellerer D.": {
-    "elo": 1476.0,
-    "last_seen": "2010-06-07"
-  },
-  "Koepfer D.": {
-    "elo": 1579.3,
-    "last_seen": "2025-01-29"
-  },
-  "Kohlmann M.": {
-    "elo": 1500.0,
-    "last_seen": "2007-06-12"
-  },
-  "Kohlschreiber P.": {
-    "elo": 1557.3,
-    "last_seen": "2022-04-25"
-  },
-  "Kohlschreiber P..": {
-    "elo": 1500.0,
-    "last_seen": "2014-09-18"
-  },
-  "Kokkinakis T.": {
-    "elo": 1715.8,
-    "last_seen": "2026-01-12"
-  },
-  "Kolar Z.": {
-    "elo": 1507.2,
-    "last_seen": "2022-06-28"
-  },
-  "Kondo H.": {
-    "elo": 1500.0,
-    "last_seen": "2008-09-30"
-  },
-  "Koning M.": {
-    "elo": 1500.0,
-    "last_seen": "2007-06-19"
-  },
-  "Kontinen H.": {
-    "elo": 1498.5,
-    "last_seen": "2010-06-16"
-  },
-  "Kopriva V.": {
-    "elo": 1616.6,
-    "last_seen": "2026-04-17"
-  },
-  "Korda S.": {
-    "elo": 1773.0,
-    "last_seen": "2026-03-22"
-  },
-  "Korolev E.": {
-    "elo": 1517.8,
-    "last_seen": "2013-05-21"
-  },
-  "Korteling S.": {
-    "elo": 1500.0,
-    "last_seen": "2005-07-19"
-  },
-  "Kosakowski D.": {
-    "elo": 1503.3,
-    "last_seen": "2014-03-08"
-  },
-  "Kotov P.": {
-    "elo": 1537.7,
-    "last_seen": "2025-04-01"
-  },
-  "Kouame M.": {
-    "elo": 1493.8,
-    "last_seen": "2026-04-05"
-  },
-  "Koubek S.": {
-    "elo": 1522.5,
-    "last_seen": "2011-02-01"
-  },
-  "Kovacevic A.": {
-    "elo": 1533.7,
-    "last_seen": "2026-03-09"
-  },
-  "Kovalik J.": {
-    "elo": 1536.2,
-    "last_seen": "2024-07-15"
-  },
-  "Kozlov S.": {
-    "elo": 1475.4,
-    "last_seen": "2022-09-20"
-  },
-  "Krajan Z.": {
-    "elo": 1500.0,
-    "last_seen": "2005-07-25"
-  },
-  "Krajicek A.": {
-    "elo": 1478.9,
-    "last_seen": "2017-07-18"
-  },
-  "Krajinovic F.": {
-    "elo": 1554.2,
-    "last_seen": "2023-05-29"
-  },
-  "Kratochvil M.": {
-    "elo": 1500.0,
-    "last_seen": "2007-07-10"
-  },
-  "Kravchuk K.": {
-    "elo": 1384.4,
-    "last_seen": "2017-10-17"
-  },
-  "Krawietz K.": {
-    "elo": 1494.8,
-    "last_seen": "2019-06-26"
-  },
-  "Krstin P.": {
-    "elo": 1487.1,
-    "last_seen": "2021-05-25"
-  },
-  "Krueger M.": {
-    "elo": 1458.4,
-    "last_seen": "2025-07-16"
-  },
-  "Krutykh O.": {
-    "elo": 1477.1,
-    "last_seen": "2023-04-17"
-  },
-  "Kubler J.": {
-    "elo": 1511.3,
-    "last_seen": "2026-01-18"
-  },
-  "Kubot L.": {
-    "elo": 1510.3,
-    "last_seen": "2015-10-13"
-  },
-  "Kucera K.": {
-    "elo": 1515.2,
-    "last_seen": "2005-09-02"
-  },
-  "Kudla D.": {
-    "elo": 1472.1,
-    "last_seen": "2024-04-02"
-  },
-  "Kudryavtsev A.": {
-    "elo": 1461.2,
-    "last_seen": "2016-06-28"
-  },
-  "Kuerten G.": {
-    "elo": 1369.7,
-    "last_seen": "2008-05-25"
-  },
-  "Kuhn N.": {
-    "elo": 1460.4,
-    "last_seen": "2022-07-19"
-  },
-  "Kukushkin M.": {
-    "elo": 1477.3,
-    "last_seen": "2024-12-31"
-  },
-  "Kumantsov A.": {
-    "elo": 1500.0,
-    "last_seen": "2011-02-15"
-  },
-  "Kumar O.": {
-    "elo": 1510.0,
-    "last_seen": "2024-08-19"
-  },
-  "Kunitsyn I.": {
-    "elo": 1395.6,
-    "last_seen": "2013-01-01"
-  },
-  "Kutac R.": {
-    "elo": 1500.0,
-    "last_seen": "2006-07-11"
-  },
-  "Kutrovsky D.": {
-    "elo": 1531.3,
-    "last_seen": "2012-02-17"
-  },
-  "Kuzmanov D.": {
-    "elo": 1431.8,
-    "last_seen": "2023-04-04"
-  },
-  "Kuznetsov A.": {
-    "elo": 1390.8,
-    "last_seen": "2012-01-16"
-  },
-  "Kuznetsov Al.": {
-    "elo": 1423.1,
-    "last_seen": "2016-07-19"
-  },
-  "Kuznetsov An.": {
-    "elo": 1579.9,
-    "last_seen": "2022-05-22"
-  },
-  "Kwiatkowski T.S.": {
-    "elo": 1437.9,
-    "last_seen": "2023-08-22"
-  },
-  "Kwon S.W.": {
-    "elo": 1601.9,
-    "last_seen": "2024-08-26"
-  },
-  "Kym J.": {
-    "elo": 1549.4,
-    "last_seen": "2025-08-30"
-  },
-  "Kypson P.": {
-    "elo": 1451.7,
-    "last_seen": "2026-04-01"
-  },
-  "Kyrgios N.": {
-    "elo": 1895.3,
-    "last_seen": "2026-01-06"
-  },
-  "Laaksonen H.": {
-    "elo": 1466.8,
-    "last_seen": "2022-09-21"
-  },
-  "Labadze I.": {
-    "elo": 1522.6,
-    "last_seen": "2006-07-03"
-  },
-  "Lacko L.": {
-    "elo": 1525.5,
-    "last_seen": "2021-06-17"
-  },
-  "Lajal M.": {
-    "elo": 1519.8,
-    "last_seen": "2025-10-14"
-  },
-  "Lajola D.": {
-    "elo": 1500.0,
-    "last_seen": "2012-02-14"
-  },
-  "Lajovic D.": {
-    "elo": 1512.4,
-    "last_seen": "2026-03-31"
-  },
-  "Lalami Laaroussi Y.": {
-    "elo": 1483.9,
-    "last_seen": "2025-04-01"
-  },
-  "Lama G.": {
-    "elo": 1451.4,
-    "last_seen": "2023-08-01"
-  },
-  "Lamasine T.": {
-    "elo": 1508.4,
-    "last_seen": "2021-01-10"
-  },
-  "Lammer M.": {
-    "elo": 1448.3,
-    "last_seen": "2011-11-02"
-  },
-  "Landaluce M.": {
-    "elo": 1536.4,
-    "last_seen": "2026-04-14"
-  },
-  "Langer N.": {
-    "elo": 1508.3,
-    "last_seen": "2013-10-15"
-  },
-  "Lapentti G.": {
-    "elo": 1433.4,
-    "last_seen": "2017-02-09"
-  },
-  "Lapentti N.": {
-    "elo": 1507.8,
-    "last_seen": "2010-05-24"
-  },
-  "Lazarov A.": {
-    "elo": 1479.2,
-    "last_seen": "2023-11-07"
-  },
-  "Lazov A.": {
-    "elo": 1500.0,
-    "last_seen": "2016-02-01"
-  },
-  "Ledovskikh M.": {
-    "elo": 1419.3,
-    "last_seen": "2015-04-28"
-  },
-  "Lee D.H.": {
-    "elo": 1500.0,
-    "last_seen": "2019-08-20"
-  },
-  "Lee H.T.": {
-    "elo": 1526.3,
-    "last_seen": "2009-01-05"
-  },
-  "Lee M.": {
-    "elo": 1493.3,
-    "last_seen": "2006-06-29"
-  },
-  "Lehecka J.": {
-    "elo": 1827.1,
-    "last_seen": "2026-04-09"
-  },
-  "Lejnieks K.": {
-    "elo": 1515.5,
-    "last_seen": "2008-10-22"
-  },
-  "Lemke J.": {
-    "elo": 1500.0,
-    "last_seen": "2010-01-11"
-  },
-  "Lenz J.": {
-    "elo": 1495.2,
-    "last_seen": "2019-09-17"
-  },
-  "Leshem E.": {
-    "elo": 1507.8,
-    "last_seen": "2022-09-29"
-  },
-  "Lestienne C.": {
-    "elo": 1434.8,
-    "last_seen": "2025-02-05"
-  },
-  "Levine I.": {
-    "elo": 1500.0,
-    "last_seen": "2007-07-10"
-  },
-  "Levine J.": {
-    "elo": 1464.3,
-    "last_seen": "2013-08-07"
-  },
-  "Levy H.": {
-    "elo": 1419.0,
-    "last_seen": "2010-01-06"
-  },
-  "Li Z.": {
-    "elo": 1417.2,
-    "last_seen": "2019-10-08"
-  },
-  "Li Zh.": {
-    "elo": 1500.0,
-    "last_seen": "2023-09-20"
-  },
-  "Lindahl N.": {
-    "elo": 1441.2,
-    "last_seen": "2010-07-20"
-  },
-  "Lindell C.": {
-    "elo": 1454.0,
-    "last_seen": "2016-07-12"
-  },
-  "Linzer M.": {
-    "elo": 1481.8,
-    "last_seen": "2016-07-19"
-  },
-  "Lipsky S.": {
-    "elo": 1500.0,
-    "last_seen": "2008-06-10"
-  },
-  "Lisnard J.": {
-    "elo": 1485.5,
-    "last_seen": "2006-02-21"
-  },
-  "Lisnard J.R.": {
-    "elo": 1441.8,
-    "last_seen": "2012-04-15"
-  },
-  "Ljubicic I.": {
-    "elo": 1697.9,
-    "last_seen": "2012-02-24"
-  },
-  "Llamas Ruiz P.": {
-    "elo": 1559.5,
-    "last_seen": "2025-08-24"
-  },
-  "Llodra M.": {
-    "elo": 1612.3,
-    "last_seen": "2014-08-25"
-  },
-  "Lock B.": {
-    "elo": 1500.0,
-    "last_seen": "2023-09-21"
-  },
-  "Loffhagen G.": {
-    "elo": 1473.4,
-    "last_seen": "2025-07-01"
-  },
-  "Lojda D.": {
-    "elo": 1500.0,
-    "last_seen": "2010-08-31"
-  },
-  "Lokoli L.": {
-    "elo": 1413.1,
-    "last_seen": "2023-07-03"
-  },
-  "Londero J.I.": {
-    "elo": 1458.5,
-    "last_seen": "2022-05-22"
-  },
-  "Lopez F.": {
-    "elo": 1417.6,
-    "last_seen": "2023-06-29"
-  },
-  "Lopez M.": {
-    "elo": 1445.1,
-    "last_seen": "2014-04-21"
-  },
-  "Lopez San Martin A.": {
-    "elo": 1500.0,
-    "last_seen": "2023-05-22"
-  },
-  "Lopez Villasenor G.": {
-    "elo": 1461.5,
-    "last_seen": "2021-07-20"
-  },
-  "Lopez-Jaen M.A.": {
-    "elo": 1510.0,
-    "last_seen": "2008-05-28"
-  },
-  "Lopez-Perez E.": {
-    "elo": 1500.0,
-    "last_seen": "2016-07-19"
-  },
-  "Lorenzi P.": {
-    "elo": 1445.7,
-    "last_seen": "2021-07-13"
-  },
-  "Lu Y.": {
-    "elo": 1439.3,
-    "last_seen": "2021-06-29"
-  },
-  "Lu Y.H.": {
-    "elo": 1575.8,
-    "last_seen": "2020-02-25"
-  },
-  "Luczak P.": {
-    "elo": 1414.0,
-    "last_seen": "2011-07-28"
-  },
-  "Luncanu P.A.": {
-    "elo": 1484.2,
-    "last_seen": "2009-10-27"
-  },
-  "Luque D.": {
-    "elo": 1500.0,
-    "last_seen": "2006-05-02"
-  },
-  "Luz O.": {
-    "elo": 1500.0,
-    "last_seen": "2017-02-27"
-  },
-  "Luzzi F.": {
-    "elo": 1465.3,
-    "last_seen": "2007-07-25"
-  },
-  "Maamoun K.": {
-    "elo": 1500.0,
-    "last_seen": "2010-01-05"
-  },
-  "Machac T.": {
-    "elo": 1782.7,
-    "last_seen": "2026-04-17"
-  },
-  "Machado R.": {
-    "elo": 1376.4,
-    "last_seen": "2015-04-30"
-  },
-  "Mackin A.": {
-    "elo": 1444.3,
-    "last_seen": "2007-01-16"
-  },
-  "Madaras D.": {
-    "elo": 1490.4,
-    "last_seen": "2023-07-17"
-  },
-  "Maden Y.": {
-    "elo": 1508.8,
-    "last_seen": "2020-02-04"
-  },
-  "Maestrelli F.": {
-    "elo": 1488.1,
-    "last_seen": "2026-03-31"
-  },
-  "Magadan A.": {
-    "elo": 1500.0,
-    "last_seen": "2025-07-16"
-  },
-  "Mager G.": {
-    "elo": 1536.1,
-    "last_seen": "2022-01-18"
-  },
-  "Mahut N.": {
-    "elo": 1619.5,
-    "last_seen": "2019-06-21"
-  },
-  "Majchrzak K.": {
-    "elo": 1646.0,
-    "last_seen": "2026-03-21"
-  },
-  "Malisse X.": {
-    "elo": 1576.0,
-    "last_seen": "2013-08-28"
-  },
-  "Mamiit C.": {
-    "elo": 1515.1,
-    "last_seen": "2008-10-01"
-  },
-  "Mannarino A.": {
-    "elo": 1618.4,
-    "last_seen": "2026-03-20"
-  },
-  "Mansouri S.": {
-    "elo": 1500.0,
-    "last_seen": "2023-08-02"
-  },
-  "Mantilla F.": {
-    "elo": 1466.6,
-    "last_seen": "2007-07-24"
-  },
-  "Marach O.": {
-    "elo": 1414.3,
-    "last_seen": "2009-04-07"
-  },
-  "Marcaccio G.": {
-    "elo": 1507.6,
-    "last_seen": "2006-05-04"
-  },
-  "Marcan D.": {
-    "elo": 1492.0,
-    "last_seen": "2013-02-07"
-  },
-  "Marchenko I.": {
-    "elo": 1476.4,
-    "last_seen": "2023-08-21"
-  },
-  "Marcondes I.": {
-    "elo": 1500.0,
-    "last_seen": "2026-02-16"
-  },
-  "Marcora R.": {
-    "elo": 1518.4,
-    "last_seen": "2021-10-09"
-  },
-  "Marin J.A.": {
-    "elo": 1408.2,
-    "last_seen": "2006-07-24"
-  },
-  "Marozsan F.": {
-    "elo": 1673.6,
-    "last_seen": "2026-04-16"
-  },
-  "Marrai M.": {
-    "elo": 1500.0,
-    "last_seen": "2008-04-29"
-  },
-  "Marray J.": {
-    "elo": 1488.5,
-    "last_seen": "2007-06-26"
-  },
-  "Marrero D.": {
-    "elo": 1472.2,
-    "last_seen": "2010-05-06"
-  },
-  "Marterer M.": {
-    "elo": 1452.5,
-    "last_seen": "2025-05-27"
-  },
-  "Marti J.": {
-    "elo": 1439.3,
-    "last_seen": "2013-05-06"
-  },
-  "Marti Y.": {
-    "elo": 1485.2,
-    "last_seen": "2016-07-18"
-  },
-  "Martin A.": {
-    "elo": 1496.1,
-    "last_seen": "2024-07-24"
-  },
-  "Martin D.": {
-    "elo": 1491.8,
-    "last_seen": "2025-07-28"
-  },
-  "Martin F.": {
-    "elo": 1500.0,
-    "last_seen": "2015-02-23"
-  },
-  "Martineau M.": {
-    "elo": 1491.0,
-    "last_seen": "2024-06-11"
-  },
-  "Martinez P.": {
-    "elo": 1451.1,
-    "last_seen": "2026-04-14"
-  },
-  "Massa E.": {
-    "elo": 1498.8,
-    "last_seen": "2006-10-04"
-  },
-  "Massu N.": {
-    "elo": 1422.3,
-    "last_seen": "2013-02-05"
-  },
-  "Masur D.": {
-    "elo": 1476.2,
-    "last_seen": "2021-06-29"
-  },
-  "Mathieu P.": {
-    "elo": 1500.0,
-    "last_seen": "2005-08-24"
-  },
-  "Mathieu P.H.": {
-    "elo": 1481.0,
-    "last_seen": "2017-09-20"
-  },
-  "Matosevic M.": {
-    "elo": 1513.5,
-    "last_seen": "2015-08-03"
-  },
-  "Matsui T.": {
-    "elo": 1520.0,
-    "last_seen": "2007-09-27"
-  },
-  "Matsukevitch D.": {
-    "elo": 1494.6,
-    "last_seen": "2008-07-15"
-  },
-  "Mayer F.": {
-    "elo": 1479.8,
-    "last_seen": "2018-08-27"
-  },
-  "Mayer L.": {
-    "elo": 1495.7,
-    "last_seen": "2021-03-08"
-  },
-  "Mayot H.": {
-    "elo": 1457.1,
-    "last_seen": "2025-04-25"
-  },
-  "Mazarakis V.": {
-    "elo": 1488.9,
-    "last_seen": "2006-03-10"
-  },
-  "McCabe J.": {
-    "elo": 1500.0,
-    "last_seen": "2025-07-01"
-  },
-  "McClune M.": {
-    "elo": 1500.0,
-    "last_seen": "2007-08-28"
-  },
-  "McDonald M.": {
-    "elo": 1532.3,
-    "last_seen": "2026-04-01"
-  },
-  "Mccabe J.": {
-    "elo": 1465.8,
-    "last_seen": "2025-01-16"
-  },
-  "Mcclune M.": {
-    "elo": 1516.9,
-    "last_seen": "2012-08-21"
-  },
-  "Mcdonald M.": {
-    "elo": 1561.6,
-    "last_seen": "2024-08-27"
-  },
-  "Mcgee J.": {
-    "elo": 1469.8,
-    "last_seen": "2016-08-22"
-  },
-  "Mecir M.": {
-    "elo": 1496.1,
-    "last_seen": "2014-10-15"
-  },
-  "Medjedovic H.": {
-    "elo": 1635.6,
-    "last_seen": "2026-04-18"
-  },
-  "Medvedev D.": {
-    "elo": 1949.9,
-    "last_seen": "2026-03-15"
-  },
-  "Meffert D.": {
-    "elo": 1485.6,
-    "last_seen": "2011-06-07"
-  },
-  "Meister N.": {
-    "elo": 1500.0,
-    "last_seen": "2012-07-24"
-  },
-  "Mejia N.": {
-    "elo": 1470.4,
-    "last_seen": "2025-07-16"
-  },
-  "Mektic N.": {
-    "elo": 1442.8,
-    "last_seen": "2017-01-02"
-  },
-  "Meligeni Alves F.": {
-    "elo": 1475.3,
-    "last_seen": "2025-02-26"
-  },
-  "Meligeni Rodrigues F": {
-    "elo": 1498.5,
-    "last_seen": "2022-02-15"
-  },
-  "Mello R.": {
-    "elo": 1428.9,
-    "last_seen": "2013-02-11"
-  },
-  "Melzer G.": {
-    "elo": 1481.1,
-    "last_seen": "2018-07-19"
-  },
-  "Melzer J.": {
-    "elo": 1585.8,
-    "last_seen": "2018-10-22"
-  },
-  "Mena F.": {
-    "elo": 1500.0,
-    "last_seen": "2022-09-19"
-  },
-  "Menendez-Maceiras A.": {
-    "elo": 1449.5,
-    "last_seen": "2019-04-10"
-  },
-  "Menezes J.": {
-    "elo": 1500.0,
-    "last_seen": "2021-02-24"
-  },
-  "Mensik J.": {
-    "elo": 1829.1,
-    "last_seen": "2026-02-19"
-  },
-  "Mergea F.": {
-    "elo": 1516.0,
-    "last_seen": "2005-07-06"
-  },
-  "Merida Aguilar D.": {
-    "elo": 1551.6,
-    "last_seen": "2026-04-05"
-  },
-  "Mertens Y.": {
-    "elo": 1495.9,
-    "last_seen": "2012-10-16"
-  },
-  "Mertinak M.": {
-    "elo": 1480.5,
-    "last_seen": "2008-06-10"
-  },
-  "Mertl J.": {
-    "elo": 1515.3,
-    "last_seen": "2016-07-20"
-  },
-  "Mesaros K.": {
-    "elo": 1500.0,
-    "last_seen": "2012-01-30"
-  },
-  "Michelsen A.": {
-    "elo": 1719.8,
-    "last_seen": "2026-04-13"
-  },
-  "Michon A.": {
-    "elo": 1513.8,
-    "last_seen": "2014-05-29"
-  },
-  "Middelkoop M.": {
-    "elo": 1500.0,
-    "last_seen": "2008-06-16"
-  },
-  "Midon L.": {
-    "elo": 1500.0,
-    "last_seen": "2026-02-09"
-  },
-  "Miedler L.": {
-    "elo": 1478.0,
-    "last_seen": "2019-07-30"
-  },
-  "Miguel L.": {
-    "elo": 1500.0,
-    "last_seen": "2026-02-18"
-  },
-  "Mikrut L.": {
-    "elo": 1500.0,
-    "last_seen": "2024-07-21"
-  },
-  "Millman J.": {
-    "elo": 1587.6,
-    "last_seen": "2023-01-18"
-  },
-  "Millot V.": {
-    "elo": 1452.2,
-    "last_seen": "2018-08-01"
-  },
-  "Milojevic N.": {
-    "elo": 1516.2,
-    "last_seen": "2022-02-02"
-  },
-  "Mina G.": {
-    "elo": 1467.4,
-    "last_seen": "2015-05-20"
-  },
-  "Minar I.": {
-    "elo": 1438.3,
-    "last_seen": "2012-07-12"
-  },
-  "Minar J.": {
-    "elo": 1487.1,
-    "last_seen": "2008-08-26"
-  },
-  "Mirnyi M.": {
-    "elo": 1469.7,
-    "last_seen": "2008-04-28"
-  },
-  "Misolic F.": {
-    "elo": 1551.7,
-    "last_seen": "2026-01-19"
-  },
-  "Mitchell B.": {
-    "elo": 1471.7,
-    "last_seen": "2013-01-15"
-  },
-  "Mmoh M.": {
-    "elo": 1649.5,
-    "last_seen": "2026-01-08"
-  },
-  "Mo Y.": {
-    "elo": 1500.0,
-    "last_seen": "2023-09-21"
-  },
-  "Mochizuki S.": {
-    "elo": 1470.9,
-    "last_seen": "2026-02-17"
-  },
-  "Molcan A.": {
-    "elo": 1681.4,
-    "last_seen": "2026-04-18"
-  },
-  "Molleker R.": {
-    "elo": 1483.2,
-    "last_seen": "2024-07-15"
-  },
-  "Moller E.": {
-    "elo": 1481.1,
-    "last_seen": "2026-04-01"
-  },
-  "Molteni A.": {
-    "elo": 1498.0,
-    "last_seen": "2015-02-24"
-  },
-  "Monaco J.": {
-    "elo": 1679.1,
-    "last_seen": "2017-04-11"
-  },
-  "Monday J.": {
-    "elo": 1500.0,
-    "last_seen": "2025-07-01"
-  },
-  "Monfils G.": {
-    "elo": 1662.3,
-    "last_seen": "2026-04-07"
-  },
-  "Montanes A.": {
-    "elo": 1570.2,
-    "last_seen": "2017-04-26"
-  },
-  "Montcourt M.": {
-    "elo": 1473.7,
-    "last_seen": "2009-05-27"
-  },
-  "Monteiro J.": {
-    "elo": 1500.0,
-    "last_seen": "2019-08-20"
-  },
-  "Monteiro T.": {
-    "elo": 1503.0,
-    "last_seen": "2026-02-17"
-  },
-  "Moodie W.": {
-    "elo": 1526.8,
-    "last_seen": "2007-10-03"
-  },
-  "Moraing M.": {
-    "elo": 1510.6,
-    "last_seen": "2021-05-25"
-  },
-  "Moraru G.": {
-    "elo": 1500.0,
-    "last_seen": "2012-04-23"
-  },
-  "Moreno De Alboran N.": {
-    "elo": 1495.3,
-    "last_seen": "2025-05-08"
-  },
-  "Moriya H.": {
-    "elo": 1479.0,
-    "last_seen": "2022-10-06"
-  },
-  "Moro Canas A.": {
-    "elo": 1498.7,
-    "last_seen": "2024-12-31"
-  },
-  "Moroni G.": {
-    "elo": 1519.1,
-    "last_seen": "2019-07-25"
-  },
-  "Moroni G.M.": {
-    "elo": 1480.2,
-    "last_seen": "2022-04-18"
-  },
-  "Morrison J.": {
-    "elo": 1480.0,
-    "last_seen": "2006-08-29"
-  },
-  "Moser F.": {
-    "elo": 1500.0,
-    "last_seen": "2006-09-25"
-  },
-  "Motomura G.": {
-    "elo": 1462.8,
-    "last_seen": "2006-10-02"
-  },
-  "Mott B.": {
-    "elo": 1496.1,
-    "last_seen": "2021-02-01"
-  },
-  "Moundir A.": {
-    "elo": 1500.0,
-    "last_seen": "2023-04-04"
-  },
-  "Moutet C.": {
-    "elo": 1683.7,
-    "last_seen": "2026-04-16"
-  },
-  "Moya C.": {
-    "elo": 1552.3,
-    "last_seen": "2010-05-10"
-  },
-  "Mpetshi G.": {
-    "elo": 1605.0,
-    "last_seen": "2026-02-25"
-  },
-  "Mpetshi Perricard G.": {
-    "elo": 1500.0,
-    "last_seen": "2025-10-27"
-  },
-  "Mu T.": {
-    "elo": 1500.0,
-    "last_seen": "2023-09-20"
-  },
-  "Mukund S.": {
-    "elo": 1486.2,
-    "last_seen": "2023-01-03"
-  },
-  "Muller A.": {
-    "elo": 1616.5,
-    "last_seen": "2026-04-07"
-  },
-  "Muller G.": {
-    "elo": 1569.7,
-    "last_seen": "2018-08-27"
-  },
-  "Munar J.": {
-    "elo": 1734.6,
-    "last_seen": "2026-02-13"
-  },
-  "Munoz De La Nava D.": {
-    "elo": 1442.0,
-    "last_seen": "2016-07-20"
-  },
-  "Munoz de La Nava D.": {
-    "elo": 1500.0,
-    "last_seen": "2009-02-17"
-  },
-  "Munoz de la Nava D.": {
-    "elo": 1500.0,
-    "last_seen": "2008-02-12"
-  },
-  "Munoz-De La Nava D.": {
-    "elo": 1460.3,
-    "last_seen": "2016-02-16"
-  },
-  "Murray A.": {
-    "elo": 1571.0,
-    "last_seen": "2024-06-18"
-  },
-  "Musetti L.": {
-    "elo": 1839.7,
-    "last_seen": "2025-11-13"
-  },
-  "Muster T.": {
-    "elo": 1484.0,
-    "last_seen": "2011-08-01"
-  },
-  "Myneni S.": {
-    "elo": 1491.7,
-    "last_seen": "2017-01-03"
-  },
-  "Nadal R.": {
-    "elo": 1947.2,
-    "last_seen": "2024-07-21"
-  },
-  "Nagal S.": {
-    "elo": 1399.2,
-    "last_seen": "2026-04-13"
-  },
-  "Nakashima B.": {
-    "elo": 1669.0,
-    "last_seen": "2026-04-16"
-  },
-  "Nalbandian D.": {
-    "elo": 1756.5,
-    "last_seen": "2013-03-21"
-  },
-  "Nam H.W.": {
-    "elo": 1479.8,
-    "last_seen": "2008-09-22"
-  },
-  "Nam J.S.": {
-    "elo": 1473.6,
-    "last_seen": "2022-09-27"
-  },
-  "Nanda G.": {
-    "elo": 1517.8,
-    "last_seen": "2025-07-17"
-  },
-  "Napolitano S.": {
-    "elo": 1511.4,
-    "last_seen": "2024-06-11"
-  },
-  "Nardi L.": {
-    "elo": 1517.9,
-    "last_seen": "2026-02-24"
-  },
-  "Naso G.": {
-    "elo": 1414.4,
-    "last_seen": "2013-02-06"
-  },
-  "Nava E.": {
-    "elo": 1492.9,
-    "last_seen": "2026-04-13"
-  },
-  "Navarro-Pastor I.": {
-    "elo": 1432.7,
-    "last_seen": "2012-05-02"
-  },
-  "Navone M.": {
-    "elo": 1583.4,
-    "last_seen": "2026-04-14"
-  },
-  "Nedelko I.": {
-    "elo": 1487.3,
-    "last_seen": "2012-09-19"
-  },
-  "Nedovyesov A.": {
-    "elo": 1455.6,
-    "last_seen": "2015-09-22"
-  },
-  "Nedovyesov O.": {
-    "elo": 1500.0,
-    "last_seen": "2013-10-15"
-  },
-  "Nedunchezhiyan J.": {
-    "elo": 1500.0,
-    "last_seen": "2013-12-30"
-  },
-  "Neff A.": {
-    "elo": 1500.0,
-    "last_seen": "2024-02-07"
-  },
-  "Neumayer L.": {
-    "elo": 1489.0,
-    "last_seen": "2025-07-22"
-  },
-  "Nielsen F.": {
-    "elo": 1383.8,
-    "last_seen": "2013-08-19"
-  },
-  "Nielsen M.": {
-    "elo": 1500.0,
-    "last_seen": "2006-01-09"
-  },
-  "Niemeyer F.": {
-    "elo": 1473.3,
-    "last_seen": "2009-08-11"
-  },
-  "Nieminen J.": {
-    "elo": 1532.7,
-    "last_seen": "2015-10-20"
-  },
-  "Niki T.": {
-    "elo": 1500.0,
-    "last_seen": "2015-09-29"
-  },
-  "Nikles J.": {
-    "elo": 1488.3,
-    "last_seen": "2022-05-18"
-  },
-  "Niland C.": {
-    "elo": 1487.2,
-    "last_seen": "2011-06-21"
-  },
-  "Nishikori K.": {
-    "elo": 1729.0,
-    "last_seen": "2025-08-08"
-  },
-  "Nishioka Y.": {
-    "elo": 1633.1,
-    "last_seen": "2025-10-05"
-  },
-  "Noguchi R.": {
-    "elo": 1513.3,
-    "last_seen": "2022-10-06"
-  },
-  "Norman D.": {
-    "elo": 1440.8,
-    "last_seen": "2009-06-17"
-  },
-  "Norrie C.": {
-    "elo": 1717.3,
-    "last_seen": "2026-04-07"
-  },
-  "Novak D.": {
-    "elo": 1415.7,
-    "last_seen": "2023-08-01"
-  },
-  "Novak J.": {
-    "elo": 1526.9,
-    "last_seen": "2006-10-26"
-  },
-  "Novikov D.": {
-    "elo": 1490.0,
-    "last_seen": "2017-08-01"
-  },
-  "O Connell C.": {
-    "elo": 1547.0,
-    "last_seen": "2026-03-31"
-  },
-  "O'Connell C.": {
-    "elo": 1482.0,
-    "last_seen": "2020-01-21"
-  },
-  "O'Neal J.": {
-    "elo": 1500.0,
-    "last_seen": "2008-07-14"
-  },
-  "Odesnik W.": {
-    "elo": 1503.3,
-    "last_seen": "2014-08-26"
-  },
-  "Ofner S.": {
-    "elo": 1502.9,
-    "last_seen": "2026-04-14"
-  },
-  "Ojeda Lara R.": {
-    "elo": 1530.7,
-    "last_seen": "2018-05-03"
-  },
-  "Okun N.": {
-    "elo": 1422.4,
-    "last_seen": "2010-06-09"
-  },
-  "Olaso G.": {
-    "elo": 1490.3,
-    "last_seen": "2013-04-23"
-  },
-  "Olejniczak D.": {
-    "elo": 1469.2,
-    "last_seen": "2008-06-24"
-  },
-  "Oliel Y.": {
-    "elo": 1500.0,
-    "last_seen": "2021-10-26"
-  },
-  "Olivetti A.": {
-    "elo": 1494.4,
-    "last_seen": "2016-06-30"
-  },
-  "Olivieri G.": {
-    "elo": 1533.9,
-    "last_seen": "2023-06-03"
-  },
-  "Olivo R.": {
-    "elo": 1482.8,
-    "last_seen": "2022-02-23"
-  },
-  "Omarkhanov A.": {
-    "elo": 1500.0,
-    "last_seen": "2025-10-13"
-  },
-  "Onclin G.": {
-    "elo": 1500.0,
-    "last_seen": "2025-01-12"
-  },
-  "Opelka R.": {
-    "elo": 1663.4,
-    "last_seen": "2026-04-13"
-  },
-  "Ortega-Olmedo R.": {
-    "elo": 1500.0,
-    "last_seen": "2016-05-16"
-  },
-  "Oswald P.": {
-    "elo": 1485.9,
-    "last_seen": "2014-09-23"
-  },
-  "Otte O.": {
-    "elo": 1507.5,
-    "last_seen": "2024-06-18"
-  },
-  "Ouahab L.": {
-    "elo": 1487.0,
-    "last_seen": "2018-04-12"
-  },
-  "Ouanna J.": {
-    "elo": 1529.4,
-    "last_seen": "2013-04-09"
-  },
-  "Oudsema S.": {
-    "elo": 1473.9,
-    "last_seen": "2007-02-14"
-  },
-  "Ouyang B.": {
-    "elo": 1500.0,
-    "last_seen": "2014-09-23"
-  },
-  "Pacheco Mendez R.": {
-    "elo": 1463.3,
-    "last_seen": "2026-02-25"
-  },
-  "Paire B.": {
-    "elo": 1409.3,
-    "last_seen": "2024-07-18"
-  },
-  "Panfil G.": {
-    "elo": 1500.0,
-    "last_seen": "2006-08-01"
-  },
-  "Pannu K.": {
-    "elo": 1481.1,
-    "last_seen": "2024-01-09"
-  },
-  "Papamalamis T.": {
-    "elo": 1500.0,
-    "last_seen": "2024-11-04"
-  },
-  "Parada F.": {
-    "elo": 1500.0,
-    "last_seen": "2006-01-30"
-  },
-  "Parmar A.": {
-    "elo": 1535.5,
-    "last_seen": "2006-02-24"
-  },
-  "Pasha N.": {
-    "elo": 1500.0,
-    "last_seen": "2014-07-23"
-  },
-  "Pashanski B.": {
-    "elo": 1419.2,
-    "last_seen": "2009-02-03"
-  },
-  "Passaro F.": {
-    "elo": 1470.6,
-    "last_seen": "2026-02-19"
-  },
-  "Patience O.": {
-    "elo": 1392.1,
-    "last_seen": "2010-07-27"
-  },
-  "Patino L.": {
-    "elo": 1500.0,
-    "last_seen": "2016-02-23"
-  },
-  "Patriarca D.": {
-    "elo": 1500.0,
-    "last_seen": "2006-07-24"
-  },
-  "Paul T.": {
-    "elo": 1835.3,
-    "last_seen": "2026-04-04"
-  },
-  "Pavel A.": {
-    "elo": 1444.3,
-    "last_seen": "2009-09-23"
-  },
-  "Pavic A.": {
-    "elo": 1465.4,
-    "last_seen": "2016-01-06"
-  },
-  "Pavic M.": {
-    "elo": 1475.2,
-    "last_seen": "2015-06-09"
-  },
-  "Pavlasek A.": {
-    "elo": 1501.2,
-    "last_seen": "2018-05-31"
-  },
-  "Pavlovic L.": {
-    "elo": 1500.0,
-    "last_seen": "2026-02-09"
-  },
-  "Pecotic M.": {
-    "elo": 1520.9,
-    "last_seen": "2023-02-15"
-  },
-  "Peliwo F.": {
-    "elo": 1477.9,
-    "last_seen": "2015-08-10"
-  },
-  "Pella G.": {
-    "elo": 1546.5,
-    "last_seen": "2023-08-29"
-  },
-  "Pellegrino A.": {
-    "elo": 1512.6,
-    "last_seen": "2026-02-27"
-  },
-  "Peniston R.": {
-    "elo": 1541.2,
-    "last_seen": "2023-07-04"
-  },
-  "Perez D.": {
-    "elo": 1500.0,
-    "last_seen": "2006-05-02"
-  },
-  "Peric T.": {
-    "elo": 1500.0,
-    "last_seen": "2006-04-25"
-  },
-  "Pervolarakis M.": {
-    "elo": 1500.0,
-    "last_seen": "2022-08-23"
-  },
-  "Petrovic D.": {
-    "elo": 1509.6,
-    "last_seen": "2021-04-19"
-  },
-  "Petzschner P.": {
-    "elo": 1564.0,
-    "last_seen": "2014-09-25"
-  },
-  "Peya A.": {
-    "elo": 1371.9,
-    "last_seen": "2011-04-26"
-  },
-  "Phau B.": {
-    "elo": 1523.8,
-    "last_seen": "2014-02-11"
-  },
-  "Philippoussis M.": {
-    "elo": 1555.4,
-    "last_seen": "2006-08-30"
-  },
-  "Piccari F.": {
-    "elo": 1500.0,
-    "last_seen": "2008-07-14"
-  },
-  "Pinnington Jones J.": {
-    "elo": 1547.8,
-    "last_seen": "2026-02-13"
-  },
-  "Piros Z.": {
-    "elo": 1479.8,
-    "last_seen": "2025-08-24"
-  },
-  "Pless K.": {
-    "elo": 1398.0,
-    "last_seen": "2008-07-14"
-  },
-  "Podlipnik H.": {
-    "elo": 1491.8,
-    "last_seen": "2010-02-02"
-  },
-  "Poerschke L.": {
-    "elo": 1493.0,
-    "last_seen": "2010-02-08"
-  },
-  "Polansky P.": {
-    "elo": 1422.4,
-    "last_seen": "2019-08-06"
-  },
-  "Poljicak M.": {
-    "elo": 1473.9,
-    "last_seen": "2025-07-22"
-  },
-  "Polmans M.": {
-    "elo": 1464.5,
-    "last_seen": "2024-01-15"
-  },
-  "Popko D.": {
-    "elo": 1477.5,
-    "last_seen": "2025-02-11"
-  },
-  "Popp A.": {
-    "elo": 1443.4,
-    "last_seen": "2005-10-25"
-  },
-  "Popp T.": {
-    "elo": 1489.6,
-    "last_seen": "2006-07-18"
-  },
-  "Popyrin A.": {
-    "elo": 1601.4,
-    "last_seen": "2026-04-07"
-  },
-  "Portas A.": {
-    "elo": 1483.9,
-    "last_seen": "2007-04-17"
-  },
-  "Pospisil J.": {
-    "elo": 1460.2,
-    "last_seen": "2013-10-17"
-  },
-  "Pospisil V.": {
-    "elo": 1606.0,
-    "last_seen": "2025-07-28"
-  },
-  "Pouille L.": {
-    "elo": 1538.2,
-    "last_seen": "2025-01-28"
-  },
-  "Prashanth V.": {
-    "elo": 1500.0,
-    "last_seen": "2015-01-06"
-  },
-  "Prizmic D.": {
-    "elo": 1527.2,
-    "last_seen": "2026-04-03"
-  },
-  "Prodon E.": {
-    "elo": 1356.8,
-    "last_seen": "2012-05-28"
-  },
-  "Prpic A.": {
-    "elo": 1500.0,
-    "last_seen": "2006-07-10"
-  },
-  "Prpic F.": {
-    "elo": 1459.5,
-    "last_seen": "2010-10-19"
-  },
-  "Przysiezny M.": {
-    "elo": 1403.2,
-    "last_seen": "2016-07-12"
-  },
-  "Pucinelli de Almeida M.": {
-    "elo": 1514.5,
-    "last_seen": "2022-02-24"
-  },
-  "Puerta M.": {
-    "elo": 1490.7,
-    "last_seen": "2005-11-18"
-  },
-  "Puetz T.": {
-    "elo": 1514.0,
-    "last_seen": "2015-01-20"
-  },
-  "Purcell M.": {
-    "elo": 1547.8,
-    "last_seen": "2024-08-27"
-  },
-  "Querrey S.": {
-    "elo": 1524.7,
-    "last_seen": "2022-08-30"
-  },
-  "Querry S.": {
-    "elo": 1473.3,
-    "last_seen": "2006-07-14"
-  },
-  "Quigley E.": {
-    "elo": 1500.0,
-    "last_seen": "2015-02-17"
-  },
-  "Quinn E.": {
-    "elo": 1569.2,
-    "last_seen": "2026-04-15"
-  },
-  "Quinzi G.": {
-    "elo": 1516.8,
-    "last_seen": "2017-04-13"
-  },
-  "Quiroz R.": {
-    "elo": 1522.1,
-    "last_seen": "2021-01-11"
-  },
-  "Qureshi A.": {
-    "elo": 1522.9,
-    "last_seen": "2007-09-25"
-  },
-  "Qureshi A.U.H.": {
-    "elo": 1479.8,
-    "last_seen": "2008-09-23"
-  },
-  "Rachidi Y.": {
-    "elo": 1500.0,
-    "last_seen": "2013-04-09"
-  },
-  "Raja P.": {
-    "elo": 1500.0,
-    "last_seen": "2007-09-27"
-  },
-  "Ram A.": {
-    "elo": 1499.0,
-    "last_seen": "2008-01-15"
-  },
-  "Ram R.": {
-    "elo": 1532.0,
-    "last_seen": "2017-02-10"
-  },
-  "Ramanathan R.": {
-    "elo": 1416.1,
-    "last_seen": "2024-10-03"
-  },
-  "Ramirez C.": {
-    "elo": 1471.8,
-    "last_seen": "2013-02-26"
-  },
-  "Ramirez-Hidalgo R.": {
-    "elo": 1349.3,
-    "last_seen": "2014-04-08"
-  },
-  "Ramos A.": {
-    "elo": 1586.7,
-    "last_seen": "2025-05-26"
-  },
-  "Ramos-Vinolas A.": {
-    "elo": 1468.1,
-    "last_seen": "2024-08-26"
-  },
-  "Raonic M.": {
-    "elo": 1824.9,
-    "last_seen": "2024-06-19"
-  },
-  "Rastogi K.": {
-    "elo": 1497.0,
-    "last_seen": "2007-01-04"
-  },
-  "Recouderc L.": {
-    "elo": 1425.9,
-    "last_seen": "2010-09-28"
-  },
-  "Rehberg M.": {
-    "elo": 1467.3,
-    "last_seen": "2024-04-15"
-  },
-  "Rehnquist B.": {
-    "elo": 1480.9,
-    "last_seen": "2009-01-19"
-  },
-  "Reid M.": {
-    "elo": 1500.0,
-    "last_seen": "2013-06-24"
-  },
-  "Reinberg E.": {
-    "elo": 1500.0,
-    "last_seen": "2018-07-25"
-  },
-  "Reis Da Silva J.": {
-    "elo": 1500.0,
-    "last_seen": "2026-02-17"
-  },
-  "Reister J.": {
-    "elo": 1422.3,
-    "last_seen": "2015-07-29"
-  },
-  "Reix C.": {
-    "elo": 1515.8,
-    "last_seen": "2012-09-19"
-  },
-  "Rejchtman Vinciguerra W.": {
-    "elo": 1500.0,
-    "last_seen": "2025-07-14"
-  },
-  "Renavand N.": {
-    "elo": 1517.4,
-    "last_seen": "2011-09-21"
-  },
-  "Rettenmaier T.": {
-    "elo": 1516.5,
-    "last_seen": "2006-02-15"
-  },
-  "Reyes-Varela M.A.": {
-    "elo": 1485.5,
-    "last_seen": "2014-02-26"
-  },
-  "Reynolds B.": {
-    "elo": 1435.5,
-    "last_seen": "2013-08-19"
-  },
-  "Riba P.": {
-    "elo": 1395.0,
-    "last_seen": "2016-02-01"
-  },
-  "Riba-Madrid P.": {
-    "elo": 1484.2,
-    "last_seen": "2010-06-22"
-  },
-  "Riedi L.": {
-    "elo": 1514.3,
-    "last_seen": "2025-09-01"
-  },
-  "Rieschick S.": {
-    "elo": 1495.5,
-    "last_seen": "2011-10-20"
-  },
-  "Riffice S.": {
-    "elo": 1500.0,
-    "last_seen": "2021-08-30"
-  },
-  "Rincon D.": {
-    "elo": 1477.5,
-    "last_seen": "2024-04-15"
-  },
-  "Rinderknech A.": {
-    "elo": 1689.9,
-    "last_seen": "2026-04-06"
-  },
-  "Rios F.": {
-    "elo": 1500.0,
-    "last_seen": "2011-02-01"
-  },
-  "Ritschard A.": {
-    "elo": 1501.9,
-    "last_seen": "2024-04-02"
-  },
-  "Robert S.": {
-    "elo": 1457.7,
-    "last_seen": "2020-01-14"
-  },
-  "Robredo R.": {
-    "elo": 1495.7,
-    "last_seen": "2006-11-15"
-  },
-  "Robredo T.": {
-    "elo": 1548.2,
-    "last_seen": "2022-04-18"
-  },
-  "Roca Batalla O.": {
-    "elo": 1506.7,
-    "last_seen": "2023-05-22"
-  },
-  "Rocha H.": {
-    "elo": 1518.9,
-    "last_seen": "2026-03-31"
-  },
-  "Rochus C.": {
-    "elo": 1347.2,
-    "last_seen": "2012-02-15"
-  },
-  "Rochus O.": {
-    "elo": 1482.3,
-    "last_seen": "2013-06-25"
-  },
-  "Roddick A.": {
-    "elo": 1827.5,
-    "last_seen": "2012-09-05"
-  },
-  "Rodesch C.": {
-    "elo": 1500.0,
-    "last_seen": "2025-06-30"
-  },
-  "Rodionov J.": {
-    "elo": 1514.7,
-    "last_seen": "2025-10-20"
-  },
-  "Rodrigues M.": {
-    "elo": 1517.1,
-    "last_seen": "2011-09-22"
-  },
-  "Rodriguez B.": {
-    "elo": 1500.0,
-    "last_seen": "2008-02-26"
-  },
-  "Rodriguez Taverna S.": {
-    "elo": 1500.0,
-    "last_seen": "2022-05-23"
-  },
-  "Roger-Vasselin E.": {
-    "elo": 1543.2,
-    "last_seen": "2016-06-30"
-  },
-  "Roitman S.": {
-    "elo": 1352.7,
-    "last_seen": "2009-07-28"
-  },
-  "Rola B.": {
-    "elo": 1458.3,
-    "last_seen": "2021-03-08"
-  },
-  "Romboli F.": {
-    "elo": 1500.0,
-    "last_seen": "2011-02-07"
-  },
-  "Rosenholm P.": {
-    "elo": 1520.7,
-    "last_seen": "2014-10-13"
-  },
-  "Roshardt R.": {
-    "elo": 1486.0,
-    "last_seen": "2008-07-08"
-  },
-  "Rosol L.": {
-    "elo": 1520.8,
-    "last_seen": "2022-10-17"
-  },
-  "Rottgering M.": {
-    "elo": 1484.9,
-    "last_seen": "2026-02-10"
-  },
-  "Roumane R.": {
-    "elo": 1500.0,
-    "last_seen": "2019-09-17"
-  },
-  "Royer V.": {
-    "elo": 1522.9,
-    "last_seen": "2026-02-24"
-  },
-  "Rubin N.": {
-    "elo": 1451.3,
-    "last_seen": "2021-08-23"
-  },
-  "Rublev A.": {
-    "elo": 1757.2,
-    "last_seen": "2026-02-20"
-  },
-  "Ruevski P.": {
-    "elo": 1500.0,
-    "last_seen": "2007-07-24"
-  },
-  "Rufin G.": {
-    "elo": 1531.5,
-    "last_seen": "2013-08-21"
-  },
-  "Rune H.": {
-    "elo": 1905.2,
-    "last_seen": "2025-06-01"
-  },
-  "Rusedski G.": {
-    "elo": 1489.0,
-    "last_seen": "2006-08-30"
-  },
-  "Russell M.": {
-    "elo": 1504.2,
-    "last_seen": "2015-01-19"
-  },
-  "Ruud C.": {
-    "elo": 1802.8,
-    "last_seen": "2026-03-11"
-  },
-  "Ruusuvuori E.": {
-    "elo": 1650.7,
-    "last_seen": "2025-10-14"
-  },
-  "Rybakov A.": {
-    "elo": 1500.0,
-    "last_seen": "2023-02-07"
-  },
-  "Ryderstedt M.": {
-    "elo": 1463.6,
-    "last_seen": "2012-07-10"
-  },
-  "Sa A.": {
-    "elo": 1481.1,
-    "last_seen": "2007-07-25"
-  },
-  "Saavedra Corvalan C.": {
-    "elo": 1500.0,
-    "last_seen": "2010-02-02"
-  },
-  "Sabau R.": {
-    "elo": 1368.6,
-    "last_seen": "2006-09-11"
-  },
-  "Sabry S.": {
-    "elo": 1500.0,
-    "last_seen": "2011-01-04"
-  },
-  "Sachko V.": {
-    "elo": 1501.1,
-    "last_seen": "2026-04-13"
-  },
-  "Sadecky A.": {
-    "elo": 1510.8,
-    "last_seen": "2011-07-25"
-  },
-  "Safin M.": {
-    "elo": 1634.5,
-    "last_seen": "2009-11-11"
-  },
-  "Safiullin R.": {
-    "elo": 1565.3,
-    "last_seen": "2025-08-29"
-  },
-  "Safranek V.": {
-    "elo": 1496.8,
-    "last_seen": "2018-01-16"
-  },
-  "Safwat M.": {
-    "elo": 1414.8,
-    "last_seen": "2020-08-31"
-  },
-  "Sakamoto P.": {
-    "elo": 1500.0,
-    "last_seen": "2019-02-26"
-  },
-  "Sakamoto R.": {
-    "elo": 1475.0,
-    "last_seen": "2026-03-21"
-  },
-  "Sakellaridis S.": {
-    "elo": 1503.9,
-    "last_seen": "2026-04-03"
-  },
-  "Sakharov G.": {
-    "elo": 1504.5,
-    "last_seen": "2019-01-15"
-  },
-  "Salamanca C.": {
-    "elo": 1500.0,
-    "last_seen": "2013-07-16"
-  },
-  "Salva B.": {
-    "elo": 1437.2,
-    "last_seen": "2008-01-01"
-  },
-  "Salzenstein J.": {
-    "elo": 1499.9,
-    "last_seen": "2006-03-10"
-  },
-  "Samper-Montana J.": {
-    "elo": 1484.0,
-    "last_seen": "2018-05-21"
-  },
-  "Samrej K.": {
-    "elo": 1500.0,
-    "last_seen": "2025-01-14"
-  },
-  "Sanchez D.": {
-    "elo": 1499.8,
-    "last_seen": "2005-09-27"
-  },
-  "Sanchez De Luna J.": {
-    "elo": 1492.3,
-    "last_seen": "2008-05-12"
-  },
-  "Sanchez Izquierdo N.": {
-    "elo": 1500.0,
-    "last_seen": "2024-05-20"
-  },
-  "Sanchez M.": {
-    "elo": 1479.7,
-    "last_seen": "2017-08-01"
-  },
-  "Sanchez de Luna J.A.": {
-    "elo": 1500.0,
-    "last_seen": "2005-09-27"
-  },
-  "Sandbichler A.": {
-    "elo": 1500.0,
-    "last_seen": "2006-07-24"
-  },
-  "Sandgren T.": {
-    "elo": 1505.1,
-    "last_seen": "2024-02-06"
-  },
-  "Sanguinetti D.": {
-    "elo": 1428.4,
-    "last_seen": "2007-09-10"
-  },
-  "Santillan A.": {
-    "elo": 1451.8,
-    "last_seen": "2017-09-26"
-  },
-  "Santoro F.": {
-    "elo": 1543.4,
-    "last_seen": "2010-01-19"
-  },
-  "Saoudi S.": {
-    "elo": 1502.1,
-    "last_seen": "2007-04-26"
-  },
-  "Saretta F.": {
-    "elo": 1474.4,
-    "last_seen": "2009-02-09"
-  },
-  "Sargsian S.": {
-    "elo": 1471.1,
-    "last_seen": "2006-02-28"
-  },
-  "Sarkissian A.": {
-    "elo": 1499.4,
-    "last_seen": "2021-07-21"
-  },
-  "Sarmiento R.": {
-    "elo": 1500.0,
-    "last_seen": "2019-08-20"
-  },
-  "Satral J.": {
-    "elo": 1507.0,
-    "last_seen": "2016-08-31"
-  },
-  "Saulnier C.": {
-    "elo": 1464.7,
-    "last_seen": "2007-02-15"
-  },
-  "Saville L.": {
-    "elo": 1467.8,
-    "last_seen": "2023-09-21"
-  },
-  "Schalken S.": {
-    "elo": 1500.0,
-    "last_seen": "2005-07-19"
-  },
-  "Scherrer J.C.": {
-    "elo": 1494.8,
-    "last_seen": "2008-09-25"
-  },
-  "Schnur B.": {
-    "elo": 1409.9,
-    "last_seen": "2021-09-22"
-  },
-  "Scholtz N.": {
-    "elo": 1500.0,
-    "last_seen": "2011-02-01"
-  },
-  "Schoolkate T.": {
-    "elo": 1484.8,
-    "last_seen": "2026-02-24"
-  },
-  "Schoorel T.": {
-    "elo": 1485.5,
-    "last_seen": "2011-05-25"
-  },
-  "Schuettler R.": {
-    "elo": 1471.5,
-    "last_seen": "2011-06-22"
-  },
-  "Schukin Y.": {
-    "elo": 1514.2,
-    "last_seen": "2011-02-01"
-  },
-  "Schuttler P.": {
-    "elo": 1500.0,
-    "last_seen": "2006-10-10"
-  },
-  "Schwaerzler J.": {
-    "elo": 1488.0,
-    "last_seen": "2024-10-21"
-  },
-  "Schwaerzler J.J.": {
-    "elo": 1500.0,
-    "last_seen": "2025-07-21"
-  },
-  "Schwank E.": {
-    "elo": 1491.5,
-    "last_seen": "2012-07-10"
-  },
-  "Schwartzman D.": {
-    "elo": 1514.5,
-    "last_seen": "2025-02-13"
-  },
-  "Searle H.": {
-    "elo": 1479.7,
-    "last_seen": "2025-06-30"
-  },
-  "Sekulic M.": {
-    "elo": 1500.0,
-    "last_seen": "2013-10-15"
-  },
-  "Sekulic P.": {
-    "elo": 1508.8,
-    "last_seen": "2023-10-05"
-  },
-  "Sela D.": {
-    "elo": 1597.9,
-    "last_seen": "2019-09-17"
-  },
-  "Sell K.": {
-    "elo": 1500.0,
-    "last_seen": "2025-05-20"
-  },
-  "Seppi A.": {
-    "elo": 1508.4,
-    "last_seen": "2022-06-07"
-  },
-  "Serdarusic N.": {
-    "elo": 1437.4,
-    "last_seen": "2023-05-23"
-  },
-  "Sergeyev I.": {
-    "elo": 1517.0,
-    "last_seen": "2010-01-21"
-  },
-  "Serra F.": {
-    "elo": 1420.4,
-    "last_seen": "2014-09-17"
-  },
-  "Setkic A.": {
-    "elo": 1474.3,
-    "last_seen": "2017-10-17"
-  },
-  "Seyboth Wild T.": {
-    "elo": 1599.6,
-    "last_seen": "2025-07-24"
-  },
-  "Shane R.": {
-    "elo": 1500.0,
-    "last_seen": "2015-08-31"
-  },
-  "Shang J.": {
-    "elo": 1647.5,
-    "last_seen": "2026-02-24"
-  },
-  "Shapovalov D.": {
-    "elo": 1662.9,
-    "last_seen": "2026-04-14"
-  },
-  "Shelbayh A.": {
-    "elo": 1449.5,
-    "last_seen": "2025-02-18"
-  },
-  "Shelton B.": {
-    "elo": 1876.4,
-    "last_seen": "2026-02-15"
-  },
-  "Shevchenko A.": {
-    "elo": 1614.3,
-    "last_seen": "2026-04-07"
-  },
-  "Shimabukuro S.": {
-    "elo": 1494.4,
-    "last_seen": "2026-03-05"
-  },
-  "Shimizu Y.": {
-    "elo": 1500.0,
-    "last_seen": "2022-10-04"
-  },
-  "Shyla Y.": {
-    "elo": 1500.0,
-    "last_seen": "2015-09-23"
-  },
-  "Sidorenko A.": {
-    "elo": 1482.4,
-    "last_seen": "2016-09-22"
-  },
-  "Sijsling I.": {
-    "elo": 1438.5,
-    "last_seen": "2016-07-12"
-  },
-  "Silva D.": {
-    "elo": 1500.0,
-    "last_seen": "2009-02-10"
-  },
-  "Silva F.": {
-    "elo": 1491.5,
-    "last_seen": "2016-04-25"
-  },
-  "Silva F.F.": {
-    "elo": 1510.0,
-    "last_seen": "2018-05-01"
-  },
-  "Silva J.": {
-    "elo": 1470.0,
-    "last_seen": "2010-08-31"
-  },
-  "Simmonds P.": {
-    "elo": 1475.8,
-    "last_seen": "2011-07-19"
-  },
-  "Simon G.": {
-    "elo": 1614.7,
-    "last_seen": "2022-11-03"
-  },
-  "Simonsson F.": {
-    "elo": 1500.0,
-    "last_seen": "2016-07-12"
-  },
-  "Singh N.": {
-    "elo": 1500.0,
-    "last_seen": "2007-09-25"
-  },
-  "Singh S.": {
-    "elo": 1500.0,
-    "last_seen": "2012-09-26"
-  },
-  "Sinner J.": {
-    "elo": 2269.0,
-    "last_seen": "2026-04-12"
-  },
-  "Sirianni J.": {
-    "elo": 1459.0,
-    "last_seen": "2009-06-09"
-  },
-  "Siriluethaiwattana P.": {
-    "elo": 1500.0,
-    "last_seen": "2012-09-24"
-  },
-  "Sitak A.": {
-    "elo": 1500.0,
-    "last_seen": "2011-08-01"
-  },
-  "Skatov T.": {
-    "elo": 1466.2,
-    "last_seen": "2026-03-31"
-  },
-  "Skugor F.": {
-    "elo": 1447.1,
-    "last_seen": "2019-02-12"
-  },
-  "Slabinsky A.": {
-    "elo": 1482.1,
-    "last_seen": "2011-06-14"
-  },
-  "Slanar M.": {
-    "elo": 1496.5,
-    "last_seen": "2008-10-01"
-  },
-  "Sluiter R.": {
-    "elo": 1495.1,
-    "last_seen": "2009-06-20"
-  },
-  "Smeets R.": {
-    "elo": 1456.8,
-    "last_seen": "2008-09-24"
-  },
-  "Smethurst D.": {
-    "elo": 1500.0,
-    "last_seen": "2014-06-24"
-  },
-  "Smit J.": {
-    "elo": 1500.0,
-    "last_seen": "2006-09-25"
-  },
-  "Smith C.": {
-    "elo": 1485.5,
-    "last_seen": "2026-03-31"
-  },
-  "Smith J.P.": {
-    "elo": 1381.9,
-    "last_seen": "2021-02-23"
-  },
-  "Smyczek T.": {
-    "elo": 1452.0,
-    "last_seen": "2019-07-31"
-  },
-  "Snobel P.": {
-    "elo": 1472.9,
-    "last_seen": "2008-10-07"
-  },
-  "Sock J.": {
-    "elo": 1589.2,
-    "last_seen": "2023-04-05"
-  },
-  "Soderling R.": {
-    "elo": 1969.4,
-    "last_seen": "2011-06-01"
-  },
-  "Soderlund C.": {
-    "elo": 1516.0,
-    "last_seen": "2016-07-14"
-  },
-  "Soeda G.": {
-    "elo": 1458.5,
-    "last_seen": "2020-09-02"
-  },
-  "Sonego L.": {
-    "elo": 1651.0,
-    "last_seen": "2026-04-16"
-  },
-  "Sorensen L.": {
-    "elo": 1506.6,
-    "last_seen": "2014-07-10"
-  },
-  "Soto M.": {
-    "elo": 1500.0,
-    "last_seen": "2026-02-24"
-  },
-  "Sousa J.": {
-    "elo": 1449.7,
-    "last_seen": "2024-04-03"
-  },
-  "Sousa P.": {
-    "elo": 1381.6,
-    "last_seen": "2023-04-04"
-  },
-  "Souza J.": {
-    "elo": 1407.6,
-    "last_seen": "2017-03-02"
-  },
-  "Spadea V.": {
-    "elo": 1413.2,
-    "last_seen": "2010-02-23"
-  },
-  "Spizzirri E.": {
-    "elo": 1617.3,
-    "last_seen": "2026-01-24"
-  },
-  "Squire H.": {
-    "elo": 1496.4,
-    "last_seen": "2024-06-18"
-  },
-  "Srichaphan P.": {
-    "elo": 1600.8,
-    "last_seen": "2006-10-28"
-  },
-  "Stadler S.": {
-    "elo": 1500.8,
-    "last_seen": "2011-01-18"
-  },
-  "Stakhovsky S.": {
-    "elo": 1516.7,
-    "last_seen": "2021-02-08"
-  },
-  "Starace P.": {
-    "elo": 1537.2,
-    "last_seen": "2014-05-25"
-  },
-  "Statham J.": {
-    "elo": 1484.0,
-    "last_seen": "2019-01-09"
-  },
-  "Statham R.": {
-    "elo": 1500.0,
-    "last_seen": "2008-01-07"
-  },
-  "Stebe C-M.": {
-    "elo": 1519.3,
-    "last_seen": "2013-01-02"
-  },
-  "Stebe C.M.": {
-    "elo": 1535.0,
-    "last_seen": "2022-02-11"
-  },
-  "Steckley R.": {
-    "elo": 1500.0,
-    "last_seen": "2005-08-09"
-  },
-  "Stepanek M.": {
-    "elo": 1500.0,
-    "last_seen": "2007-04-18"
-  },
-  "Stepanek R.": {
-    "elo": 1692.8,
-    "last_seen": "2017-01-19"
-  },
-  "Stoppini A.": {
-    "elo": 1486.1,
-    "last_seen": "2009-02-12"
-  },
-  "Stricker D.": {
-    "elo": 1600.8,
-    "last_seen": "2025-07-16"
-  },
-  "Strode B.": {
-    "elo": 1500.0,
-    "last_seen": "2012-02-16"
-  },
-  "Struff J-L.": {
-    "elo": 1500.0,
-    "last_seen": "2014-01-07"
-  },
-  "Struff J.L.": {
-    "elo": 1601.2,
-    "last_seen": "2026-03-19"
-  },
-  "Struvay E.": {
-    "elo": 1484.0,
-    "last_seen": "2014-07-15"
-  },
-  "Sugita Y.": {
-    "elo": 1491.9,
-    "last_seen": "2021-08-30"
-  },
-  "Summerer T.": {
-    "elo": 1443.6,
-    "last_seen": "2007-05-15"
-  },
-  "Sun F.": {
-    "elo": 1488.1,
-    "last_seen": "2025-09-18"
-  },
-  "Sun P.": {
-    "elo": 1484.0,
-    "last_seen": "2007-09-10"
-  },
-  "Suresh D.": {
-    "elo": 1500.0,
-    "last_seen": "2025-08-18"
-  },
-  "Suzuki T.": {
-    "elo": 1537.1,
-    "last_seen": "2009-10-06"
-  },
-  "Svajda T.": {
-    "elo": 1481.9,
-    "last_seen": "2026-02-11"
-  },
-  "Svajda Z.": {
-    "elo": 1504.1,
-    "last_seen": "2026-03-07"
-  },
-  "Svrcina D.": {
-    "elo": 1543.7,
-    "last_seen": "2026-03-07"
-  },
-  "Sweeny D.": {
-    "elo": 1505.5,
-    "last_seen": "2026-01-22"
-  },
-  "Sweeting R.": {
-    "elo": 1552.3,
-    "last_seen": "2013-02-13"
-  },
-  "Tabara M.": {
-    "elo": 1484.0,
-    "last_seen": "2005-07-18"
-  },
-  "Taberner C.": {
-    "elo": 1541.3,
-    "last_seen": "2026-01-20"
-  },
-  "Tabilo A.": {
-    "elo": 1684.6,
-    "last_seen": "2026-04-14"
-  },
-  "Tabur C.": {
-    "elo": 1516.1,
-    "last_seen": "2025-11-06"
-  },
-  "Tahiri M.": {
-    "elo": 1514.7,
-    "last_seen": "2006-04-27"
-  },
-  "Taino E.": {
-    "elo": 1516.0,
-    "last_seen": "2005-10-05"
-  },
-  "Takahashi Y.": {
-    "elo": 1500.0,
-    "last_seen": "2017-10-02"
-  },
-  "Takeuchi K.": {
-    "elo": 1500.0,
-    "last_seen": "2014-09-23"
-  },
-  "Tarvet O.": {
-    "elo": 1515.7,
-    "last_seen": "2025-07-02"
-  },
-  "Tavares L.": {
-    "elo": 1514.1,
-    "last_seen": "2010-05-06"
-  },
-  "Te R.": {
-    "elo": 1500.0,
-    "last_seen": "2023-10-04"
-  },
-  "Tearney F.": {
-    "elo": 1490.7,
-    "last_seen": "2017-01-09"
-  },
-  "Teixeira M.": {
-    "elo": 1473.1,
-    "last_seen": "2015-07-27"
-  },
-  "Tepavac M.": {
-    "elo": 1500.0,
-    "last_seen": "2017-02-07"
-  },
-  "Terachi T.": {
-    "elo": 1514.3,
-    "last_seen": "2005-10-05"
-  },
-  "Thiem D.": {
-    "elo": 1549.5,
-    "last_seen": "2024-10-22"
-  },
-  "Thomann N.": {
-    "elo": 1477.8,
-    "last_seen": "2006-10-24"
-  },
-  "Thompson C.": {
-    "elo": 1500.0,
-    "last_seen": "2014-07-07"
-  },
-  "Thompson J.": {
-    "elo": 1685.9,
-    "last_seen": "2026-01-21"
-  },
-  "Thron A.": {
-    "elo": 1484.7,
-    "last_seen": "2005-09-27"
-  },
-  "Tiafoe F.": {
-    "elo": 1783.0,
-    "last_seen": "2026-03-26"
-  },
-  "Tien L.": {
-    "elo": 1809.9,
-    "last_seen": "2026-03-12"
-  },
-  "Tipsarevic J.": {
-    "elo": 1572.8,
-    "last_seen": "2019-10-18"
-  },
-  "Tirante T.A.": {
-    "elo": 1606.8,
-    "last_seen": "2026-04-04"
-  },
-  "Tiurnev E.": {
-    "elo": 1500.0,
-    "last_seen": "2021-10-25"
-  },
-  "Tomic B.": {
-    "elo": 1552.4,
-    "last_seen": "2025-10-13"
-  },
-  "Topic J.": {
-    "elo": 1500.0,
-    "last_seen": "2013-07-23"
-  },
-  "Topo M.": {
-    "elo": 1427.8,
-    "last_seen": "2026-04-14"
-  },
-  "Torebko P.": {
-    "elo": 1485.9,
-    "last_seen": "2019-07-16"
-  },
-  "Torpegaard M.": {
-    "elo": 1493.5,
-    "last_seen": "2021-02-09"
-  },
-  "Travaglia S.": {
-    "elo": 1464.4,
-    "last_seen": "2023-08-28"
-  },
-  "Trevisan M.": {
-    "elo": 1500.0,
-    "last_seen": "2015-07-21"
-  },
-  "Trinker B.": {
-    "elo": 1509.9,
-    "last_seen": "2015-07-23"
-  },
-  "Troicki V.": {
-    "elo": 1527.3,
-    "last_seen": "2021-06-17"
-  },
-  "Trongcharoenchaikul W.": {
-    "elo": 1500.0,
-    "last_seen": "2013-09-24"
-  },
-  "Trotter J.K.": {
-    "elo": 1488.4,
-    "last_seen": "2025-10-02"
-  },
-  "Trujillo G.": {
-    "elo": 1511.1,
-    "last_seen": "2008-04-30"
-  },
-  "Trungelliti M.": {
-    "elo": 1561.2,
-    "last_seen": "2026-04-05"
-  },
-  "Trusendi W.": {
-    "elo": 1500.0,
-    "last_seen": "2012-07-10"
-  },
-  "Tseng C. H.": {
-    "elo": 1484.6,
-    "last_seen": "2024-07-25"
-  },
-  "Tseng C.H.": {
-    "elo": 1402.1,
-    "last_seen": "2026-03-05"
-  },
-  "Tsitsipas P.": {
-    "elo": 1500.0,
-    "last_seen": "2021-03-09"
-  },
-  "Tsitsipas S.": {
-    "elo": 1685.0,
-    "last_seen": "2026-04-15"
-  },
-  "Tsonga J.W.": {
-    "elo": 1603.6,
-    "last_seen": "2022-05-24"
-  },
-  "Tu L.": {
-    "elo": 1447.0,
-    "last_seen": "2025-03-07"
-  },
-  "Tuksar S.": {
-    "elo": 1465.1,
-    "last_seen": "2006-05-29"
-  },
-  "Turcanu R.D.": {
-    "elo": 1500.0,
-    "last_seen": "2026-03-31"
-  },
-  "Tursunov D.": {
-    "elo": 1515.0,
-    "last_seen": "2017-08-02"
-  },
-  "Tveit E.": {
-    "elo": 1500.0,
-    "last_seen": "2007-07-10"
-  },
-  "Tyurnev E.": {
-    "elo": 1500.0,
-    "last_seen": "2017-09-18"
-  },
-  "Uchida K.": {
-    "elo": 1504.6,
-    "last_seen": "2022-10-04"
-  },
-  "Uchiyama Y.": {
-    "elo": 1447.5,
-    "last_seen": "2024-09-21"
-  },
-  "Udomchoke D.": {
-    "elo": 1313.8,
-    "last_seen": "2012-09-26"
-  },
-  "Ugo Carabelli C.": {
-    "elo": 1573.4,
-    "last_seen": "2026-04-15"
-  },
-  "Ulihrach B.": {
-    "elo": 1481.8,
-    "last_seen": "2007-06-26"
-  },
-  "Ungur A.": {
-    "elo": 1401.3,
-    "last_seen": "2016-05-22"
-  },
-  "Uppal V.": {
-    "elo": 1500.0,
-    "last_seen": "2006-01-02"
-  },
-  "Vacek J.": {
-    "elo": 1529.6,
-    "last_seen": "2008-06-12"
-  },
-  "Vacherot V.": {
-    "elo": 1760.4,
-    "last_seen": "2026-04-11"
-  },
-  "Vagnozzi S.": {
-    "elo": 1487.0,
-    "last_seen": "2011-07-26"
-  },
-  "Vahaly B.": {
-    "elo": 1515.2,
-    "last_seen": "2006-03-03"
-  },
-  "Vaisse M.": {
-    "elo": 1500.0,
-    "last_seen": "2014-05-19"
-  },
-  "Valent R.": {
-    "elo": 1500.0,
-    "last_seen": "2009-09-22"
-  },
-  "Valkusz M.": {
-    "elo": 1488.9,
-    "last_seen": "2024-01-16"
-  },
-  "Vallejo D.": {
-    "elo": 1500.0,
-    "last_seen": "2026-04-02"
-  },
-  "Van Assche L.": {
-    "elo": 1526.4,
-    "last_seen": "2026-04-03"
-  },
-  "Van D. Merwe I.": {
-    "elo": 1500.0,
-    "last_seen": "2012-01-30"
-  },
-  "Van De Zandschulp B.": {
-    "elo": 1668.0,
-    "last_seen": "2026-04-16"
-  },
-  "Van Der Merwe I.": {
-    "elo": 1542.1,
-    "last_seen": "2012-07-13"
-  },
-  "Van Rijthoven T.": {
-    "elo": 1580.8,
-    "last_seen": "2023-02-15"
-  },
-  "Van der Dium A.": {
-    "elo": 1500.0,
-    "last_seen": "2006-02-21"
-  },
-  "Van der Merwe I.": {
-    "elo": 1497.8,
-    "last_seen": "2009-02-05"
-  },
-  "Vanek J.": {
-    "elo": 1416.0,
-    "last_seen": "2009-05-25"
-  },
-  "Vanni L.": {
-    "elo": 1421.0,
-    "last_seen": "2019-01-15"
-  },
-  "Vardhan V.": {
-    "elo": 1483.5,
-    "last_seen": "2012-01-02"
-  },
-  "Varillas J. P.": {
-    "elo": 1566.5,
-    "last_seen": "2024-01-16"
-  },
-  "Varillas J.P.": {
-    "elo": 1518.1,
-    "last_seen": "2024-07-17"
-  },
-  "Vasilevski A.": {
-    "elo": 1500.0,
-    "last_seen": "2012-09-17"
-  },
-  "Vassallo-Arguello M.": {
-    "elo": 1394.5,
-    "last_seen": "2010-02-09"
-  },
-  "Vatutin A.": {
-    "elo": 1457.7,
-    "last_seen": "2024-10-15"
-  },
-  "Vavassori A.": {
-    "elo": 1547.1,
-    "last_seen": "2026-02-03"
-  },
-  "Vega Hernandez D.": {
-    "elo": 1500.0,
-    "last_seen": "2015-04-30"
-  },
-  "Veger F.": {
-    "elo": 1500.0,
-    "last_seen": "2013-02-05"
-  },
-  "Veic A.": {
-    "elo": 1432.6,
-    "last_seen": "2015-02-04"
-  },
-  "Velotti A.": {
-    "elo": 1482.9,
-    "last_seen": "2016-07-19"
-  },
-  "Vemic D.": {
-    "elo": 1449.5,
-    "last_seen": "2008-08-08"
-  },
-  "Ventura S.": {
-    "elo": 1434.0,
-    "last_seen": "2010-06-21"
-  },
-  "Venus M.": {
-    "elo": 1451.4,
-    "last_seen": "2018-01-08"
-  },
-  "Verdasco F.": {
-    "elo": 1439.9,
-    "last_seen": "2023-04-18"
-  },
-  "Verkerk M.": {
-    "elo": 1376.7,
-    "last_seen": "2008-06-16"
-  },
-  "Vesely J.": {
-    "elo": 1582.6,
-    "last_seen": "2024-01-16"
-  },
-  "Vicente F.": {
-    "elo": 1318.7,
-    "last_seen": "2009-06-09"
-  },
-  "Vicente M.": {
-    "elo": 1500.0,
-    "last_seen": "2006-07-11"
-  },
-  "Vico U.": {
-    "elo": 1498.6,
-    "last_seen": "2005-09-29"
-  },
-  "Vik R.": {
-    "elo": 1386.2,
-    "last_seen": "2009-05-18"
-  },
-  "Vilella Martinez M.": {
-    "elo": 1540.3,
-    "last_seen": "2021-07-28"
-  },
-  "Villanueva G.": {
-    "elo": 1500.0,
-    "last_seen": "2022-08-03"
-  },
-  "Vinciguerra A.": {
-    "elo": 1494.7,
-    "last_seen": "2013-07-09"
-  },
-  "Viola M.": {
-    "elo": 1475.1,
-    "last_seen": "2019-09-17"
-  },
-  "Viola Mat.": {
-    "elo": 1490.4,
-    "last_seen": "2012-01-31"
-  },
-  "Virtanen O.": {
-    "elo": 1512.1,
-    "last_seen": "2026-04-14"
-  },
-  "Vliegen K.": {
-    "elo": 1413.1,
-    "last_seen": "2010-09-23"
-  },
-  "Volandri F.": {
-    "elo": 1350.4,
-    "last_seen": "2016-07-18"
-  },
-  "Vovk S.": {
-    "elo": 1500.0,
-    "last_seen": "2009-10-26"
-  },
-  "Vrbensky M.": {
-    "elo": 1500.0,
-    "last_seen": "2021-01-08"
-  },
-  "Vukic A.": {
-    "elo": 1593.7,
-    "last_seen": "2026-01-15"
-  },
-  "Wachiramanowong K.": {
-    "elo": 1493.3,
-    "last_seen": "2011-09-26"
-  },
-  "Walter L.": {
-    "elo": 1500.0,
-    "last_seen": "2011-06-13"
-  },
-  "Walton A.": {
-    "elo": 1523.7,
-    "last_seen": "2026-04-01"
-  },
-  "Wang C.": {
-    "elo": 1525.7,
-    "last_seen": "2014-10-08"
-  },
-  "Wang J.": {
-    "elo": 1511.1,
-    "last_seen": "2015-01-20"
-  },
-  "Wang Y.": {
-    "elo": 1480.9,
-    "last_seen": "2006-05-22"
-  },
-  "Wang Y. Jr": {
-    "elo": 1516.0,
-    "last_seen": "2005-09-16"
-  },
-  "Wang Y.Jr.": {
-    "elo": 1500.0,
-    "last_seen": "2006-09-12"
-  },
-  "Wang Y.T.": {
-    "elo": 1494.5,
-    "last_seen": "2007-09-28"
-  },
-  "Warburg S.": {
-    "elo": 1454.1,
-    "last_seen": "2008-08-29"
-  },
-  "Ward A.": {
-    "elo": 1471.4,
-    "last_seen": "2017-07-04"
-  },
-  "Ward J.": {
-    "elo": 1360.0,
-    "last_seen": "2021-06-22"
-  },
-  "Washington M.": {
-    "elo": 1500.0,
-    "last_seen": "2005-07-19"
-  },
-  "Waske A.": {
-    "elo": 1421.6,
-    "last_seen": "2007-07-17"
-  },
-  "Watanuki Y.": {
-    "elo": 1598.0,
-    "last_seen": "2025-09-24"
-  },
-  "Watt J.": {
-    "elo": 1500.0,
-    "last_seen": "2026-01-12"
-  },
-  "Wawrinka S.": {
-    "elo": 1560.9,
-    "last_seen": "2026-04-13"
-  },
-  "Weiner G.": {
-    "elo": 1483.2,
-    "last_seen": "2006-03-10"
-  },
-  "Weintraub A.": {
-    "elo": 1474.9,
-    "last_seen": "2016-08-10"
-  },
-  "Wessels L.": {
-    "elo": 1500.0,
-    "last_seen": "2023-06-20"
-  },
-  "Wessels P.": {
-    "elo": 1536.0,
-    "last_seen": "2007-10-10"
-  },
-  "Westerhof B.": {
-    "elo": 1500.0,
-    "last_seen": "2013-07-23"
-  },
-  "Whitehouse W.": {
-    "elo": 1477.3,
-    "last_seen": "2007-07-31"
-  },
-  "Whittington A.": {
-    "elo": 1519.8,
-    "last_seen": "2017-07-03"
-  },
-  "Widom T.": {
-    "elo": 1538.9,
-    "last_seen": "2009-03-15"
-  },
-  "Williams R.": {
-    "elo": 1444.6,
-    "last_seen": "2015-01-06"
-  },
-  "Willis M.": {
-    "elo": 1515.9,
-    "last_seen": "2016-06-29"
-  },
-  "Wilson B.": {
-    "elo": 1472.3,
-    "last_seen": "2007-02-13"
-  },
-  "Witten J.": {
-    "elo": 1474.2,
-    "last_seen": "2010-06-21"
-  },
-  "Wolf J.J.": {
-    "elo": 1529.9,
-    "last_seen": "2024-07-30"
-  },
-  "Wolmarans F.": {
-    "elo": 1498.2,
-    "last_seen": "2011-02-03"
-  },
-  "Wong C.": {
-    "elo": 1541.8,
-    "last_seen": "2026-04-01"
-  },
-  "Wu D.": {
-    "elo": 1446.0,
-    "last_seen": "2019-09-26"
-  },
-  "Wu T.L.": {
-    "elo": 1486.2,
-    "last_seen": "2023-03-10"
-  },
-  "Wu Y.": {
-    "elo": 1670.5,
-    "last_seen": "2026-03-20"
-  },
-  "Xu J.C.": {
-    "elo": 1500.0,
-    "last_seen": "2008-09-22"
-  },
-  "Yang T.H.": {
-    "elo": 1472.8,
-    "last_seen": "2012-09-25"
-  },
-  "Yani M.": {
-    "elo": 1428.9,
-    "last_seen": "2012-09-26"
-  },
-  "Yevseyev D.": {
-    "elo": 1501.2,
-    "last_seen": "2024-09-19"
-  },
-  "Ymer E.": {
-    "elo": 1476.2,
-    "last_seen": "2026-02-24"
-  },
-  "Ymer M.": {
-    "elo": 1605.0,
-    "last_seen": "2025-10-14"
-  },
-  "Young D.": {
-    "elo": 1506.6,
-    "last_seen": "2021-01-09"
-  },
-  "Youzhny A.": {
-    "elo": 1500.0,
-    "last_seen": "2007-10-17"
-  },
-  "Youzhny M.": {
-    "elo": 1471.2,
-    "last_seen": "2018-09-20"
-  },
-  "Yu X.Y.": {
-    "elo": 1481.9,
-    "last_seen": "2007-09-10"
-  },
-  "Yuksel A.": {
-    "elo": 1500.0,
-    "last_seen": "2017-01-02"
-  },
-  "Zabaleta M.": {
-    "elo": 1482.2,
-    "last_seen": "2008-01-28"
-  },
-  "Zahraj P.": {
-    "elo": 1500.0,
-    "last_seen": "2025-07-16"
-  },
-  "Zampieri C.": {
-    "elo": 1497.6,
-    "last_seen": "2011-02-03"
-  },
-  "Zapata Miralles B.": {
-    "elo": 1453.8,
-    "last_seen": "2024-03-08"
-  },
-  "Zayed M. S.": {
-    "elo": 1500.0,
-    "last_seen": "2013-01-01"
-  },
-  "Zayid M. S.": {
-    "elo": 1500.0,
-    "last_seen": "2016-01-04"
-  },
-  "Zayid M.S.": {
-    "elo": 1500.0,
-    "last_seen": "2017-01-03"
-  },
-  "Zeballos H.": {
-    "elo": 1583.1,
-    "last_seen": "2018-08-21"
-  },
-  "Zekic M.": {
-    "elo": 1504.9,
-    "last_seen": "2017-08-02"
-  },
-  "Zemlja G.": {
-    "elo": 1600.8,
-    "last_seen": "2016-07-14"
-  },
-  "Zeng S.X.": {
-    "elo": 1500.1,
-    "last_seen": "2009-10-14"
-  },
-  "Zeppieri G.": {
-    "elo": 1434.9,
-    "last_seen": "2025-10-14"
-  },
-  "Zhang Z.": {
-    "elo": 1495.0,
-    "last_seen": "2015-01-20"
-  },
-  "Zhang Ze": {
-    "elo": 1448.6,
-    "last_seen": "2018-10-09"
-  },
-  "Zhang Ze.": {
-    "elo": 1490.2,
-    "last_seen": "2019-10-07"
-  },
-  "Zhang Zh.": {
-    "elo": 1539.4,
-    "last_seen": "2026-04-14"
-  },
-  "Zheng M.": {
-    "elo": 1514.9,
-    "last_seen": "2026-03-06"
-  },
-  "Zhou Y.": {
-    "elo": 1470.7,
-    "last_seen": "2025-10-02"
-  },
-  "Zhukayev B.": {
-    "elo": 1472.4,
-    "last_seen": "2025-10-15"
-  },
-  "Ziadi M.": {
-    "elo": 1458.2,
-    "last_seen": "2013-04-08"
-  },
-  "Zib T.": {
-    "elo": 1395.8,
-    "last_seen": "2008-08-26"
-  },
-  "Zimonjic N.": {
-    "elo": 1493.2,
-    "last_seen": "2007-05-01"
-  },
-  "Zitko R.": {
-    "elo": 1500.0,
-    "last_seen": "2005-07-19"
-  },
-  "Zlatanovic A.": {
-    "elo": 1500.0,
-    "last_seen": "2009-05-05"
-  },
-  "Zopp J.": {
-    "elo": 1518.5,
-    "last_seen": "2018-07-31"
-  },
-  "Zovko L.": {
-    "elo": 1506.4,
-    "last_seen": "2009-02-04"
-  },
-  "Zuk K.": {
-    "elo": 1484.3,
-    "last_seen": "2021-07-20"
-  },
-  "Zverev A.": {
-    "elo": 1970.4,
-    "last_seen": "2026-04-11"
-  },
-  "Zverev M.": {
-    "elo": 1488.6,
-    "last_seen": "2021-03-24"
-  },
-  "de Chaunac S.": {
-    "elo": 1433.0,
-    "last_seen": "2008-02-26"
-  },
-  "de Voest R.": {
-    "elo": 1471.1,
-    "last_seen": "2008-03-16"
-  },
-  "di Mauro A.": {
-    "elo": 1388.6,
-    "last_seen": "2007-05-29"
-  },
-  "van Gemerden M.": {
-    "elo": 1498.7,
-    "last_seen": "2006-06-29"
-  },
-  "van Lottum J.": {
-    "elo": 1500.0,
-    "last_seen": "2006-02-28"
-  },
-  "van Scheppingen D.": {
-    "elo": 1519.1,
-    "last_seen": "2007-02-22"
+  "John Millman": {
+    "elo": 1544.0
+  },
+  "Rhyne Williams": {
+    "elo": 1484.0
+  },
+  "Jarkko Nieminen": {
+    "elo": 1495.8
+  },
+  "Denis Kudla": {
+    "elo": 1461.7
+  },
+  "James Duckworth": {
+    "elo": 1456.3
+  },
+  "Gilles Simon": {
+    "elo": 1568.4
+  },
+  "Jeremy Chardy": {
+    "elo": 1634.4
+  },
+  "Andrey Golubev": {
+    "elo": 1403.0
+  },
+  "Martin Klizan": {
+    "elo": 1480.5
+  },
+  "Jurgen Melzer": {
+    "elo": 1539.5
+  },
+  "Alexandr Dolgopolov": {
+    "elo": 1631.7
+  },
+  "Carlos Berlocq": {
+    "elo": 1402.7
+  },
+  "Lukasz Kubot": {
+    "elo": 1475.3
+  },
+  "Kevin Anderson": {
+    "elo": 1582.4
+  },
+  "Sam Groth": {
+    "elo": 1422.2
+  },
+  "Lleyton Hewitt": {
+    "elo": 1457.4
+  },
+  "Mikhail Kukushkin": {
+    "elo": 1416.8
+  },
+  "Marius Copil": {
+    "elo": 1493.6
+  },
+  "Thanasi Kokkinakis": {
+    "elo": 1706.6
+  },
+  "Julien Benneteau": {
+    "elo": 1575.1
+  },
+  "Bernard Tomic": {
+    "elo": 1496.4
+  },
+  "Sam Querrey": {
+    "elo": 1516.9
+  },
+  "Steve Johnson": {
+    "elo": 1526.6
+  },
+  "Marinko Matosevic": {
+    "elo": 1346.6
+  },
+  "Roger Federer": {
+    "elo": 1936.9
+  },
+  "Grigor Dimitrov": {
+    "elo": 1653.2
+  },
+  "Milos Raonic": {
+    "elo": 1722.2
+  },
+  "Kei Nishikori": {
+    "elo": 1644.9
+  },
+  "Borna Coric": {
+    "elo": 1479.7
+  },
+  "Robin Haase": {
+    "elo": 1541.8
+  },
+  "Elias Ymer": {
+    "elo": 1507.5
+  },
+  "Igor Sijsling": {
+    "elo": 1405.4
+  },
+  "Gilles Muller": {
+    "elo": 1491.8
+  },
+  "Edouard Roger-Vasselin": {
+    "elo": 1462.0
+  },
+  "Ricardas Berankis": {
+    "elo": 1609.9
+  },
+  "Luca Vanni": {
+    "elo": 1363.7
+  },
+  "Jiri Vesely": {
+    "elo": 1542.7
+  },
+  "N Vijay Sundar Prashanth": {
+    "elo": 1484.0
+  },
+  "Andreas Haider Maurer": {
+    "elo": 1365.0
+  },
+  "Marcel Granollers": {
+    "elo": 1484.3
+  },
+  "Yen Hsun Lu": {
+    "elo": 1441.6
+  },
+  "Somdev Devvarman": {
+    "elo": 1469.0
+  },
+  "Pablo Carreno Busta": {
+    "elo": 1576.8
+  },
+  "Alejandro Gonzalez": {
+    "elo": 1418.0
+  },
+  "Peter Gojowczyk": {
+    "elo": 1472.5
+  },
+  "Alejandro Falla": {
+    "elo": 1448.8
+  },
+  "Guillermo Garcia Lopez": {
+    "elo": 1464.2
+  },
+  "Evgeny Donskoy": {
+    "elo": 1425.2
+  },
+  "Tatsuma Ito": {
+    "elo": 1417.6
+  },
+  "Ramkumar Ramanathan": {
+    "elo": 1419.7
+  },
+  "Aljaz Bedene": {
+    "elo": 1520.0
+  },
+  "Lukas Lacko": {
+    "elo": 1465.7
+  },
+  "Stan Wawrinka": {
+    "elo": 1551.8
+  },
+  "David Goffin": {
+    "elo": 1539.4
+  },
+  "Roberto Bautista Agut": {
+    "elo": 1566.7
+  },
+  "Feliciano Lopez": {
+    "elo": 1440.7
+  },
+  "Novak Djokovic": {
+    "elo": 1999.6
+  },
+  "Dusan Lajovic": {
+    "elo": 1466.4
+  },
+  "Sergiy Stakhovsky": {
+    "elo": 1478.9
+  },
+  "Jabor Al Mutawa": {
+    "elo": 1468.1
+  },
+  "Nikoloz Basilashvili": {
+    "elo": 1509.4
+  },
+  "Mikhail Youzhny": {
+    "elo": 1401.2
+  },
+  "Ivo Karlovic": {
+    "elo": 1448.0
+  },
+  "Lukas Rosol": {
+    "elo": 1477.3
+  },
+  "David Ferrer": {
+    "elo": 1619.2
+  },
+  "Thiemo De Bakker": {
+    "elo": 1418.5
+  },
+  "Fernando Verdasco": {
+    "elo": 1404.4
+  },
+  "Teymuraz Gabashvili": {
+    "elo": 1396.0
+  },
+  "Dustin Brown": {
+    "elo": 1463.5
+  },
+  "Paolo Lorenzi": {
+    "elo": 1406.3
+  },
+  "Jan Lennard Struff": {
+    "elo": 1580.3
+  },
+  "Philipp Kohlschreiber": {
+    "elo": 1544.9
+  },
+  "Richard Gasquet": {
+    "elo": 1506.6
+  },
+  "Pablo Andujar": {
+    "elo": 1453.4
+  },
+  "Simone Bolelli": {
+    "elo": 1503.7
+  },
+  "Benjamin Becker": {
+    "elo": 1384.1
+  },
+  "Blaz Kavcic": {
+    "elo": 1371.2
+  },
+  "Juan Monaco": {
+    "elo": 1537.0
+  },
+  "Tomas Berdych": {
+    "elo": 1654.7
+  },
+  "Denis Istomin": {
+    "elo": 1410.5
+  },
+  "Andreas Seppi": {
+    "elo": 1455.6
+  },
+  "Leonardo Mayer": {
+    "elo": 1425.5
+  },
+  "Joao Souza": {
+    "elo": 1362.2
+  },
+  "Malek Jaziri": {
+    "elo": 1454.5
+  },
+  "Ivan Dodig": {
+    "elo": 1433.9
+  },
+  "Mohamed Safwat": {
+    "elo": 1505.0
+  },
+  "Michael Berrer": {
+    "elo": 1397.6
+  },
+  "Rafael Nadal": {
+    "elo": 1823.6
+  },
+  "Juan Martin del Potro": {
+    "elo": 1832.5
+  },
+  "Pablo Cuevas": {
+    "elo": 1516.6
+  },
+  "Nicolas Almagro": {
+    "elo": 1556.9
+  },
+  "Vasek Pospisil": {
+    "elo": 1565.1
+  },
+  "Jerzy Janowicz": {
+    "elo": 1558.9
+  },
+  "Nick Kyrgios": {
+    "elo": 1764.9
+  },
+  "Viktor Troicki": {
+    "elo": 1464.8
+  },
+  "Fabio Fognini": {
+    "elo": 1482.6
+  },
+  "Michael Venus": {
+    "elo": 1440.8
+  },
+  "Albert Ramos": {
+    "elo": 1448.7
+  },
+  "Adrian Mannarino": {
+    "elo": 1523.6
+  },
+  "Federico Delbonis": {
+    "elo": 1489.4
+  },
+  "Jose Rubin Statham": {
+    "elo": 1411.8
+  },
+  "Kenny De Schepper": {
+    "elo": 1430.0
+  },
+  "Santiago Giraldo": {
+    "elo": 1426.8
+  },
+  "Joao Sousa": {
+    "elo": 1453.7
+  },
+  "Dominic Thiem": {
+    "elo": 1513.2
+  },
+  "Diego Schwartzman": {
+    "elo": 1478.7
+  },
+  "Donald Young": {
+    "elo": 1458.2
+  },
+  "Go Soeda": {
+    "elo": 1441.8
+  },
+  "Thomaz Bellucci": {
+    "elo": 1425.5
+  },
+  "Lucas Pouille": {
+    "elo": 1512.6
+  },
+  "Ernests Gulbis": {
+    "elo": 1484.0
+  },
+  "Andrey Kuznetsov": {
+    "elo": 1512.0
+  },
+  "James Ward": {
+    "elo": 1321.6
+  },
+  "John Isner": {
+    "elo": 1577.3
+  },
+  "Jimmy Wang": {
+    "elo": 1501.5
+  },
+  "Laurent Lokoli": {
+    "elo": 1429.4
+  },
+  "Blaz Rola": {
+    "elo": 1451.4
+  },
+  "Hiroki Moriya": {
+    "elo": 1467.3
+  },
+  "Gael Monfils": {
+    "elo": 1589.4
+  },
+  "Ze Zhang": {
+    "elo": 1464.2
+  },
+  "Tim Puetz": {
+    "elo": 1484.7
+  },
+  "Illya Marchenko": {
+    "elo": 1450.8
+  },
+  "Marsel Ilhan": {
+    "elo": 1458.0
+  },
+  "Matthias Bachinger": {
+    "elo": 1518.1
+  },
+  "Stephane Robert": {
+    "elo": 1390.5
+  },
+  "Jan Hernych": {
+    "elo": 1481.6
+  },
+  "Kyle Edmund": {
+    "elo": 1528.3
+  },
+  "Victor Estrella": {
+    "elo": 1367.9
+  },
+  "Paul Henri Mathieu": {
+    "elo": 1387.3
+  },
+  "Tobias Kamke": {
+    "elo": 1474.8
+  },
+  "Filip Krajinovic": {
+    "elo": 1539.3
+  },
+  "Dudi Sela": {
+    "elo": 1493.8
+  },
+  "Tim Smyczek": {
+    "elo": 1395.8
+  },
+  "Luke Saville": {
+    "elo": 1438.7
+  },
+  "Andy Murray": {
+    "elo": 1576.6
+  },
+  "Yuki Bhambri": {
+    "elo": 1459.9
+  },
+  "Alexander Kudryavtsev": {
+    "elo": 1438.7
+  },
+  "Jordan Thompson": {
+    "elo": 1621.7
+  },
+  "Michael Russell": {
+    "elo": 1484.1
+  },
+  "Marcos Baghdatis": {
+    "elo": 1544.0
+  },
+  "Maximo Gonzalez": {
+    "elo": 1407.6
+  },
+  "Tommy Robredo": {
+    "elo": 1432.0
+  },
+  "Ruben Bemelmans": {
+    "elo": 1458.7
+  },
+  "Steve Darcis": {
+    "elo": 1492.2
+  },
+  "Jurgen Zopp": {
+    "elo": 1465.6
+  },
+  "Vincent Millot": {
+    "elo": 1449.4
+  },
+  "Taro Daniel": {
+    "elo": 1457.6
+  },
+  "Benoit Paire": {
+    "elo": 1358.4
+  },
+  "Andreas Beck": {
+    "elo": 1466.7
+  },
+  "Facundo Bagnis": {
+    "elo": 1501.4
+  },
+  "Nicolas Jarry": {
+    "elo": 1522.1
+  },
+  "Gonzalo Escobar": {
+    "elo": 1498.0
+  },
+  "Gerald Melzer": {
+    "elo": 1421.0
+  },
+  "Adrian Menendez Maceiras": {
+    "elo": 1431.6
+  },
+  "Andre Ghem": {
+    "elo": 1467.9
+  },
+  "Renzo Olivo": {
+    "elo": 1437.0
+  },
+  "Daniel Gimeno Traver": {
+    "elo": 1426.9
+  },
+  "Marton Fucsovics": {
+    "elo": 1614.5
+  },
+  "Giovanni Lapentti": {
+    "elo": 1464.7
+  },
+  "Horacio Zeballos": {
+    "elo": 1537.9
+  },
+  "Austin Krajicek": {
+    "elo": 1425.8
+  },
+  "Albert Montanes": {
+    "elo": 1479.9
+  },
+  "Facundo Arguello": {
+    "elo": 1413.4
+  },
+  "Toni Androic": {
+    "elo": 1471.0
+  },
+  "Damir Dzumhur": {
+    "elo": 1528.1
+  },
+  "Antonio Veic": {
+    "elo": 1483.3
+  },
+  "Mate Delic": {
+    "elo": 1442.4
+  },
+  "Frank Dancevic": {
+    "elo": 1478.7
+  },
+  "Ryan Harrison": {
+    "elo": 1513.9
+  },
+  "Jared Donaldson": {
+    "elo": 1520.8
+  },
+  "Stefan Kozlov": {
+    "elo": 1441.6
+  },
+  "Nicolas Mahut": {
+    "elo": 1571.0
+  },
+  "Alexander Zverev": {
+    "elo": 1946.2
+  },
+  "Jesse Huta Galung": {
+    "elo": 1471.2
+  },
+  "Guilherme Clezar": {
+    "elo": 1397.6
+  },
+  "Kimmer Coppejans": {
+    "elo": 1413.3
+  },
+  "Guido Pella": {
+    "elo": 1514.4
+  },
+  "John Patrick Smith": {
+    "elo": 1345.5
+  },
+  "Eric Quigley": {
+    "elo": 1484.3
+  },
+  "Andrey Rublev": {
+    "elo": 1760.6
+  },
+  "Yoshihito Nishioka": {
+    "elo": 1563.6
+  },
+  "Pierre Hugues Herbert": {
+    "elo": 1503.2
+  },
+  "David Guez": {
+    "elo": 1467.5
+  },
+  "Marco Cecchinato": {
+    "elo": 1500.7
+  },
+  "Daniel Garza": {
+    "elo": 1521.1
+  },
+  "Guido Andreozzi": {
+    "elo": 1436.1
+  },
+  "Andres Molteni": {
+    "elo": 1484.0
+  },
+  "Fabrice Martin": {
+    "elo": 1467.8
+  },
+  "James Mcgee": {
+    "elo": 1439.3
+  },
+  "Seanon Williams": {
+    "elo": 1428.0
+  },
+  "Darian King": {
+    "elo": 1608.6
+  },
+  "Jose Hernandez": {
+    "elo": 1443.5
+  },
+  "Haydn Lewis": {
+    "elo": 1423.9
+  },
+  "Di Wu": {
+    "elo": 1429.5
+  },
+  "Zhe Li": {
+    "elo": 1436.7
+  },
+  "Chuhan Wang": {
+    "elo": 1484.6
+  },
+  "Laurynas Grigelis": {
+    "elo": 1453.1
+  },
+  "Kamil Majchrzak": {
+    "elo": 1625.8
+  },
+  "Adrian Ungur": {
+    "elo": 1462.0
+  },
+  "Bar Tzuf Botzer": {
+    "elo": 1468.9
+  },
+  "Edan Leshem": {
+    "elo": 1434.6
+  },
+  "Frederik Nielsen": {
+    "elo": 1576.8
+  },
+  "Martin Pedersen": {
+    "elo": 1468.4
+  },
+  "Grega Zemlja": {
+    "elo": 1479.7
+  },
+  "Norbert Gombos": {
+    "elo": 1490.9
+  },
+  "Tom Kocevar Desman": {
+    "elo": 1470.5
+  },
+  "Mike Urbanija": {
+    "elo": 1467.3
+  },
+  "Christian Lindell": {
+    "elo": 1478.9
+  },
+  "Yong Kyu Lim": {
+    "elo": 1514.7
+  },
+  "Danai Udomchoke": {
+    "elo": 1469.5
+  },
+  "Hyeon Chung": {
+    "elo": 1632.8
+  },
+  "Warit Sornbutnark": {
+    "elo": 1467.2
+  },
+  "Ji Sung Nam": {
+    "elo": 1458.7
+  },
+  "Martin Cuevas": {
+    "elo": 1417.2
+  },
+  "Cristian Garin": {
+    "elo": 1563.9
+  },
+  "Duilio Beretta": {
+    "elo": 1502.0
+  },
+  "Juan Pablo Varillas": {
+    "elo": 1465.7
+  },
+  "Duilio Vallebuona": {
+    "elo": 1484.7
+  },
+  "Hans Podlipnik Castillo": {
+    "elo": 1545.2
+  },
+  "Radu Albot": {
+    "elo": 1513.3
+  },
+  "Gabor Borsos": {
+    "elo": 1466.3
+  },
+  "Andrei Ciumac": {
+    "elo": 1483.3
+  },
+  "Maxim Bulat": {
+    "elo": 1466.6
+  },
+  "Christopher Rungkat": {
+    "elo": 1573.0
+  },
+  "Shahin Khaledan": {
+    "elo": 1472.0
+  },
+  "Sunu Wahyu Trijati": {
+    "elo": 1516.0
+  },
+  "Anoosha Shahgholi": {
+    "elo": 1454.9
+  },
+  "David Agung Susanto": {
+    "elo": 1459.8
+  },
+  "Mohsen Hossein Zade": {
+    "elo": 1455.5
+  },
+  "Aditya Hari Sasongko": {
+    "elo": 1453.0
+  },
+  "Dzmitry Zhyrmont": {
+    "elo": 1483.3
+  },
+  "Sam Barry": {
+    "elo": 1439.5
+  },
+  "Egor Gerasimov": {
+    "elo": 1536.0
+  },
+  "Daniel Glancy": {
+    "elo": 1469.5
+  },
+  "Martins Podzus": {
+    "elo": 1493.1
+  },
+  "Alexandar Lazov": {
+    "elo": 1471.3
+  },
+  "Dimitar Kuzmanov": {
+    "elo": 1463.9
+  },
+  "Janis Podzus": {
+    "elo": 1455.6
+  },
+  "Rudolfs Mednis": {
+    "elo": 1439.7
+  },
+  "Jacob Rasolondrazana": {
+    "elo": 1471.0
+  },
+  "Antso Rakotondramanga": {
+    "elo": 1500.0
+  },
+  "Ugo Nastasi": {
+    "elo": 1445.2
+  },
+  "Lofo Ramiaramanana": {
+    "elo": 1516.0
+  },
+  "Gilles Kremer": {
+    "elo": 1472.8
+  },
+  "Federico Zeballos": {
+    "elo": 1421.5
+  },
+  "Hugo Dellien": {
+    "elo": 1419.2
+  },
+  "Tigre Hank": {
+    "elo": 1425.6
+  },
+  "Romain Arneodo": {
+    "elo": 1468.7
+  },
+  "Benjamin Balleret": {
+    "elo": 1481.9
+  },
+  "Micke Kontinen": {
+    "elo": 1467.4
+  },
+  "Henrik Sillanpaa": {
+    "elo": 1468.2
+  },
+  "Aisam Ul Haq Qureshi": {
+    "elo": 1539.8
+  },
+  "Naser Al Obaidly": {
+    "elo": 1484.0
+  },
+  "Mohammad Ghareeb": {
+    "elo": 1541.8
+  },
+  "Aqeel Khan": {
+    "elo": 1558.3
+  },
+  "M Abid Ali Khan Akbar": {
+    "elo": 1502.0
+  },
+  "Dawood Sayed Hashim": {
+    "elo": 1483.3
+  },
+  "Patrick Tierro": {
+    "elo": 1483.4
+  },
+  "Harshana Godamanna": {
+    "elo": 1513.8
+  },
+  "Ruben Gonzales": {
+    "elo": 1530.4
+  },
+  "Sharmal Dissanayake": {
+    "elo": 1474.5
+  },
+  "Treat Conrad Huey": {
+    "elo": 1515.3
+  },
+  "Francis Casey Alcantara": {
+    "elo": 1515.3
+  },
+  "Dineshkanthan Thangarajah": {
+    "elo": 1484.0
+  },
+  "Yassine Idmbarek": {
+    "elo": 1484.3
+  },
+  "Rui Machado": {
+    "elo": 1482.3
+  },
+  "Lamine Ouahab": {
+    "elo": 1505.6
+  },
+  "Frederico Ferreira Silva": {
+    "elo": 1472.1
+  },
+  "Joao Domingues": {
+    "elo": 1525.9
+  },
+  "Mehdi Jdi": {
+    "elo": 1468.0
+  },
+  "Marcelo Arevalo": {
+    "elo": 1640.7
+  },
+  "Gabriel Flores Ruiz": {
+    "elo": 1484.0
+  },
+  "Alex Llompart": {
+    "elo": 1514.6
+  },
+  "Rafa Orantes": {
+    "elo": 1484.0
+  },
+  "Christian Garay": {
+    "elo": 1530.5
+  },
+  "Alberto Emmanuel Alvarado Larin": {
+    "elo": 1391.8
+  },
+  "Ibrahim Abou Chahine": {
+    "elo": 1470.1
+  },
+  "Jui Chen Hung": {
+    "elo": 1511.1
+  },
+  "Karim Alayli": {
+    "elo": 1484.0
+  },
+  "Chieh Fu Wang": {
+    "elo": 1532.9
+  },
+  "Nour Nehme": {
+    "elo": 1484.0
+  },
+  "Fritz Wolmarans": {
+    "elo": 1515.1
+  },
+  "Cem Ilkel": {
+    "elo": 1373.8
+  },
+  "Tucker Vorster": {
+    "elo": 1538.7
+  },
+  "Ruan Roelofse": {
+    "elo": 1479.1
+  },
+  "David Souto": {
+    "elo": 1505.3
+  },
+  "Julian Saborio": {
+    "elo": 1452.9
+  },
+  "Ricardo Rodriguez": {
+    "elo": 1548.6
+  },
+  "Ignaci Roca": {
+    "elo": 1441.0
+  },
+  "Pablo Nunez": {
+    "elo": 1469.4
+  },
+  "Luis David Martinez": {
+    "elo": 1514.6
+  },
+  "Mirza Basic": {
+    "elo": 1435.4
+  },
+  "Takanyi Garanganga": {
+    "elo": 1448.7
+  },
+  "Benjamin Lock": {
+    "elo": 1522.7
+  },
+  "Tomislav Brkic": {
+    "elo": 1454.4
+  },
+  "Nerman Fatic": {
+    "elo": 1473.0
+  },
+  "Henri Laaksonen": {
+    "elo": 1412.6
+  },
+  "Michael Lammer": {
+    "elo": 1484.7
+  },
+  "Adrien Bossel": {
+    "elo": 1435.9
+  },
+  "Jan Mertl": {
+    "elo": 1517.5
+  },
+  "Aleksandr Nedovyesov": {
+    "elo": 1410.6
+  },
+  "Franko Skugor": {
+    "elo": 1417.5
+  },
+  "Dennis Novikov": {
+    "elo": 1448.4
+  },
+  "Mischa Zverev": {
+    "elo": 1427.6
+  },
+  "Mardy Fish": {
+    "elo": 1488.8
+  },
+  "Alex Bolt": {
+    "elo": 1526.3
+  },
+  "Jack Sock": {
+    "elo": 1545.7
+  },
+  "Victor Hanescu": {
+    "elo": 1500.7
+  },
+  "Marin Cilic": {
+    "elo": 1648.8
+  },
+  "Jo-Wilfried Tsonga": {
+    "elo": 1526.3
+  },
+  "Arthur De Greef": {
+    "elo": 1454.8
+  },
+  "Rogerio Dutra Silva": {
+    "elo": 1394.7
+  },
+  "Janko Tipsarevic": {
+    "elo": 1473.1
+  },
+  "Florian Mayer": {
+    "elo": 1416.4
+  },
+  "Roberto Carballes Baena": {
+    "elo": 1536.1
+  },
+  "Yuichi Sugita": {
+    "elo": 1449.6
+  },
+  "Jaume Munar": {
+    "elo": 1661.4
+  },
+  "Thomas Fabbiano": {
+    "elo": 1423.9
+  },
+  "Nikola Mektic": {
+    "elo": 1452.5
+  },
+  "Lorenzo Giustino": {
+    "elo": 1433.7
+  },
+  "Constant Lestienne": {
+    "elo": 1403.2
+  },
+  "Martin Fischer": {
+    "elo": 1484.2
+  },
+  "Gastao Elias": {
+    "elo": 1417.7
+  },
+  "David Vega Hernandez": {
+    "elo": 1480.2
+  },
+  "Mikhail Ledovskikh": {
+    "elo": 1485.0
+  },
+  "Radek Stepanek": {
+    "elo": 1581.4
+  },
+  "Farrukh Dustov": {
+    "elo": 1464.1
+  },
+  "Bastian Trinker": {
+    "elo": 1486.8
+  },
+  "Andrea Arnaboldi": {
+    "elo": 1451.7
+  },
+  "Federico Gaio": {
+    "elo": 1389.2
+  },
+  "Matteo Donati": {
+    "elo": 1508.8
+  },
+  "Frances Tiafoe": {
+    "elo": 1730.7
+  },
+  "Gianni Mina": {
+    "elo": 1503.5
+  },
+  "Maxime Hamou": {
+    "elo": 1459.6
+  },
+  "Quentin Halys": {
+    "elo": 1562.9
+  },
+  "Germain Gigounon": {
+    "elo": 1490.1
+  },
+  "Marco Chiudinelli": {
+    "elo": 1451.4
+  },
+  "Tommy Haas": {
+    "elo": 1412.1
+  },
+  "Maximilian Marterer": {
+    "elo": 1485.4
+  },
+  "Mate Pavic": {
+    "elo": 1471.4
+  },
+  "Taylor Fritz": {
+    "elo": 1779.3
+  },
+  "Matthew Ebden": {
+    "elo": 1507.6
+  },
+  "Liam Broady": {
+    "elo": 1523.1
+  },
+  "Brydan Klein": {
+    "elo": 1434.9
+  },
+  "Rajeev Ram": {
+    "elo": 1450.7
+  },
+  "Noah Rubin": {
+    "elo": 1440.6
+  },
+  "Niels Desein": {
+    "elo": 1480.7
+  },
+  "Ante Pavic": {
+    "elo": 1464.4
+  },
+  "Samir Iftikhar": {
+    "elo": 1499.2
+  },
+  "Nik Razborsek": {
+    "elo": 1486.1
+  },
+  "Amir Weintraub": {
+    "elo": 1449.0
+  },
+  "Aljaz Radinski": {
+    "elo": 1516.0
+  },
+  "Ben Patael": {
+    "elo": 1469.0
+  },
+  "Oliver Marach": {
+    "elo": 1515.5
+  },
+  "Ivan Endara": {
+    "elo": 1471.2
+  },
+  "Emilio Gomez": {
+    "elo": 1463.3
+  },
+  "Roberto Cid": {
+    "elo": 1463.2
+  },
+  "Marcus Daniell": {
+    "elo": 1482.6
+  },
+  "Michal Przysiezny": {
+    "elo": 1427.6
+  },
+  "Karen Khachanov": {
+    "elo": 1669.3
+  },
+  "Seong Chan Hong": {
+    "elo": 1444.4
+  },
+  "Temur Ismailov": {
+    "elo": 1484.9
+  },
+  "Abdullah Maqdas": {
+    "elo": 1466.8
+  },
+  "Mikelis Libietis": {
+    "elo": 1468.3
+  },
+  "Jean Jacques Rakotohasy": {
+    "elo": 1529.8
+  },
+  "Mauricio Echazu": {
+    "elo": 1499.3
+  },
+  "Rodrigo Banzer": {
+    "elo": 1498.6
+  },
+  "Alex Diaz": {
+    "elo": 1494.8
+  },
+  "Jad Ballout": {
+    "elo": 1468.0
+  },
+  "Hady Habib": {
+    "elo": 1476.7
+  },
+  "Giovani Samaha": {
+    "elo": 1484.0
+  },
+  "Dmitrii Baskov": {
+    "elo": 1484.0
+  },
+  "Andrei Soltoianu": {
+    "elo": 1483.3
+  },
+  "Egor Matvievici": {
+    "elo": 1484.8
+  },
+  "Juan Carlos Saez": {
+    "elo": 1544.5
+  },
+  "Lucas Gomez": {
+    "elo": 1422.0
+  },
+  "Gerardo Lopez Villasenor": {
+    "elo": 1476.6
+  },
+  "Peter Nagy": {
+    "elo": 1493.3
+  },
+  "Dimitar Kutrovsky": {
+    "elo": 1498.0
+  },
+  "Tihomir Grozdanov": {
+    "elo": 1516.0
+  },
+  "Alex Knaff": {
+    "elo": 1525.3
+  },
+  "Jeson Patrombon": {
+    "elo": 1445.0
+  },
+  "Rafael Arevalo": {
+    "elo": 1444.8
+  },
+  "Filip Peliwo": {
+    "elo": 1455.5
+  },
+  "Markus Eriksson": {
+    "elo": 1516.8
+  },
+  "Julian Reister": {
+    "elo": 1480.5
+  },
+  "Daniel Elahi Galan": {
+    "elo": 1447.7
+  },
+  "Pere Riba": {
+    "elo": 1453.0
+  },
+  "Alexander Sarkissian": {
+    "elo": 1461.9
+  },
+  "Marcelo Demoliner": {
+    "elo": 1480.8
+  },
+  "Nicolas Barrientos": {
+    "elo": 1473.7
+  },
+  "Alejandro Gomez Gb42": {
+    "elo": 1501.4
+  },
+  "Matteo Trevisan": {
+    "elo": 1479.0
+  },
+  "Laslo Djere": {
+    "elo": 1513.9
+  },
+  "Christopher Eubanks": {
+    "elo": 1540.4
+  },
+  "Maxime Teixeira": {
+    "elo": 1486.6
+  },
+  "Calvin Hemery": {
+    "elo": 1404.3
+  },
+  "Inigo Cervantes Huegun": {
+    "elo": 1426.2
+  },
+  "Dennis Novak": {
+    "elo": 1396.7
+  },
+  "Philip Bester": {
+    "elo": 1482.5
+  },
+  "Bjorn Fratangelo": {
+    "elo": 1465.8
+  },
+  "Tommy Paul": {
+    "elo": 1826.6
+  },
+  "Ryan Shane": {
+    "elo": 1487.2
+  },
+  "Konstantin Kravchuk": {
+    "elo": 1366.2
+  },
+  "Mikael Torpegaard": {
+    "elo": 1477.3
+  },
+  "Vladyslav Manafov": {
+    "elo": 1483.8
+  },
+  "Marat Deviatiarov": {
+    "elo": 1516.0
+  },
+  "Lukas Mugevicius": {
+    "elo": 1488.5
+  },
+  "Pruchya Isarow": {
+    "elo": 1498.9
+  },
+  "Gonzalo Lama": {
+    "elo": 1481.7
+  },
+  "Jordi Munoz Abreu": {
+    "elo": 1424.0
+  },
+  "Miguel Angel Este": {
+    "elo": 1502.0
+  },
+  "Uladzimir Ignatik": {
+    "elo": 1468.2
+  },
+  "Tim Van Rijthoven": {
+    "elo": 1548.7
+  },
+  "Daniel Evans": {
+    "elo": 1600.0
+  },
+  "Yaraslav Shyla": {
+    "elo": 1478.1
+  },
+  "Alexandre Sidorenko": {
+    "elo": 1489.9
+  },
+  "Yasutaka Uchiyama": {
+    "elo": 1457.1
+  },
+  "Zhizhen Zhang": {
+    "elo": 1520.7
+  },
+  "Yan Bai": {
+    "elo": 1463.2
+  },
+  "Takuto Niki": {
+    "elo": 1484.0
+  },
+  "Aslan Karatsev": {
+    "elo": 1561.3
+  },
+  "Mikael Ymer": {
+    "elo": 1588.8
+  },
+  "Lucas Miedler": {
+    "elo": 1470.5
+  },
+  "Daniel Brands": {
+    "elo": 1463.8
+  },
+  "Santiago Maresca": {
+    "elo": 1484.2
+  },
+  "Rodrigo Arus": {
+    "elo": 1484.9
+  },
+  "Nicolas Xiviller": {
+    "elo": 1516.0
+  },
+  "Russell Moseley": {
+    "elo": 1484.0
+  },
+  "Oliver Anderson": {
+    "elo": 1482.5
+  },
+  "Benjamin Mitchell": {
+    "elo": 1481.3
+  },
+  "Jozef Kovalik": {
+    "elo": 1481.8
+  },
+  "Mubarak Shannan Zayid": {
+    "elo": 1440.9
+  },
+  "Daniel Munoz de la Nava": {
+    "elo": 1374.6
+  },
+  "Finn Tearney": {
+    "elo": 1451.8
+  },
+  "Matthew Barton": {
+    "elo": 1533.5
+  },
+  "Omar Jasika": {
+    "elo": 1483.4
+  },
+  "Marco Trungelliti": {
+    "elo": 1470.1
+  },
+  "Dmitry Tursunov": {
+    "elo": 1418.3
+  },
+  "Brian Baker": {
+    "elo": 1414.8
+  },
+  "Andrej Martin": {
+    "elo": 1479.5
+  },
+  "Michael Mmoh": {
+    "elo": 1619.8
+  },
+  "Thiago Monteiro": {
+    "elo": 1500.1
+  },
+  "Luis Patino": {
+    "elo": 1455.4
+  },
+  "Adam Hornby": {
+    "elo": 1454.2
+  },
+  "Jose Olivares": {
+    "elo": 1457.4
+  },
+  "Manuel Castellanos": {
+    "elo": 1486.1
+  },
+  "Yasir Khan": {
+    "elo": 1468.2
+  },
+  "Mahammad Abid": {
+    "elo": 1451.8
+  },
+  "Pedro Sousa": {
+    "elo": 1410.9
+  },
+  "Tomislav Ternar": {
+    "elo": 1470.4
+  },
+  "Isak Arvidsson": {
+    "elo": 1462.7
+  },
+  "Daniel Windahl": {
+    "elo": 1467.4
+  },
+  "Anis Ghorbel": {
+    "elo": 1485.1
+  },
+  "Alexandar Lazarov": {
+    "elo": 1473.4
+  },
+  "Altug Celikbilek": {
+    "elo": 1570.8
+  },
+  "Karim Mohamed Maamoun": {
+    "elo": 1448.8
+  },
+  "Ilya Ivashka": {
+    "elo": 1560.3
+  },
+  "Christian Sigsgaard": {
+    "elo": 1477.3
+  },
+  "George Tsivadze": {
+    "elo": 1429.3
+  },
+  "Benjamin Hannestad": {
+    "elo": 1488.4
+  },
+  "Giorgi Javakhishvili": {
+    "elo": 1484.0
+  },
+  "Irakli Metreveli": {
+    "elo": 1484.6
+  },
+  "Viktor Durasovic": {
+    "elo": 1448.1
+  },
+  "Casper Ruud": {
+    "elo": 1830.5
+  },
+  "Wilfredo Gonzalez": {
+    "elo": 1503.8
+  },
+  "Hans Hach Verdugo": {
+    "elo": 1498.5
+  },
+  "Christopher Diaz Figueroa": {
+    "elo": 1502.0
+  },
+  "Lucas Catarina": {
+    "elo": 1449.4
+  },
+  "Bruno Britez": {
+    "elo": 1484.8
+  },
+  "Ayed Zatar": {
+    "elo": 1452.4
+  },
+  "Francisco Yim Kim": {
+    "elo": 1485.3
+  },
+  "Hernando Jose Escurra Isnardi": {
+    "elo": 1482.9
+  },
+  "Abdulrahman Alawadhi": {
+    "elo": 1483.3
+  },
+  "Abdulhamid Mubarak": {
+    "elo": 1484.1
+  },
+  "Ali Ghareeb": {
+    "elo": 1484.7
+  },
+  "Sebastian Arcila": {
+    "elo": 1486.7
+  },
+  "Ignacio Garcia": {
+    "elo": 1455.1
+  },
+  "Sebastian Quiros": {
+    "elo": 1484.0
+  },
+  "Lloyd Harris": {
+    "elo": 1538.9
+  },
+  "Tom Diederich": {
+    "elo": 1485.3
+  },
+  "Puriwat Chatpatcharoen": {
+    "elo": 1467.4
+  },
+  "Mohd Assri Merzuki": {
+    "elo": 1500.5
+  },
+  "Liang Chi Huang": {
+    "elo": 1548.0
+  },
+  "Syed Mohd Agil Syed Naguib": {
+    "elo": 1484.0
+  },
+  "Hao Sheng Koay": {
+    "elo": 1483.8
+  },
+  "Jorge Brian Panta Herreros": {
+    "elo": 1529.9
+  },
+  "Minhtuan Pham": {
+    "elo": 1454.3
+  },
+  "Nam Hoang Ly": {
+    "elo": 1557.0
+  },
+  "Thien Nguyen Hoang": {
+    "elo": 1467.5
+  },
+  "Courtney John Lock": {
+    "elo": 1439.6
+  },
+  "Harri Heliovaara": {
+    "elo": 1472.6
+  },
+  "Eero Vasa": {
+    "elo": 1426.8
+  },
+  "Hubert Hurkacz": {
+    "elo": 1683.0
+  },
+  "Antoine Bellier": {
+    "elo": 1505.1
+  },
+  "Peter Polansky": {
+    "elo": 1415.6
+  },
+  "Mackenzie Mcdonald": {
+    "elo": 1555.4
+  },
+  "Reilly Opelka": {
+    "elo": 1608.8
+  },
+  "Nicolas Kicker": {
+    "elo": 1436.7
+  },
+  "Amine Ahouda": {
+    "elo": 1446.5
+  },
+  "Reda El Amrani": {
+    "elo": 1493.5
+  },
+  "Pedro Cachin": {
+    "elo": 1441.9
+  },
+  "Michael Linzer": {
+    "elo": 1467.8
+  },
+  "Aldin Setkic": {
+    "elo": 1468.5
+  },
+  "Steven Diez": {
+    "elo": 1399.3
+  },
+  "Cedrik Marcel Stebe": {
+    "elo": 1489.3
+  },
+  "Filippo Volandri": {
+    "elo": 1476.3
+  },
+  "Lorenzo Sonego": {
+    "elo": 1576.4
+  },
+  "Salvatore Caruso": {
+    "elo": 1407.0
+  },
+  "Roberto Ortega Olmedo": {
+    "elo": 1483.4
+  },
+  "Daniil Medvedev": {
+    "elo": 1886.0
+  },
+  "Gregoire Barrere": {
+    "elo": 1517.1
+  },
+  "Adam Pavlasek": {
+    "elo": 1494.8
+  },
+  "Mathias Bourgue": {
+    "elo": 1472.8
+  },
+  "Jordi Samper Montana": {
+    "elo": 1472.1
+  },
+  "Ernesto Escobedo": {
+    "elo": 1404.8
+  },
+  "Jan Choinski": {
+    "elo": 1424.6
+  },
+  "Alexander Ward": {
+    "elo": 1461.9
+  },
+  "Marcus Willis": {
+    "elo": 1510.4
+  },
+  "Tristan Lamasine": {
+    "elo": 1485.3
+  },
+  "Albano Olivetti": {
+    "elo": 1484.8
+  },
+  "Carl Soderlund": {
+    "elo": 1502.3
+  },
+  "Fred Simonsson": {
+    "elo": 1484.0
+  },
+  "Louis Wessels": {
+    "elo": 1492.2
+  },
+  "Marvin Moeller": {
+    "elo": 1482.0
+  },
+  "Jan Satral": {
+    "elo": 1476.4
+  },
+  "Alex Kuznetsov": {
+    "elo": 1465.6
+  },
+  "Roberto Quiroz": {
+    "elo": 1474.1
+  },
+  "Florin Mergea": {
+    "elo": 1493.5
+  },
+  "Saketh Myneni": {
+    "elo": 1477.5
+  },
+  "Rohan Bopanna": {
+    "elo": 1516.0
+  },
+  "Hong Chung": {
+    "elo": 1484.0
+  },
+  "Matwe Middelkoop": {
+    "elo": 1529.4
+  },
+  "Tadas Babelis": {
+    "elo": 1427.1
+  },
+  "Nicolas Alvarez": {
+    "elo": 1511.9
+  },
+  "Ti Chen": {
+    "elo": 1528.6
+  },
+  "Kittipong Wachiramanowong": {
+    "elo": 1498.2
+  },
+  "Dac Tien Nguyen": {
+    "elo": 1472.2
+  },
+  "Agustin Velotti": {
+    "elo": 1459.6
+  },
+  "Johan Nikles": {
+    "elo": 1468.1
+  },
+  "Yann Marti": {
+    "elo": 1484.7
+  },
+  "Akira Santillan": {
+    "elo": 1424.2
+  },
+  "Enrique Lopez Perez": {
+    "elo": 1489.4
+  },
+  "Nikola Cacic": {
+    "elo": 1501.8
+  },
+  "Nino Serdarusic": {
+    "elo": 1434.8
+  },
+  "Denis Shapovalov": {
+    "elo": 1622.6
+  },
+  "Austin Smith": {
+    "elo": 1483.7
+  },
+  "Alessandro Giannessi": {
+    "elo": 1438.9
+  },
+  "Christian Harrison": {
+    "elo": 1499.4
+  },
+  "Andreas Bjerrehus": {
+    "elo": 1485.6
+  },
+  "Tomas Vaise": {
+    "elo": 1468.7
+  },
+  "Tsung Hua Yang": {
+    "elo": 1502.9
+  },
+  "Kuan Yi Lee": {
+    "elo": 1500.0
+  },
+  "Joris De Loore": {
+    "elo": 1451.3
+  },
+  "Marc Lopez": {
+    "elo": 1516.0
+  },
+  "Sumit Nagal": {
+    "elo": 1417.5
+  },
+  "Artem Smirnov": {
+    "elo": 1423.5
+  },
+  "Danylo Kalenichenko": {
+    "elo": 1484.4
+  },
+  "Sanjar Fayziev": {
+    "elo": 1405.6
+  },
+  "Jurabek Karimov": {
+    "elo": 1520.9
+  },
+  "Marin Draganja": {
+    "elo": 1491.6
+  },
+  "Alexander Bublik": {
+    "elo": 1757.4
+  },
+  "Andrew Whittington": {
+    "elo": 1491.8
+  },
+  "Yannick Maden": {
+    "elo": 1472.9
+  },
+  "Alex De Minaur": {
+    "elo": 1812.4
+  },
+  "Anil Yuksel": {
+    "elo": 1470.6
+  },
+  "Artem Sitak": {
+    "elo": 1484.2
+  },
+  "Christopher Oconnell": {
+    "elo": 1526.7
+  },
+  "Blake Mott": {
+    "elo": 1482.5
+  },
+  "Tomas Barrios Vera": {
+    "elo": 1443.2
+  },
+  "Nick Hardt": {
+    "elo": 1500.1
+  },
+  "Yshai Oliel": {
+    "elo": 1474.9
+  },
+  "Daniel Cukierman": {
+    "elo": 1475.0
+  },
+  "Alexander Merino": {
+    "elo": 1483.1
+  },
+  "Duck Hee Lee": {
+    "elo": 1498.7
+  },
+  "Soon Woo Kwon": {
+    "elo": 1599.7
+  },
+  "Attila Balazs": {
+    "elo": 1487.8
+  },
+  "Philip Wilbert Major": {
+    "elo": 1468.0
+  },
+  "Spencer Newman": {
+    "elo": 1485.3
+  },
+  "Justin Lunn": {
+    "elo": 1486.4
+  },
+  "Nicolaas Scholtz": {
+    "elo": 1479.6
+  },
+  "Vladimir Ivanov": {
+    "elo": 1472.0
+  },
+  "Mattias Siimar": {
+    "elo": 1469.3
+  },
+  "Emil Ruusuvuori": {
+    "elo": 1615.4
+  },
+  "Patrik Niklas Salminen": {
+    "elo": 1478.5
+  },
+  "Alberto Lim": {
+    "elo": 1488.3
+  },
+  "Anthony Susanto": {
+    "elo": 1446.1
+  },
+  "Jirat Navasirisomboon": {
+    "elo": 1507.0
+  },
+  "Wishaya Trongcharoenchaikul": {
+    "elo": 1532.3
+  },
+  "Lucas Andriamasilalao": {
+    "elo": 1483.5
+  },
+  "Soren Hess Olesen": {
+    "elo": 1485.1
+  },
+  "Manuel Sanchez": {
+    "elo": 1521.0
+  },
+  "Thomas Oger": {
+    "elo": 1516.0
+  },
+  "Tilen Zitnik": {
+    "elo": 1470.5
+  },
+  "Simen Sunde Bratholm": {
+    "elo": 1478.2
+  },
+  "Arturs Lazdins": {
+    "elo": 1484.6
+  },
+  "Hamid Reza Nadaf": {
+    "elo": 1499.3
+  },
+  "Patrik Rosenholm": {
+    "elo": 1500.9
+  },
+  "Aziz Dougaz": {
+    "elo": 1422.1
+  },
+  "Petros Chrysochos": {
+    "elo": 1439.3
+  },
+  "Menelaos Efstathiou": {
+    "elo": 1449.1
+  },
+  "Nicholas Campbell": {
+    "elo": 1500.0
+  },
+  "Hong Kit Jack Wong": {
+    "elo": 1500.3
+  },
+  "Hei Yin Andrew Li": {
+    "elo": 1483.3
+  },
+  "Karan Rastogi": {
+    "elo": 1515.2
+  },
+  "Nenad Zimonjic": {
+    "elo": 1475.1
+  },
+  "Marko Tepavac": {
+    "elo": 1485.2
+  },
+  "Stefanos Tsitsipas": {
+    "elo": 1690.5
+  },
+  "Tallon Griekspoor": {
+    "elo": 1631.5
+  },
+  "Yibing Wu": {
+    "elo": 1614.6
+  },
+  "Jason Jung": {
+    "elo": 1430.0
+  },
+  "Hsien Yin Peng": {
+    "elo": 1483.9
+  },
+  "Omar Awadhy": {
+    "elo": 1488.1
+  },
+  "Orlando Luz": {
+    "elo": 1504.2
+  },
+  "Eduardo Struvay": {
+    "elo": 1484.9
+  },
+  "Dmitry Popko": {
+    "elo": 1453.3
+  },
+  "Mykyta Mashtakov": {
+    "elo": 1487.7
+  },
+  "Illia Biloborodko": {
+    "elo": 1472.7
+  },
+  "Prajnesh Gunneswaran": {
+    "elo": 1409.6
+  },
+  "Luciano Ramazzini": {
+    "elo": 1486.6
+  },
+  "Jesus Bandres": {
+    "elo": 1490.0
+  },
+  "August Holmgren": {
+    "elo": 1528.6
+  },
+  "Tennys Sandgren": {
+    "elo": 1441.2
+  },
+  "Gianluigi Quinzi": {
+    "elo": 1465.8
+  },
+  "Riccardo Bellotti": {
+    "elo": 1479.1
+  },
+  "Yannick Hanfmann": {
+    "elo": 1671.0
+  },
+  "Daniel Masur": {
+    "elo": 1443.3
+  },
+  "Gianluca Mager": {
+    "elo": 1486.4
+  },
+  "Stefano Napolitano": {
+    "elo": 1479.6
+  },
+  "Matteo Berrettini": {
+    "elo": 1681.3
+  },
+  "Roberto Marcora": {
+    "elo": 1496.3
+  },
+  "Daniel Altmaier": {
+    "elo": 1563.4
+  },
+  "Alexandre Muller": {
+    "elo": 1552.1
+  },
+  "Benjamin Bonzi": {
+    "elo": 1625.9
+  },
+  "Cameron Norrie": {
+    "elo": 1712.3
+  },
+  "Stefano Travaglia": {
+    "elo": 1477.5
+  },
+  "Sebastian Ofner": {
+    "elo": 1530.2
+  },
+  "Mitchell Krueger": {
+    "elo": 1464.3
+  },
+  "Thai Son Kwiatkowski": {
+    "elo": 1420.8
+  },
+  "Marc Polmans": {
+    "elo": 1424.3
+  },
+  "Miljan Zekic": {
+    "elo": 1494.4
+  },
+  "Gleb Sakharov": {
+    "elo": 1480.3
+  },
+  "Rudolf Molleker": {
+    "elo": 1453.5
+  },
+  "Evan King": {
+    "elo": 1487.5
+  },
+  "Alexios Halebian": {
+    "elo": 1482.1
+  },
+  "Sekou Bangoura": {
+    "elo": 1482.4
+  },
+  "Alessandro Bega": {
+    "elo": 1484.4
+  },
+  "Brayden Schnur": {
+    "elo": 1368.5
+  },
+  "Dominik Koepfer": {
+    "elo": 1609.8
+  },
+  "Jonathan Eysseric": {
+    "elo": 1481.8
+  },
+  "Geoffrey Blancaneaux": {
+    "elo": 1438.0
+  },
+  "Vaclav Safranek": {
+    "elo": 1464.7
+  },
+  "Patrick Kypson": {
+    "elo": 1421.0
+  },
+  "Jc Aragone": {
+    "elo": 1455.2
+  },
+  "Matthew Foster Estwick": {
+    "elo": 1470.2
+  },
+  "Julius Tverijonas": {
+    "elo": 1445.8
+  },
+  "Viktor Galovic": {
+    "elo": 1474.0
+  },
+  "Evgenii Tiurnev": {
+    "elo": 1481.7
+  },
+  "Nicola Kuhn": {
+    "elo": 1452.2
+  },
+  "Yusuke Takahashi": {
+    "elo": 1486.6
+  },
+  "Roman Safiullin": {
+    "elo": 1560.3
+  },
+  "Ricardo Ojeda Lara": {
+    "elo": 1513.3
+  },
+  "Arjun Kadhe": {
+    "elo": 1443.8
+  },
+  "Liam Caruana": {
+    "elo": 1455.6
+  },
+  "Alexei Popyrin": {
+    "elo": 1647.1
+  },
+  "Aleksandar Vukic": {
+    "elo": 1531.5
+  },
+  "Jason Kubler": {
+    "elo": 1533.2
+  },
+  "Kevin King": {
+    "elo": 1476.2
+  },
+  "Corentin Moutet": {
+    "elo": 1619.5
+  },
+  "Cristian Rodriguez": {
+    "elo": 1516.0
+  },
+  "Xavier Lawrence": {
+    "elo": 1464.0
+  },
+  "Joao Pedro Sorgi": {
+    "elo": 1474.2
+  },
+  "Minjong Park": {
+    "elo": 1483.3
+  },
+  "Zsombor Piros": {
+    "elo": 1564.0
+  },
+  "Julien Cagnina": {
+    "elo": 1484.0
+  },
+  "Adrian Bodmer": {
+    "elo": 1471.8
+  },
+  "Marc Andrea Huesler": {
+    "elo": 1443.3
+  },
+  "Roman Hassanov": {
+    "elo": 1484.0
+  },
+  "Pedja Krstin": {
+    "elo": 1523.3
+  },
+  "Alejandro Mendoza": {
+    "elo": 1484.7
+  },
+  "Luis Diego Chavez Villalpando": {
+    "elo": 1516.7
+  },
+  "Youssef Hossam": {
+    "elo": 1513.8
+  },
+  "Peter August Anker": {
+    "elo": 1484.0
+  },
+  "Rafael Eduardo Gonzalez Retana": {
+    "elo": 1482.5
+  },
+  "Kenneth Raisma": {
+    "elo": 1468.9
+  },
+  "Ainius Sabaliauskas": {
+    "elo": 1498.1
+  },
+  "Anthony Jackie Tang": {
+    "elo": 1515.4
+  },
+  "Skyler Butts": {
+    "elo": 1516.0
+  },
+  "Amir Hossein Badi": {
+    "elo": 1484.0
+  },
+  "Simon Carr": {
+    "elo": 1457.5
+  },
+  "Peter Bothwell": {
+    "elo": 1501.8
+  },
+  "Benjamin Hassan": {
+    "elo": 1529.0
+  },
+  "Cheng Yu Yu": {
+    "elo": 1484.0
+  },
+  "Chun Hsin Tseng": {
+    "elo": 1365.6
+  },
+  "Michel Saade": {
+    "elo": 1484.0
+  },
+  "Muhammad Althaf Dhaifullah": {
+    "elo": 1482.6
+  },
+  "John Bryan Decasa Otico": {
+    "elo": 1502.0
+  },
+  "Nicolae Frunza": {
+    "elo": 1481.3
+  },
+  "Christophe Tholl": {
+    "elo": 1467.1
+  },
+  "Bogdan Borza": {
+    "elo": 1515.2
+  },
+  "Yasitha De Silva": {
+    "elo": 1456.7
+  },
+  "Alex Fairbanks": {
+    "elo": 1486.2
+  },
+  "Moez Echargui": {
+    "elo": 1520.7
+  },
+  "Sarp Agabigun": {
+    "elo": 1516.0
+  },
+  "Mehluli Don Ayanda Sibanda": {
+    "elo": 1439.0
+  },
+  "Carlos Taberner": {
+    "elo": 1520.5
+  },
+  "Adrian Andreev": {
+    "elo": 1477.2
+  },
+  "Alexander Donski": {
+    "elo": 1501.8
+  },
+  "Sebastian Korda": {
+    "elo": 1775.3
+  },
+  "Felix Auger Aliassime": {
+    "elo": 1809.4
+  },
+  "Hugo Gaston": {
+    "elo": 1440.4
+  },
+  "Thiago Seyboth Wild": {
+    "elo": 1533.1
+  },
+  "Bradley Klahn": {
+    "elo": 1410.7
+  },
+  "Miomir Kecmanovic": {
+    "elo": 1581.2
+  },
+  "Khumoun Sultanov": {
+    "elo": 1520.0
+  },
+  "Muzammil Murtaza": {
+    "elo": 1459.2
+  },
+  "Christoffer Konigsfeldt": {
+    "elo": 1484.7
+  },
+  "Holger Rune": {
+    "elo": 1729.8
+  },
+  "Chun Hun Wong": {
+    "elo": 1456.2
+  },
+  "Daniel Michalski": {
+    "elo": 1478.1
+  },
+  "Mark Chigaazira": {
+    "elo": 1484.0
+  },
+  "Dragos Dima": {
+    "elo": 1530.2
+  },
+  "Soufiane El Mesbahi": {
+    "elo": 1484.0
+  },
+  "Edris Fetisleam": {
+    "elo": 1516.0
+  },
+  "Yassir Kilani": {
+    "elo": 1484.0
+  },
+  "Palaphoom Kovapitukted": {
+    "elo": 1503.2
+  },
+  "Francisco Llanes": {
+    "elo": 1474.5
+  },
+  "Brandon Perez": {
+    "elo": 1457.2
+  },
+  "Pedro Martinez": {
+    "elo": 1474.1
+  },
+  "Alexey Vatutin": {
+    "elo": 1432.9
+  },
+  "Filippo Baldi": {
+    "elo": 1457.7
+  },
+  "Bernabe Zapata Miralles": {
+    "elo": 1441.2
+  },
+  "Federico Coria": {
+    "elo": 1467.6
+  },
+  "Filip Horansky": {
+    "elo": 1447.8
+  },
+  "Elliot Benchetrit": {
+    "elo": 1446.3
+  },
+  "Oscar Otte": {
+    "elo": 1454.1
+  },
+  "Maxime Janvier": {
+    "elo": 1439.2
+  },
+  "Max Purcell": {
+    "elo": 1554.5
+  },
+  "Matteo Viola": {
+    "elo": 1472.6
+  },
+  "Jay Clarke": {
+    "elo": 1406.6
+  },
+  "Zdenek Kolar": {
+    "elo": 1491.9
+  },
+  "Juan Ignacio Londero": {
+    "elo": 1436.5
+  },
+  "Emil Reinberg": {
+    "elo": 1479.8
+  },
+  "Oriol Roca Batalla": {
+    "elo": 1492.1
+  },
+  "Marcos Giron": {
+    "elo": 1583.3
+  },
+  "Jurij Rodionov": {
+    "elo": 1591.6
+  },
+  "Yosuke Watanuki": {
+    "elo": 1608.0
+  },
+  "Borna Gojo": {
+    "elo": 1566.1
+  },
+  "Ugo Humbert": {
+    "elo": 1704.2
+  },
+  "Collin Altamirano": {
+    "elo": 1484.0
+  },
+  "Jenson Brooksby": {
+    "elo": 1613.4
+  },
+  "Nicolas Mejia": {
+    "elo": 1448.4
+  },
+  "Scott Griekspoor": {
+    "elo": 1495.2
+  },
+  "Mate Valkusz": {
+    "elo": 1450.2
+  },
+  "Darko Bojanovic": {
+    "elo": 1483.5
+  },
+  "N Sriram Balaji": {
+    "elo": 1487.7
+  },
+  "Jonathan Mridha": {
+    "elo": 1502.6
+  },
+  "Sandro Ehrat": {
+    "elo": 1452.6
+  },
+  "Evgeny Karlovskiy": {
+    "elo": 1485.9
+  },
+  "Antoine Hoang": {
+    "elo": 1465.8
+  },
+  "Francisco Cerundolo": {
+    "elo": 1756.6
+  },
+  "Jack Mingjie Lin": {
+    "elo": 1483.8
+  },
+  "Emilio Nava": {
+    "elo": 1553.5
+  },
+  "Pedro Sakamoto": {
+    "elo": 1486.2
+  },
+  "Alejandro Davidovich Fokina": {
+    "elo": 1712.5
+  },
+  "Jannik Sinner": {
+    "elo": 2249.3
+  },
+  "Andrea Basso": {
+    "elo": 1493.4
+  },
+  "Mats Moraing": {
+    "elo": 1504.3
+  },
+  "Kevin Krawietz": {
+    "elo": 1483.9
+  },
+  "Ergi Kirkin": {
+    "elo": 1517.7
+  },
+  "Paul Jubb": {
+    "elo": 1497.0
+  },
+  "Alastair Gray": {
+    "elo": 1483.9
+  },
+  "Peter Torebko": {
+    "elo": 1479.9
+  },
+  "Cole Gromley": {
+    "elo": 1485.8
+  },
+  "Gian Marco Moroni": {
+    "elo": 1471.7
+  },
+  "Julian Lenz": {
+    "elo": 1484.2
+  },
+  "Raymond Sarmiento": {
+    "elo": 1489.8
+  },
+  "Zachary Svajda": {
+    "elo": 1481.2
+  },
+  "Rayane Roumane": {
+    "elo": 1489.5
+  },
+  "Nikola Milojevic": {
+    "elo": 1508.0
+  },
+  "Alen Avidzba": {
+    "elo": 1500.5
+  },
+  "Alibek Kachmazov": {
+    "elo": 1489.7
+  },
+  "Artem Dubrivnyy": {
+    "elo": 1487.6
+  },
+  "Botic Van De Zandschulp": {
+    "elo": 1660.2
+  },
+  "Joao Menezes": {
+    "elo": 1463.5
+  },
+  "Juan Lugo": {
+    "elo": 1484.1
+  },
+  "Cayetano March": {
+    "elo": 1501.3
+  },
+  "Jonas Forejtek": {
+    "elo": 1540.3
+  },
+  "Sebastian Dominguez": {
+    "elo": 1482.9
+  },
+  "Franz Luna Lavidalie": {
+    "elo": 1464.0
+  },
+  "Juan Borba": {
+    "elo": 1462.5
+  },
+  "Adolfo Daniel Vallejo": {
+    "elo": 1551.6
+  },
+  "Kyle Johnson": {
+    "elo": 1486.7
+  },
+  "Ajeet Rai": {
+    "elo": 1415.6
+  },
+  "Fitriadi M Rifqi": {
+    "elo": 1506.9
+  },
+  "Rhett Purcell": {
+    "elo": 1515.2
+  },
+  "Ari Fahresi": {
+    "elo": 1516.7
+  },
+  "Kasidit Samrej": {
+    "elo": 1481.9
+  },
+  "Coleman Wong": {
+    "elo": 1596.3
+  },
+  "Tung Lin Wu": {
+    "elo": 1507.3
+  },
+  "Pak Long Yeung": {
+    "elo": 1470.8
+  },
+  "Wai Yu Kai": {
+    "elo": 1468.3
+  },
+  "Adam Moundir": {
+    "elo": 1468.8
+  },
+  "Aleksandre Metreveli": {
+    "elo": 1443.0
+  },
+  "Filip Cristian Jianu": {
+    "elo": 1475.8
+  },
+  "Philip Henning": {
+    "elo": 1549.3
+  },
+  "Gabriel Donev": {
+    "elo": 1484.0
+  },
+  "Jiri Lehecka": {
+    "elo": 1819.9
+  },
+  "David Szintai": {
+    "elo": 1489.0
+  },
+  "Franco Roncadelli": {
+    "elo": 1511.7
+  },
+  "Alexander Cozbinov": {
+    "elo": 1453.4
+  },
+  "Kacper Zuk": {
+    "elo": 1494.3
+  },
+  "Michail Pervolarakis": {
+    "elo": 1416.7
+  },
+  "Mario Vilella Martinez": {
+    "elo": 1517.9
+  },
+  "Alejandro Tabilo": {
+    "elo": 1677.1
+  },
+  "Andrew Harris": {
+    "elo": 1502.8
+  },
+  "Juan Pablo Ficovich": {
+    "elo": 1523.8
+  },
+  "Enzo Couacaud": {
+    "elo": 1458.3
+  },
+  "Sasi Kumar Mukund": {
+    "elo": 1459.7
+  },
+  "Facundo Diaz Acosta": {
+    "elo": 1511.6
+  },
+  "Brian Shi": {
+    "elo": 1484.6
+  },
+  "Danilo Petrovic": {
+    "elo": 1492.2
+  },
+  "Brandon Nakashima": {
+    "elo": 1638.4
+  },
+  "Harold Mayot": {
+    "elo": 1463.5
+  },
+  "Carlos Alcaraz": {
+    "elo": 2117.0
+  },
+  "Felipe Meligeni Alves": {
+    "elo": 1446.9
+  },
+  "Lorenzo Musetti": {
+    "elo": 1822.0
+  },
+  "J J Wolf": {
+    "elo": 1504.2
+  },
+  "Maxime Cressy": {
+    "elo": 1456.8
+  },
+  "Ulises Blanch": {
+    "elo": 1490.9
+  },
+  "Arthur Rinderknech": {
+    "elo": 1716.7
+  },
+  "Tomas Machac": {
+    "elo": 1727.3
+  },
+  "Andrea Pellegrino": {
+    "elo": 1587.9
+  },
+  "Giulio Zeppieri": {
+    "elo": 1423.1
+  },
+  "Pavel Kotov": {
+    "elo": 1507.1
+  },
+  "Timofey Skatov": {
+    "elo": 1522.5
+  },
+  "Vitaliy Sachko": {
+    "elo": 1480.0
+  },
+  "Daniil Ostapenkov": {
+    "elo": 1499.5
+  },
+  "Hasan Ibrahim": {
+    "elo": 1488.4
+  },
+  "Otto Virtanen": {
+    "elo": 1529.2
+  },
+  "Lukas Hellum Lilleengen": {
+    "elo": 1495.2
+  },
+  "Kaipo Marshall": {
+    "elo": 1396.2
+  },
+  "Jesse Flores": {
+    "elo": 1451.1
+  },
+  "Rodrigo Crespo Piedra": {
+    "elo": 1466.3
+  },
+  "Quinton Vega": {
+    "elo": 1468.5
+  },
+  "Blaise Bicknell": {
+    "elo": 1536.4
+  },
+  "Rowland Phillips": {
+    "elo": 1447.3
+  },
+  "Kristjan Tamm": {
+    "elo": 1449.5
+  },
+  "Zura Tkemaladze": {
+    "elo": 1429.3
+  },
+  "Daniil Glinka": {
+    "elo": 1483.8
+  },
+  "Nikoloz Davlianidze": {
+    "elo": 1484.0
+  },
+  "Sheil Kotecha": {
+    "elo": 1486.1
+  },
+  "Ismael Changawa Ruwa Mzai": {
+    "elo": 1482.5
+  },
+  "Gunawan Trismuwantara": {
+    "elo": 1451.7
+  },
+  "Kevin Cheruiyot": {
+    "elo": 1484.0
+  },
+  "Karlis Ozolins": {
+    "elo": 1460.2
+  },
+  "Robert Strombachs": {
+    "elo": 1518.3
+  },
+  "Amr Elsayed Abdou Ahmed Mohamed": {
+    "elo": 1466.0
+  },
+  "Phuong Van Nguyen": {
+    "elo": 1483.3
+  },
+  "Aissa Benchakroun": {
+    "elo": 1516.0
+  },
+  "Linh Giang Trinh": {
+    "elo": 1451.5
+  },
+  "Martin Antonio Vergara Del Puerto": {
+    "elo": 1462.9
+  },
+  "Thehan Sanjaya Wijemanne": {
+    "elo": 1484.1
+  },
+  "Petros Tsitsipas": {
+    "elo": 1496.4
+  },
+  "Eric Jr. Olivarez": {
+    "elo": 1484.7
+  },
+  "Ching Lam": {
+    "elo": 1484.4
+  },
+  "Maks Kasnikowski": {
+    "elo": 1527.4
+  },
+  "Hazem Naw": {
+    "elo": 1516.9
+  },
+  "Amer Naow": {
+    "elo": 1486.4
+  },
+  "Zizou Bergs": {
+    "elo": 1652.6
+  },
+  "Luca Nardi": {
+    "elo": 1517.9
+  },
+  "Lukas Klein": {
+    "elo": 1476.3
+  },
+  "Jack Draper": {
+    "elo": 1834.2
+  },
+  "Dominic Stricker": {
+    "elo": 1535.0
+  },
+  "Juan Manuel Cerundolo": {
+    "elo": 1526.1
+  },
+  "Leandro Riedi": {
+    "elo": 1546.7
+  },
+  "Vit Kopriva": {
+    "elo": 1633.3
+  },
+  "Alexander Erler": {
+    "elo": 1503.0
+  },
+  "Lukas Neumayer": {
+    "elo": 1536.8
+  },
+  "Arthur Cazaux": {
+    "elo": 1612.8
+  },
+  "Shintaro Mochizuki": {
+    "elo": 1390.6
+  },
+  "Alex Molcan": {
+    "elo": 1691.4
+  },
+  "Sebastian Baez": {
+    "elo": 1601.0
+  },
+  "Andrea Vavassori": {
+    "elo": 1555.7
+  },
+  "Leo Borg": {
+    "elo": 1470.3
+  },
+  "Duje Ajdukovic": {
+    "elo": 1515.5
+  },
+  "Andrea Collarini": {
+    "elo": 1467.8
+  },
+  "Tomas Martin Etcheverry": {
+    "elo": 1712.1
+  },
+  "Thiago Agustin Tirante": {
+    "elo": 1660.1
+  },
+  "Sam Riffice": {
+    "elo": 1491.9
+  },
+  "Li Tu": {
+    "elo": 1409.6
+  },
+  "Trent Bryde": {
+    "elo": 1485.5
+  },
+  "Eduardo Nava": {
+    "elo": 1472.7
+  },
+  "Nuno Borges": {
+    "elo": 1553.4
+  },
+  "Tristan Schoolkate": {
+    "elo": 1461.9
+  },
+  "Dane Sweeny": {
+    "elo": 1493.9
+  },
+  "Thomas Fancutt": {
+    "elo": 1483.2
+  },
+  "Hugo Grenier": {
+    "elo": 1452.6
+  },
+  "Michael Vrbensky": {
+    "elo": 1490.3
+  },
+  "Harry Bourchier": {
+    "elo": 1507.4
+  },
+  "Raul Brancaccio": {
+    "elo": 1469.7
+  },
+  "Flavio Cobolli": {
+    "elo": 1726.5
+  },
+  "Hamad Medjedovic": {
+    "elo": 1672.9
+  },
+  "Marko Topo": {
+    "elo": 1425.7
+  },
+  "Fabian Marozsan": {
+    "elo": 1607.4
+  },
+  "Erik Arutiunian": {
+    "elo": 1483.9
+  },
+  "Alexander Zgirovsky": {
+    "elo": 1493.1
+  },
+  "Murkel Alejandro Dellien Velasco": {
+    "elo": 1473.1
+  },
+  "Michael Geerts": {
+    "elo": 1499.7
+  },
+  "Matheus Pucinelli De Almeida": {
+    "elo": 1505.8
+  },
+  "Roey Tabet": {
+    "elo": 1484.0
+  },
+  "Kaichi Uchida": {
+    "elo": 1505.1
+  },
+  "Yuta Shimizu": {
+    "elo": 1496.2
+  },
+  "Finn Reynolds": {
+    "elo": 1489.5
+  },
+  "Ignacio Carou": {
+    "elo": 1440.6
+  },
+  "Aziz Ouakaa": {
+    "elo": 1447.7
+  },
+  "Thabo Ncube": {
+    "elo": 1484.0
+  },
+  "Justin Barki": {
+    "elo": 1515.2
+  },
+  "Alexandros Skorilas": {
+    "elo": 1504.3
+  },
+  "Vilius Gaubas": {
+    "elo": 1559.7
+  },
+  "Lluis Miralles": {
+    "elo": 1482.0
+  },
+  "Wojciech Marek": {
+    "elo": 1489.7
+  },
+  "Dimitri Badra": {
+    "elo": 1482.2
+  },
+  "Bor Artnak": {
+    "elo": 1494.2
+  },
+  "Sebastian Dominko": {
+    "elo": 1448.8
+  },
+  "Jerome Kym": {
+    "elo": 1550.9
+  },
+  "Siim Troost": {
+    "elo": 1484.0
+  },
+  "Johannes Ingildsen": {
+    "elo": 1480.0
+  },
+  "Edgars Manusis": {
+    "elo": 1483.1
+  },
+  "Jan Zielinski": {
+    "elo": 1494.3
+  },
+  "Aristotelis Thanos": {
+    "elo": 1528.3
+  },
+  "Aleksandre Bakshi": {
+    "elo": 1501.6
+  },
+  "Rinky Hijikata": {
+    "elo": 1540.3
+  },
+  "Caleb Chakravarthi": {
+    "elo": 1486.8
+  },
+  "Juncheng Shang": {
+    "elo": 1589.4
+  },
+  "Juan Alejandro Hernandez Serrano": {
+    "elo": 1487.5
+  },
+  "Gijs Brouwer": {
+    "elo": 1555.1
+  },
+  "Manuel Guinard": {
+    "elo": 1511.8
+  },
+  "Nicolas Alvarez Varona": {
+    "elo": 1497.4
+  },
+  "Max Hans Rehberg": {
+    "elo": 1452.7
+  },
+  "Carlos Gimeno Valero": {
+    "elo": 1492.6
+  },
+  "Francesco Passaro": {
+    "elo": 1459.4
+  },
+  "Matteo Arnaldi": {
+    "elo": 1573.4
+  },
+  "Camilo Ugo Carabelli": {
+    "elo": 1587.3
+  },
+  "Santiago Fa Rodriguez Taverna": {
+    "elo": 1495.1
+  },
+  "Franco Agamenone": {
+    "elo": 1547.4
+  },
+  "Jesper De Jong": {
+    "elo": 1534.7
+  },
+  "Henri Squire": {
+    "elo": 1473.1
+  },
+  "Ryan Peniston": {
+    "elo": 1524.1
+  },
+  "Alexander Ritschard": {
+    "elo": 1487.3
+  },
+  "William Blumberg": {
+    "elo": 1488.3
+  },
+  "Andres Martin": {
+    "elo": 1489.3
+  },
+  "Ben Shelton": {
+    "elo": 1778.7
+  },
+  "Filip Misolic": {
+    "elo": 1546.4
+  },
+  "Ivan Gakhov": {
+    "elo": 1488.3
+  },
+  "Hernan Casanova": {
+    "elo": 1483.5
+  },
+  "Daniel Dutra Da Silva": {
+    "elo": 1485.9
+  },
+  "Alexander Shevchenko": {
+    "elo": 1598.6
+  },
+  "Dino Prizmic": {
+    "elo": 1620.0
+  },
+  "Mili Poljicak": {
+    "elo": 1464.0
+  },
+  "Rodrigo Pacheco Mendez": {
+    "elo": 1522.3
+  },
+  "Nick Chappell": {
+    "elo": 1467.9
+  },
+  "Gonzalo Villanueva": {
+    "elo": 1488.9
+  },
+  "Alexis Galarneau": {
+    "elo": 1504.2
+  },
+  "Brandon Holt": {
+    "elo": 1407.5
+  },
+  "Learner Tien": {
+    "elo": 1800.5
+  },
+  "Facundo Mena": {
+    "elo": 1478.0
+  },
+  "Evan Furness": {
+    "elo": 1491.8
+  },
+  "Aleksandar Kovacevic": {
+    "elo": 1552.1
+  },
+  "Yunseong Chung": {
+    "elo": 1472.1
+  },
+  "Dragos Nicolae Madaras": {
+    "elo": 1442.1
+  },
+  "Beibit Zhukayev": {
+    "elo": 1520.5
+  },
+  "Rio Noguchi": {
+    "elo": 1503.5
+  },
+  "Sho Shimabukuro": {
+    "elo": 1474.9
+  },
+  "Francesco Maestrelli": {
+    "elo": 1469.1
+  },
+  "Martin Landaluce": {
+    "elo": 1534.9
+  },
+  "Luca Van Assche": {
+    "elo": 1531.6
+  },
+  "Gilles Arnaud Bailly": {
+    "elo": 1489.9
+  },
+  "Arthur Fils": {
+    "elo": 1894.8
+  },
+  "Gabriel Diallo": {
+    "elo": 1604.7
+  },
+  "Gabi Adrian Boitan": {
+    "elo": 1480.4
+  },
+  "Muhammad Shoaib": {
+    "elo": 1467.7
+  },
+  "Alan Fernando Rubio Fierros": {
+    "elo": 1485.1
+  },
+  "Luis Carlos Alvarez Valdes": {
+    "elo": 1499.7
+  },
+  "Andrej Nedic": {
+    "elo": 1446.0
+  },
+  "Yanki Erel": {
+    "elo": 1507.9
+  },
+  "Kiranpal Pannu": {
+    "elo": 1425.9
+  },
+  "Isaac Becroft": {
+    "elo": 1481.6
+  },
+  "Viacheslav Bielinskyi": {
+    "elo": 1508.5
+  },
+  "Vladyslav Orlov": {
+    "elo": 1496.0
+  },
+  "Sergey Fomin": {
+    "elo": 1433.7
+  },
+  "Nicholas David Ionel": {
+    "elo": 1489.2
+  },
+  "Diego Fernandez Flores": {
+    "elo": 1515.2
+  },
+  "Edas Butvilas": {
+    "elo": 1526.8
+  },
+  "Osgar Ohoisin": {
+    "elo": 1496.5
+  },
+  "Yuttana Charoenphon": {
+    "elo": 1514.3
+  },
+  "Elmer Moller": {
+    "elo": 1547.5
+  },
+  "Cesar Cruz": {
+    "elo": 1408.6
+  },
+  "Peter Bertran": {
+    "elo": 1498.8
+  },
+  "Daniels Tens": {
+    "elo": 1412.4
+  },
+  "Valentin Vacherot": {
+    "elo": 1781.9
+  },
+  "Hugo Nys": {
+    "elo": 1495.8
+  },
+  "Michael Bassem Sobhy": {
+    "elo": 1469.9
+  },
+  "Nathan Anthony Barki": {
+    "elo": 1486.4
+  },
+  "Olaf Pieczkowski": {
+    "elo": 1505.6
+  },
+  "Tegar Abdi Satrio Wibowo": {
+    "elo": 1487.0
+  },
+  "Lucky Candra Kurniawan": {
+    "elo": 1469.2
+  },
+  "Lleyton Cronje": {
+    "elo": 1483.4
+  },
+  "Mark Lajal": {
+    "elo": 1542.5
+  },
+  "Matic Kriznik": {
+    "elo": 1470.5
+  },
+  "Skander Mansouri": {
+    "elo": 1458.2
+  },
+  "Bu Yunchaokete": {
+    "elo": 1507.5
+  },
+  "Rigele Te": {
+    "elo": 1470.6
+  },
+  "Stylianos Christodoulou": {
+    "elo": 1507.6
+  },
+  "Alexis Klegou": {
+    "elo": 1455.8
+  },
+  "Delmas Ntcha": {
+    "elo": 1483.0
+  },
+  "Sylvestre Monnou": {
+    "elo": 1527.9
+  },
+  "Ki Lung Ng": {
+    "elo": 1483.1
+  },
+  "Stefanos Sakellaridis": {
+    "elo": 1491.1
+  },
+  "Dalibor Svrcina": {
+    "elo": 1549.9
+  },
+  "Manas Dhamne": {
+    "elo": 1480.0
+  },
+  "Mattia Bellucci": {
+    "elo": 1539.4
+  },
+  "Yu Hsiou Hsu": {
+    "elo": 1529.0
+  },
+  "Oleksii Krutykh": {
+    "elo": 1473.9
+  },
+  "Luciano Darderi": {
+    "elo": 1716.7
+  },
+  "Alex Rybakov": {
+    "elo": 1489.8
+  },
+  "Liam Krall": {
+    "elo": 1484.1
+  },
+  "Clement Chidekh": {
+    "elo": 1472.5
+  },
+  "Matija Pecotic": {
+    "elo": 1509.8
+  },
+  "Abedallah Shelbayh": {
+    "elo": 1430.4
+  },
+  "Mateus Alves": {
+    "elo": 1497.6
+  },
+  "Joao Fonseca": {
+    "elo": 1757.6
+  },
+  "Jacopo Berrettini": {
+    "elo": 1513.5
+  },
+  "Riccardo Bonadio": {
+    "elo": 1491.2
+  },
+  "Henrique Rocha": {
+    "elo": 1565.0
+  },
+  "Younes Lalami Laaroussi": {
+    "elo": 1460.2
+  },
+  "Daniel Rincon": {
+    "elo": 1466.2
+  },
+  "Pablo Llamas Ruiz": {
+    "elo": 1563.6
+  },
+  "Alvaro Lopez San Martin": {
+    "elo": 1487.4
+  },
+  "Genaro Alberto Olivieri": {
+    "elo": 1530.5
+  },
+  "Giovanni Mpetshi Perricard": {
+    "elo": 1563.8
+  },
+  "Alex Michelsen": {
+    "elo": 1694.2
+  },
+  "George Loffhagen": {
+    "elo": 1457.9
+  },
+  "Arthur Fery": {
+    "elo": 1506.4
+  },
+  "Ethan Quinn": {
+    "elo": 1549.9
+  },
+  "Eliot Spizzirri": {
+    "elo": 1601.3
+  },
+  "Omni Kumar": {
+    "elo": 1501.0
+  },
+  "Strong Kirchheimer": {
+    "elo": 1472.7
+  },
+  "Nicolas Moreno De Alboran": {
+    "elo": 1481.0
+  },
+  "Titouan Droguet": {
+    "elo": 1560.4
+  },
+  "Jakub Mensik": {
+    "elo": 1750.0
+  },
+  "Philip Sekulic": {
+    "elo": 1499.1
+  },
+  "Tao Mu": {
+    "elo": 1485.2
+  },
+  "Jie Cui": {
+    "elo": 1489.3
+  },
+  "Terence Atmane": {
+    "elo": 1605.7
+  },
+  "Yi Zhou": {
+    "elo": 1507.8
+  },
+  "Ye Cong Mo": {
+    "elo": 1490.8
+  },
+  "Denis Yevseyev": {
+    "elo": 1508.7
+  },
+  "Karl Friberg": {
+    "elo": 1475.0
+  },
+  "Alexander Blockx": {
+    "elo": 1682.9
+  },
+  "Matteo Martineau": {
+    "elo": 1479.1
+  },
+  "Billy Harris": {
+    "elo": 1474.2
+  },
+  "Patrick Kaukovalta": {
+    "elo": 1493.1
+  },
+  "Andreja Petrovic": {
+    "elo": 1488.6
+  },
+  "Amir Milushev": {
+    "elo": 1482.4
+  },
+  "Yanaki Milev": {
+    "elo": 1491.5
+  },
+  "Gonzalo Bueno": {
+    "elo": 1491.7
+  },
+  "Nicolai Budkov Kjaer": {
+    "elo": 1500.8
+  },
+  "Ignacio Buse": {
+    "elo": 1684.6
+  },
+  "Gustavo Heide": {
+    "elo": 1471.4
+  },
+  "Arklon Huertas Del Pino": {
+    "elo": 1516.0
+  },
+  "Conner Huertas Del Pino": {
+    "elo": 1531.3
+  },
+  "Michael Agwi": {
+    "elo": 1468.8
+  },
+  "Oleksandr Ovcharenko": {
+    "elo": 1488.3
+  },
+  "Conor Gannon": {
+    "elo": 1477.3
+  },
+  "Diego Duran": {
+    "elo": 1515.0
+  },
+  "Freddy Murray": {
+    "elo": 1531.3
+  },
+  "Jose  Flores": {
+    "elo": 1484.0
+  },
+  "Martins Rocens": {
+    "elo": 1477.1
+  },
+  "Yassine Dlimi": {
+    "elo": 1508.5
+  },
+  "Digvijaypratap Singh": {
+    "elo": 1516.0
+  },
+  "Walid Ahouda": {
+    "elo": 1484.0
+  },
+  "Mustapha El Natour": {
+    "elo": 1516.0
+  },
+  "Daniel Azar": {
+    "elo": 1484.0
+  },
+  "Fajing Sun": {
+    "elo": 1455.1
+  },
+  "Alvaro Guillen Meza": {
+    "elo": 1516.8
+  },
+  "Chris Rodesch": {
+    "elo": 1506.7
+  },
+  "Joaquin  Aguilar Cardozo": {
+    "elo": 1464.7
+  },
+  "Clement Mainguy": {
+    "elo": 1467.8
+  },
+  "Colin Sinclair": {
+    "elo": 1499.8
+  },
+  "Juan Carlos Prado Angelo": {
+    "elo": 1487.1
+  },
+  "Raul Garcia": {
+    "elo": 1464.0
+  },
+  "Saba Purtseladze": {
+    "elo": 1501.0
+  },
+  "Daniel Vallejo": {
+    "elo": 1566.9
+  },
+  "Karam Hatamleh": {
+    "elo": 1491.1
+  },
+  "Mousa Alkotop": {
+    "elo": 1506.1
+  },
+  "Johannes Seeman": {
+    "elo": 1516.0
+  },
+  "Jacob Bicknell": {
+    "elo": 1484.0
+  },
+  "Alec Beckley": {
+    "elo": 1455.5
+  },
+  "Kris Van Wyk": {
+    "elo": 1456.2
+  },
+  "Raphael Calzi": {
+    "elo": 1497.9
+  },
+  "Devin Badenhorst": {
+    "elo": 1484.0
+  },
+  "Chak Lam Coleman Wong": {
+    "elo": 1489.4
+  },
+  "James Mccabe": {
+    "elo": 1433.9
+  },
+  "Adam Walton": {
+    "elo": 1517.6
+  },
+  "Antoine Escoffier": {
+    "elo": 1483.8
+  },
+  "Ugo Blanchet": {
+    "elo": 1492.7
+  },
+  "Roman Andres Burruchaga": {
+    "elo": 1542.4
+  },
+  "Mariano Navone": {
+    "elo": 1691.9
+  },
+  "Francisco Comesana": {
+    "elo": 1499.4
+  },
+  "Federico Agustin Gomez": {
+    "elo": 1483.8
+  },
+  "Adam Neff": {
+    "elo": 1490.2
+  },
+  "Martin Damm": {
+    "elo": 1571.8
+  },
+  "Darwin Blanch": {
+    "elo": 1498.5
+  },
+  "David Jorda Sanchis": {
+    "elo": 1501.4
+  },
+  "Jaime Faria": {
+    "elo": 1475.9
+  },
+  "Matteo Gigante": {
+    "elo": 1564.1
+  },
+  "Alejandro Moro Canas": {
+    "elo": 1485.9
+  },
+  "Javier Barranco Cosano": {
+    "elo": 1488.8
+  },
+  "Nikolas Sanchez Izquierdo": {
+    "elo": 1491.5
+  },
+  "Sebastian Fanselow": {
+    "elo": 1487.7
+  },
+  "Giles Hussey": {
+    "elo": 1510.8
+  },
+  "Charles Broom": {
+    "elo": 1473.8
+  },
+  "Jacob Fearnley": {
+    "elo": 1525.9
+  },
+  "Henry Searle": {
+    "elo": 1464.8
+  },
+  "Joel Schwaerzler": {
+    "elo": 1475.5
+  },
+  "Matej Dodig": {
+    "elo": 1473.8
+  },
+  "Luka Mikrut": {
+    "elo": 1483.0
+  },
+  "Francisco Cabral": {
+    "elo": 1495.0
+  },
+  "Matthew Forbes": {
+    "elo": 1488.6
+  },
+  "Kyrian Jacquet": {
+    "elo": 1497.8
+  },
+  "Justin Engel": {
+    "elo": 1477.1
+  },
+  "Raphael Collignon": {
+    "elo": 1652.0
+  },
+  "Branko Djuric": {
+    "elo": 1451.7
+  },
+  "Theo Papamalamis": {
+    "elo": 1487.2
+  },
+  "Nishesh Basavareddy": {
+    "elo": 1523.4
+  },
+  "Orel Kimhi": {
+    "elo": 1451.3
+  },
+  "Lukas Pokorny": {
+    "elo": 1520.3
+  },
+  "Faris Zakaryia": {
+    "elo": 1481.9
+  },
+  "Adria Soriano Barrera": {
+    "elo": 1491.9
+  },
+  "Philip Hjorth": {
+    "elo": 1485.0
+  },
+  "Martyn Pawelski": {
+    "elo": 1530.0
+  },
+  "Min Kyu Song": {
+    "elo": 1484.0
+  },
+  "Ioannis Xilas": {
+    "elo": 1514.9
+  },
+  "Demetris Azoides": {
+    "elo": 1520.9
+  },
+  "Remy Bertola": {
+    "elo": 1520.2
+  },
+  "Siddharth Vishwakarma": {
+    "elo": 1483.1
+  },
+  "Petr Nesterov": {
+    "elo": 1491.2
+  },
+  "Andres Andrade": {
+    "elo": 1554.2
+  },
+  "Luca Preda": {
+    "elo": 1483.9
+  },
+  "Davis Rolis": {
+    "elo": 1468.2
+  },
+  "Niki Kaliyanda Poonacha": {
+    "elo": 1514.9
+  },
+  "Maxim Shin": {
+    "elo": 1486.8
+  },
+  "Yousaf Khalil": {
+    "elo": 1487.6
+  },
+  "Iliyan Radulov": {
+    "elo": 1522.6
+  },
+  "Juan Carlos Fuentes Vasquez": {
+    "elo": 1468.3
+  },
+  "Jack Cheng": {
+    "elo": 1484.7
+  },
+  "Marcos Lee Chan Baratau": {
+    "elo": 1482.4
+  },
+  "Jack Loutit": {
+    "elo": 1533.2
+  },
+  "Cezar Cretu": {
+    "elo": 1549.9
+  },
+  "Thomas Yaka Kofi Setodji": {
+    "elo": 1501.0
+  },
+  "Liova Ayite Ajavon": {
+    "elo": 1495.1
+  },
+  "Maximus Jones": {
+    "elo": 1485.2
+  },
+  "Boris Arias": {
+    "elo": 1516.0
+  },
+  "Thanapet Chanta": {
+    "elo": 1468.7
+  },
+  "Hamza Karmoussi": {
+    "elo": 1483.2
+  },
+  "Gillian Osmont": {
+    "elo": 1482.5
+  },
+  "Heve Kelley": {
+    "elo": 1491.2
+  },
+  "Matavao Fanguna": {
+    "elo": 1483.3
+  },
+  "Benedict Badza": {
+    "elo": 1516.0
+  },
+  "Kwok Shun Dasson Chan": {
+    "elo": 1484.0
+  },
+  "Oliver Ojakaar": {
+    "elo": 1547.1
+  },
+  "Sina Moghimi": {
+    "elo": 1498.5
+  },
+  "Komlavi Loglo": {
+    "elo": 1496.7
+  },
+  "Ilya Snitari": {
+    "elo": 1504.1
+  },
+  "Tristan Boyer": {
+    "elo": 1500.5
+  },
+  "Gauthier Onclin": {
+    "elo": 1491.4
+  },
+  "Trevor Svajda": {
+    "elo": 1468.6
+  },
+  "Mees Rottgering": {
+    "elo": 1473.2
+  },
+  "James Trotter": {
+    "elo": 1483.8
+  },
+  "Arthur Gea": {
+    "elo": 1514.5
+  },
+  "Colton Smith": {
+    "elo": 1474.9
+  },
+  "Federico Cina": {
+    "elo": 1461.1
+  },
+  "Rei Sakamoto": {
+    "elo": 1458.2
+  },
+  "Corentin Denolly": {
+    "elo": 1498.4
+  },
+  "Taha Baadi": {
+    "elo": 1517.7
+  },
+  "Diego Dedura Palomero": {
+    "elo": 1491.3
+  },
+  "Karue Sell": {
+    "elo": 1490.5
+  },
+  "Valentin Royer": {
+    "elo": 1465.6
+  },
+  "Clement Tabur": {
+    "elo": 1489.2
+  },
+  "Jack Pinnington Jones": {
+    "elo": 1521.2
+  },
+  "Johannus Monday": {
+    "elo": 1496.3
+  },
+  "Oliver Crawford": {
+    "elo": 1485.4
+  },
+  "Oliver Tarvet": {
+    "elo": 1514.8
+  },
+  "William Rejchtman Vinciguerra": {
+    "elo": 1488.5
+  },
+  "Patrick Zahraj": {
+    "elo": 1482.2
+  },
+  "Luis Carlos Alvarez": {
+    "elo": 1498.5
+  },
+  "Govind Nanda": {
+    "elo": 1510.1
+  },
+  "Alan Magadan": {
+    "elo": 1474.6
+  },
+  "Murphy Cassone": {
+    "elo": 1490.2
+  },
+  "Nicolas Arseneault": {
+    "elo": 1508.0
+  },
+  "Dan Martin": {
+    "elo": 1490.4
+  },
+  "Liam Draxl": {
+    "elo": 1495.7
+  },
+  "Stefan Dostanic": {
+    "elo": 1489.7
+  },
+  "Dhakshineswar Suresh": {
+    "elo": 1540.7
+  },
+  "Amir Omarkhanov": {
+    "elo": 1491.6
+  },
+  "Henry Bernet": {
+    "elo": 1473.2
+  },
+  "Ivan Ivanov": {
+    "elo": 1471.8
+  },
+  "Dan Added": {
+    "elo": 1483.1
+  },
+  "Rafael Jodar": {
+    "elo": 1749.0
+  },
+  "John Peers": {
+    "elo": 1481.7
+  },
+  "Ofek Shimanov": {
+    "elo": 1498.8
+  },
+  "Gerard Campana Lee": {
+    "elo": 1494.0
+  },
+  "Maxim Mrva": {
+    "elo": 1498.6
+  },
+  "San Hui Sin": {
+    "elo": 1484.0
+  },
+  "Tsung Hao Huang": {
+    "elo": 1471.7
+  },
+  "Alexander Vasilev": {
+    "elo": 1527.0
+  },
+  "Cleeve Harper": {
+    "elo": 1514.4
+  },
+  "Aaron Gil Garcia": {
+    "elo": 1487.3
+  },
+  "Daniel Antonio Nunez": {
+    "elo": 1516.0
+  },
+  "Louis Van Herck": {
+    "elo": 1484.0
+  },
+  "Tomasz Berkieta": {
+    "elo": 1493.4
+  },
+  "Arda Azkara": {
+    "elo": 1515.2
+  },
+  "Olle Wallin": {
+    "elo": 1502.9
+  },
+  "Christos Antonopoulos": {
+    "elo": 1484.3
+  },
+  "Karan Singh": {
+    "elo": 1516.0
+  },
+  "Hod'abalo isak Padio": {
+    "elo": 1484.8
+  },
+  "Huzaifa Abdul Rehman": {
+    "elo": 1485.4
+  },
+  "Ahmad Nael Qureshi": {
+    "elo": 1483.6
+  },
+  "Fadi Bidan": {
+    "elo": 1501.4
+  },
+  "Atakan Karahan": {
+    "elo": 1516.0
+  },
+  "Rafael De Alba": {
+    "elo": 1484.0
+  },
+  "Mert Naci Turker": {
+    "elo": 1516.0
+  },
+  "Eugenio Gonzalez Fitzmaurice": {
+    "elo": 1484.0
+  },
+  "Melios Efstathiou": {
+    "elo": 1537.4
+  },
+  "Radu David Turcanu": {
+    "elo": 1538.2
+  },
+  "Gabriel Ghetu": {
+    "elo": 1523.9
+  },
+  "Tsz Fu Wong": {
+    "elo": 1468.3
+  },
+  "Peter Buldorini": {
+    "elo": 1501.5
+  },
+  "Stephen Slocombe": {
+    "elo": 1483.3
+  },
+  "Patrick Agbo Panzo": {
+    "elo": 1453.1
+  },
+  "Pijus Vaitiekunas": {
+    "elo": 1515.2
+  },
+  "James Watt": {
+    "elo": 1516.4
+  },
+  "Alex Santino Nunez Vera": {
+    "elo": 1499.6
+  },
+  "Marc Van Der Merwe": {
+    "elo": 1483.4
+  },
+  "Connor Doig": {
+    "elo": 1484.2
+  },
+  "Karim Bennani": {
+    "elo": 1539.7
+  },
+  "Leo Matthysen": {
+    "elo": 1484.0
+  },
+  "Filip Jeff Planinsek": {
+    "elo": 1545.8
+  },
+  "Ziga Sesko": {
+    "elo": 1515.5
+  },
+  "Kodjo Charles Alipoe Tchotchodji": {
+    "elo": 1483.1
+  },
+  "Akram El Sallaly": {
+    "elo": 1482.5
+  },
+  "Enmanuel Munoz": {
+    "elo": 1467.5
+  },
+  "Andreas Timini": {
+    "elo": 1515.3
+  },
+  "Andrei Gorban": {
+    "elo": 1479.6
+  },
+  "Ilie Cazac": {
+    "elo": 1489.7
+  },
+  "Ignacio Parisca": {
+    "elo": 1470.2
+  },
+  "Markus Molder": {
+    "elo": 1530.7
+  },
+  "Saud Alhogbani": {
+    "elo": 1483.3
+  },
+  "Ammar Faleh Alhogbani": {
+    "elo": 1483.1
+  },
+  "Ammar Elamin": {
+    "elo": 1531.3
+  },
+  "Abdulmajeed Bukhari": {
+    "elo": 1484.0
+  },
+  "Abdulmalek Burasais": {
+    "elo": 1484.7
+  },
+  "Petar Jovanovic": {
+    "elo": 1466.7
+  },
+  "Aleksa Krivokapic": {
+    "elo": 1452.7
+  },
+  "Connor Henry Van Schalkwyk": {
+    "elo": 1501.1
+  },
+  "Codie Schalk Van Schalkwyk": {
+    "elo": 1487.0
+  },
+  "David Ekpenyong": {
+    "elo": 1483.5
+  },
+  "Christopher Bulus": {
+    "elo": 1498.2
+  },
+  "Ethan Denzel Sibanda": {
+    "elo": 1480.7
+  },
+  "Ronan Tashinga Mtisi": {
+    "elo": 1484.7
+  },
+  "Michael Zheng": {
+    "elo": 1494.6
+  },
+  "Moise Kouame": {
+    "elo": 1489.0
+  },
+  "Alex Barrena": {
+    "elo": 1470.8
+  },
+  "Lautaro Midon": {
+    "elo": 1484.8
+  },
+  "Guy Den Ouden": {
+    "elo": 1513.0
+  },
+  "Thijs Boogaard": {
+    "elo": 1486.2
+  },
+  "Luka Pavlovic": {
+    "elo": 1490.2
+  },
+  "Igor Ribeiro Marcondes": {
+    "elo": 1488.6
+  },
+  "Luis Guto Miguel": {
+    "elo": 1483.5
+  },
+  "Joao Lucas Reis Da Silva": {
+    "elo": 1473.8
+  },
+  "Matias Soto": {
+    "elo": 1499.7
+  },
+  "Daniel Merida Aguilar": {
+    "elo": 1558.5
+  },
+  "Reda Bennani": {
+    "elo": 1482.5
+  },
+  "Gianluca Cadenasso": {
+    "elo": 1491.4
+  },
+  "Max Schoenhaus": {
+    "elo": 1490.6
+  },
+  "Emilio Camacho": {
+    "elo": 1484.8
+  },
+  "Ognjen Milic": {
+    "elo": 1491.2
+  },
+  "Matyas Fuele": {
+    "elo": 1485.8
+  },
+  "Karol Filar": {
+    "elo": 1515.9
+  },
+  "Filip Pieczonka": {
+    "elo": 1516.0
+  },
+  "Karim Ibrahim": {
+    "elo": 1484.0
+  },
+  "Siu Chi Nicholas Cheng": {
+    "elo": 1483.6
+  },
+  "Amit Vales": {
+    "elo": 1471.3
+  },
+  "Anton Shepp": {
+    "elo": 1495.9
+  },
+  "Stefan Palosi": {
+    "elo": 1486.4
+  },
+  "Mert Alkaya": {
+    "elo": 1514.3
+  },
+  "Kaan Isak Kosaner": {
+    "elo": 1485.4
+  },
+  "Alaa Trifi": {
+    "elo": 1485.5
+  },
+  "Mika Brunold": {
+    "elo": 1514.3
+  },
+  "Amar Huseinovic": {
+    "elo": 1485.0
+  },
+  "Photos Photiades": {
+    "elo": 1516.0
+  },
+  "Stefan Micov": {
+    "elo": 1484.0
+  },
+  "Kristijan Janev": {
+    "elo": 1483.2
+  },
+  "Konstantinos Megalemos": {
+    "elo": 1516.0
+  },
+  "Marko Aleksovski": {
+    "elo": 1484.0
+  },
+  "Eriks Valeinis": {
+    "elo": 1515.2
+  },
+  "Daniel Phillips": {
+    "elo": 1499.3
+  },
+  "Wayne Montgomery": {
+    "elo": 1496.7
+  },
+  "Noah Koffi": {
+    "elo": 1483.6
+  },
+  "Kwami Stanislas Dussey": {
+    "elo": 1484.0
+  },
+  "Jean Paul Kadangah Kili": {
+    "elo": 1480.7
+  },
+  "Taym Al Azmeh": {
+    "elo": 1499.4
+  },
+  "Yacoub Makzoume": {
+    "elo": 1484.7
+  },
+  "Steyn Dippenaar": {
+    "elo": 1485.3
+  },
+  "Sten Hiiesalu": {
+    "elo": 1516.0
+  },
+  "Ruben Yssel": {
+    "elo": 1484.0
+  },
+  "canice Abua": {
+    "elo": 1484.2
+  },
+  "Daniel Adeleye": {
+    "elo": 1531.3
+  },
+  "Abdulaziz Usmonjonov": {
+    "elo": 1484.0
+  },
+  "Ilya Ignatov": {
+    "elo": 1484.7
+  },
+  "Nicolas Jadoun": {
+    "elo": 1463.0
+  },
+  "Seydina Andre": {
+    "elo": 1486.0
+  },
+  "Yannick Languina": {
+    "elo": 1481.3
+  },
+  "Yannik Alvarez": {
+    "elo": 1482.5
+  },
+  "Marko Mesarovic": {
+    "elo": 1467.2
+  },
+  "Pawit Sornlaksup": {
+    "elo": 1515.2
   }
 }
