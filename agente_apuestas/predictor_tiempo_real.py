@@ -24,6 +24,9 @@ UMBRAL_CONFIANZA  = 0.70  # fallback
 VALUE_MIN         = 0.10  # fallback
 BANKROLL          = 100_000  # CLP paper trading
 
+# Encoding de liga para xgboost_clubes_v2 (pd.factorize orden de aparición en davidcariboo)
+LIGA_ENC_V2 = {78: 0, 61: 1, 39: 2, 140: 3, 135: 4}  # Bundesliga/Ligue1/PL/LaLiga/SerieA
+
 
 def _get_ligas_activas() -> dict:
     """
@@ -321,6 +324,184 @@ def _construir_features(partido: dict, pi_ratings: dict, feature_cols: list,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# MODELO CLUBES v2  (xgboost_clubes_v2.pkl — AUC 0.6916)
+# Binario: 1=local gana, 0=empate o visitante gana
+# Features: pi_diff, mv_diff, rolling wr5/wr3/net5/net3/gf5/ga5, h2h, liga_enc
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _cargar_modelo_clubes_v2():
+    """Carga xgboost_clubes_v2.pkl desde models/. Retorna (model, feature_cols) o (None, None)."""
+    path = BASE_DIR / "models" / "xgboost_clubes_v2.pkl"
+    meta_path = BASE_DIR / "models" / "xgboost_clubes_v2_meta.json"
+    if not path.exists():
+        log("[WARN] xgboost_clubes_v2.pkl no encontrado — solo modelo v1")
+        return None, None
+    try:
+        model = joblib.load(path)
+        if meta_path.exists():
+            with open(meta_path, "r") as f:
+                meta = json.load(f)
+            feat_cols = meta.get("feature_cols", [])
+        else:
+            feat_cols = []
+        log(f"[OK] Clubes v2 cargado — AUC entrenamiento {meta.get('cv_auc_mean', '?')} | {len(feat_cols)} features")
+        return model, feat_cols
+    except Exception as e:
+        log(f"[WARN] Error cargando clubes v2: {e}")
+        return None, None
+
+
+def _calcular_forma_v2(home: str, away: str, fecha: str,
+                       df_hist: pd.DataFrame) -> dict:
+    """
+    Calcula wr5/wr3, net5/net3, gf5/ga5, h2h_home_wr para xgboost_clubes_v2.
+    Misma fuente que _calcular_forma_reciente (football-data.org CSVs) pero
+    con nombres de features en el formato del modelo v2.
+    """
+    feats = {}
+    if df_hist is None or df_hist.empty:
+        return feats
+
+    try:
+        fecha_dt = pd.to_datetime(fecha, errors="coerce")
+        if pd.isna(fecha_dt):
+            return feats
+        if getattr(fecha_dt, "tzinfo", None) is not None:
+            fecha_dt = fecha_dt.tz_localize(None)
+        col_date = df_hist["date"]
+        if hasattr(col_date.dtype, "tz") and col_date.dtype.tz is not None:
+            col_date = col_date.dt.tz_localize(None)
+
+        df_antes = df_hist[col_date < fecha_dt].copy()
+
+        def _get_team_games(equipo, n):
+            mask = (df_antes["home"] == equipo) | (df_antes["away"] == equipo)
+            if not mask.any() and equipo:
+                tok = equipo.split()[0]
+                mask = (df_antes["home"].str.startswith(tok, na=False) |
+                        df_antes["away"].str.startswith(tok, na=False))
+            return df_antes[mask].tail(n)
+
+        def _stats(equipo, partidos):
+            wins, gf, ga = [], [], []
+            for _, p in partidos.iterrows():
+                h = str(p.get("home", ""))
+                es_local = (h == equipo) or (equipo and h.startswith(equipo.split()[0]))
+                gh = float(p.get("home_goals", 0) or 0)
+                gaw = float(p.get("away_goals", 0) or 0)
+                if es_local:
+                    wins.append(1 if gh > gaw else 0)
+                    gf.append(gh); ga.append(gaw)
+                else:
+                    wins.append(1 if gaw > gh else 0)
+                    gf.append(gaw); ga.append(gh)
+            n = len(wins)
+            if n == 0:
+                return None
+            return {
+                "wr":  sum(wins) / n,
+                "net": (sum(gf) - sum(ga)) / n,
+                "gf":  sum(gf) / n,
+                "ga":  sum(ga) / n,
+            }
+
+        for equipo, lado in [(home, "home"), (away, "away")]:
+            g5 = _get_team_games(equipo, 5)
+            g3 = _get_team_games(equipo, 3)
+            s5 = _stats(equipo, g5) if len(g5) >= 3 else None
+            s3 = _stats(equipo, g3) if len(g3) >= 2 else None
+            feats[f"wr5_{lado}"]  = s5["wr"]  if s5 else 0.5
+            feats[f"net5_{lado}"] = s5["net"] if s5 else 0.0
+            feats[f"gf5_{lado}"]  = s5["gf"]  if s5 else 0.0
+            feats[f"ga5_{lado}"]  = s5["ga"]  if s5 else 0.0
+            feats[f"wr3_{lado}"]  = s3["wr"]  if s3 else 0.5
+            feats[f"net3_{lado}"] = s3["net"] if s3 else 0.0
+
+        feats["wr5_diff"]  = feats["wr5_home"]  - feats["wr5_away"]
+        feats["net5_diff"] = feats["net5_home"] - feats["net5_away"]
+        feats["wr3_diff"]  = feats["wr3_home"]  - feats["wr3_away"]
+        feats["net3_diff"] = feats["net3_home"] - feats["net3_away"]
+
+        # H2H: partidos entre home y away (últimos 10 enfrentamientos)
+        mask_h2h = (
+            ((df_antes["home"] == home) & (df_antes["away"] == away)) |
+            ((df_antes["home"] == away) & (df_antes["away"] == home))
+        )
+        if not mask_h2h.any() and home and away:
+            th, ta = home.split()[0], away.split()[0]
+            mask_h2h = (
+                (df_antes["home"].str.startswith(th, na=False) & df_antes["away"].str.startswith(ta, na=False)) |
+                (df_antes["home"].str.startswith(ta, na=False) & df_antes["away"].str.startswith(th, na=False))
+            )
+        h2h_df = df_antes[mask_h2h].tail(10)
+        if len(h2h_df) >= 2:
+            hw_wins = 0
+            for _, p in h2h_df.iterrows():
+                h = str(p.get("home", ""))
+                gh = float(p.get("home_goals", 0) or 0)
+                ga = float(p.get("away_goals", 0) or 0)
+                es_home_actual = h == home or (home and h.startswith(home.split()[0]))
+                if (es_home_actual and gh > ga) or (not es_home_actual and ga > gh):
+                    hw_wins += 1
+            feats["h2h_home_wr"] = hw_wins / len(h2h_df)
+        else:
+            feats["h2h_home_wr"] = 0.5
+
+    except Exception as e:
+        log(f"[WARN] _calcular_forma_v2 falló {home} vs {away}: {e}")
+
+    return feats
+
+
+def _construir_features_v2(partido: dict, pi_ratings: dict,
+                           df_hist: pd.DataFrame, feature_cols_v2: list) -> dict:
+    """Construye vector de features para xgboost_clubes_v2."""
+    home = partido.get("home_nombre") or partido.get("home_team", "")
+    away = partido.get("away_nombre") or partido.get("away_team", "")
+    fecha = partido.get("fecha") or str(date.today())
+    liga_id = int(partido.get("liga_id", LIGA_SERIE_A))
+
+    pi_home = pi_ratings.get(home, pi_ratings.get(home.split()[0] if home else "", 0.0))
+    pi_away = pi_ratings.get(away, pi_ratings.get(away.split()[0] if away else "", 0.0))
+
+    feats = {
+        "pi_home":  pi_home,
+        "pi_away":  pi_away,
+        "pi_diff":  pi_home - pi_away,
+        "liga_enc": float(LIGA_ENC_V2.get(liga_id, 4)),
+    }
+
+    # Rolling stats desde histórico
+    if df_hist is not None and not df_hist.empty:
+        feats.update(_calcular_forma_v2(home, away, fecha, df_hist))
+
+    # Market values desde Transfermarkt
+    try:
+        from entrenamiento.transfermarkt_collector import get_valor_plantilla, calcular_ratio_valor
+        v_h = get_valor_plantilla(home)
+        v_a = get_valor_plantilla(away)
+        if v_h and v_a:
+            mh = v_h["valor_total_mill_eur"]
+            ma = v_a["valor_total_mill_eur"]
+            ratio = calcular_ratio_valor(mh, ma)
+            feats["mv_home_m"]  = mh
+            feats["mv_away_m"]  = ma
+            feats["mv_ratio"]   = ratio.get("ratio_valor", 1.0)
+            feats["mv_diff_m"]  = ratio.get("diff_valor_mill", 0.0)
+        else:
+            feats.update({"mv_home_m": 0.0, "mv_away_m": 0.0, "mv_ratio": 1.0, "mv_diff_m": 0.0})
+    except Exception:
+        feats.update({"mv_home_m": 0.0, "mv_away_m": 0.0, "mv_ratio": 1.0, "mv_diff_m": 0.0})
+
+    # Rellenar cols faltantes con 0.0
+    for col in feature_cols_v2:
+        if col not in feats:
+            feats[col] = 0.0
+
+    return feats
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # FUNCIÓN PRINCIPAL
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -341,6 +522,9 @@ def predecir_partidos_hoy() -> list:
     modelo, scaler, feature_cols = _cargar_modelo()
     if modelo is None:
         return []
+
+    # Modelo v2 (clubes_v2 binario — ensemble con v1 para home_win)
+    modelo_v2, feature_cols_v2 = _cargar_modelo_clubes_v2()
 
     # Cargar Pi-Ratings
     pi_ratings = _cargar_pi_ratings()
@@ -463,6 +647,20 @@ def predecir_partidos_hoy() -> list:
         clases     = ["home_win", "draw", "away_win"]
         pred_str   = clases[pred_clase]
 
+        # Modelo v2 ensemble (solo home_win — binario: índice 1 = local gana)
+        prob_home_v2 = None
+        if modelo_v2 and feature_cols_v2:
+            try:
+                feats_v2 = _construir_features_v2(partido, pi_ratings, df_hist, feature_cols_v2)
+                X_v2 = pd.DataFrame([feats_v2])[feature_cols_v2].fillna(0.0)
+                prob_home_v2 = float(modelo_v2.predict_proba(X_v2.values)[0][1])
+                log(f"[v2] {home} vs {away} — P(home)={prob_home_v2:.3f}")
+                if pred_str == "home_win":
+                    confianza = (confianza + prob_home_v2) / 2
+                    log(f"[v2] Ensemble home_win → confianza={confianza:.3f}")
+            except Exception as e:
+                log(f"[WARN] Clubes v2 falló {home} vs {away}: {e}")
+
         # Aplicar umbral de confianza (per-liga)
         if confianza < umbral_liga:
             log(f"[INFO] {home} vs {away} — confianza {confianza:.2%} < {umbral_liga:.0%} → skip")
@@ -545,6 +743,7 @@ def predecir_partidos_hoy() -> list:
             "pi_rating_home":   round(features.get("pi_rating_home", 0.0), 4),
             "pi_rating_away":   round(features.get("pi_rating_away", 0.0), 4),
             "xg_diff_home":     round(features.get("xg_diferencial_5_home", 0.0), 4),
+            "prob_home_v2":     round(prob_home_v2, 4) if prob_home_v2 is not None else None,
             "lineup_confirmado": False,
             "bajas_criticas":   [],
             "fuente":           "ml_xgboost",
