@@ -1,0 +1,258 @@
+{
+  "Miami Dolphins": {
+    "season_wr": 0.4,
+    "wr6": 0.667,
+    "net6": 1.83,
+    "pts3": 23.33,
+    "def3": 27.67,
+    "is_dome": 0
+  },
+  "New York Giants": {
+    "season_wr": 0.188,
+    "wr6": 0.167,
+    "net6": -3.17,
+    "pts3": 22.67,
+    "def3": 18.33,
+    "is_dome": 0
+  },
+  "Indianapolis Colts": {
+    "season_wr": 0.533,
+    "wr6": 0.167,
+    "net6": -6.83,
+    "pts3": 20.67,
+    "def3": 34.0,
+    "is_dome": 1
+  },
+  "Los Angeles Rams": {
+    "season_wr": 0.688,
+    "wr6": 0.5,
+    "net6": 9.17,
+    "pts3": 34.0,
+    "def3": 33.0,
+    "is_dome": 1
+  },
+  "Kansas City Chiefs": {
+    "season_wr": 0.4,
+    "wr6": 0.167,
+    "net6": -5.5,
+    "pts3": 10.67,
+    "def3": 20.67,
+    "is_dome": 0
+  },
+  "Jacksonville Jaguars": {
+    "season_wr": 0.765,
+    "wr6": 1.0,
+    "net6": 20.17,
+    "pts3": 32.67,
+    "def3": 14.67,
+    "is_dome": 0
+  },
+  "Houston Texans": {
+    "season_wr": 0.688,
+    "wr6": 1.0,
+    "net6": 7.33,
+    "pts3": 27.67,
+    "def3": 19.0,
+    "is_dome": 1
+  },
+  "Philadelphia Eagles": {
+    "season_wr": 0.647,
+    "wr6": 0.5,
+    "net6": 4.0,
+    "pts3": 19.67,
+    "def3": 18.0,
+    "is_dome": 0
+  },
+  "Green Bay Packers": {
+    "season_wr": 0.643,
+    "wr6": 0.667,
+    "net6": 4.0,
+    "pts3": 23.33,
+    "def3": 25.67,
+    "is_dome": 0
+  },
+  "San Francisco 49ers": {
+    "season_wr": 0.75,
+    "wr6": 1.0,
+    "net6": 14.33,
+    "pts3": 42.33,
+    "def3": 29.67,
+    "is_dome": 0
+  },
+  "Minnesota Vikings": {
+    "season_wr": 0.5,
+    "wr6": 0.667,
+    "net6": 2.0,
+    "pts3": 24.33,
+    "def3": 16.33,
+    "is_dome": 1
+  },
+  "Tennessee Titans": {
+    "season_wr": 0.2,
+    "wr6": 0.333,
+    "net6": -4.17,
+    "pts3": 27.0,
+    "def3": 25.0,
+    "is_dome": 0
+  },
+  "Pittsburgh Steelers": {
+    "season_wr": 0.588,
+    "wr6": 0.667,
+    "net6": -0.17,
+    "pts3": 20.33,
+    "def3": 20.33,
+    "is_dome": 0
+  },
+  "Arizona Cardinals": {
+    "season_wr": 0.214,
+    "wr6": 0.0,
+    "net6": -15.83,
+    "pts3": 18.0,
+    "def3": 35.0,
+    "is_dome": 1
+  },
+  "Washington Commanders": {
+    "season_wr": 0.267,
+    "wr6": 0.167,
+    "net6": -10.0,
+    "pts3": 15.67,
+    "def3": 27.0,
+    "is_dome": 0
+  },
+  "New Orleans Saints": {
+    "season_wr": 0.286,
+    "wr6": 0.5,
+    "net6": -4.17,
+    "pts3": 20.33,
+    "def3": 19.33,
+    "is_dome": 1
+  },
+  "Atlanta Falcons": {
+    "season_wr": 0.438,
+    "wr6": 0.667,
+    "net6": -1.0,
+    "pts3": 27.33,
+    "def3": 23.67,
+    "is_dome": 1
+  },
+  "Cincinnati Bengals": {
+    "season_wr": 0.375,
+    "wr6": 0.5,
+    "net6": 5.0,
+    "pts3": 27.33,
+    "def3": 19.67,
+    "is_dome": 0
+  },
+  "Las Vegas Raiders": {
+    "season_wr": 0.125,
+    "wr6": 0.0,
+    "net6": -15.83,
+    "pts3": 10.33,
+    "def3": 29.33,
+    "is_dome": 1
+  },
+  "Detroit Lions": {
+    "season_wr": 0.571,
+    "wr6": 0.5,
+    "net6": 3.67,
+    "pts3": 34.0,
+    "def3": 34.0,
+    "is_dome": 1
+  },
+  "Carolina Panthers": {
+    "season_wr": 0.471,
+    "wr6": 0.333,
+    "net6": -4.5,
+    "pts3": 15.67,
+    "def3": 21.0,
+    "is_dome": 0
+  },
+  "Buffalo Bills": {
+    "season_wr": 0.688,
+    "wr6": 0.667,
+    "net6": 4.33,
+    "pts3": 23.33,
+    "def3": 21.33,
+    "is_dome": 0
+  },
+  "Seattle Seahawks": {
+    "season_wr": 0.824,
+    "wr6": 1.0,
+    "net6": 15.5,
+    "pts3": 27.0,
+    "def3": 6.33,
+    "is_dome": 0
+  },
+  "Chicago Bears": {
+    "season_wr": 0.647,
+    "wr6": 0.5,
+    "net6": 4.0,
+    "pts3": 28.33,
+    "def3": 29.33,
+    "is_dome": 0
+  },
+  "New York Jets": {
+    "season_wr": 0.2,
+    "wr6": 0.167,
+    "net6": -16.33,
+    "pts3": 12.0,
+    "def3": 37.0,
+    "is_dome": 0
+  },
+  "Tampa Bay Buccaneers": {
+    "season_wr": 0.438,
+    "wr6": 0.167,
+    "net6": -5.83,
+    "pts3": 21.67,
+    "def3": 24.0,
+    "is_dome": 0
+  },
+  "Baltimore Ravens": {
+    "season_wr": 0.5,
+    "wr6": 0.667,
+    "net6": 4.83,
+    "pts3": 20.0,
+    "def3": 19.67,
+    "is_dome": 0
+  },
+  "New England Patriots": {
+    "season_wr": 0.824,
+    "wr6": 1.0,
+    "net6": 15.33,
+    "pts3": 18.0,
+    "def3": 8.67,
+    "is_dome": 0
+  },
+  "Los Angeles Chargers": {
+    "season_wr": 0.733,
+    "wr6": 0.833,
+    "net6": 4.33,
+    "pts3": 24.0,
+    "def3": 16.33,
+    "is_dome": 1
+  },
+  "Dallas Cowboys": {
+    "season_wr": 0.462,
+    "wr6": 0.5,
+    "net6": -1.5,
+    "pts3": 29.0,
+    "def3": 35.33,
+    "is_dome": 1
+  },
+  "Denver Broncos": {
+    "season_wr": 0.824,
+    "wr6": 0.833,
+    "net6": 4.5,
+    "pts3": 24.0,
+    "def3": 15.33,
+    "is_dome": 0
+  },
+  "Cleveland Browns": {
+    "season_wr": 0.2,
+    "wr6": 0.167,
+    "net6": -7.33,
+    "pts3": 17.33,
+    "def3": 28.33,
+    "is_dome": 0
+  }
+}

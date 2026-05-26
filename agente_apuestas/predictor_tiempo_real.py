@@ -1240,6 +1240,523 @@ def predecir_tenis_hoy() -> list:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# NBA  (xgboost_nba_v2.pkl — AUC 0.6804)
+# Fuente fixtures: api-sports Basketball (v2.basketball.api-sports.io, liga 12)
+# Fuente features: nba_features.py (nba_api) + nba_team_lookup_2024.json
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Mapeo abreviación dataset → nombre api-sports Basketball
+_NBA_ABR_TO_NAME = {
+    "ATL": "Atlanta Hawks",       "BKN": "Brooklyn Nets",
+    "BOS": "Boston Celtics",      "CHA": "Charlotte Hornets",
+    "CHI": "Chicago Bulls",       "CLE": "Cleveland Cavaliers",
+    "DAL": "Dallas Mavericks",    "DEN": "Denver Nuggets",
+    "DET": "Detroit Pistons",     "GSW": "Golden State Warriors",
+    "HOU": "Houston Rockets",     "IND": "Indiana Pacers",
+    "LAC": "LA Clippers",         "LAL": "Los Angeles Lakers",
+    "MEM": "Memphis Grizzlies",   "MIA": "Miami Heat",
+    "MIL": "Milwaukee Bucks",     "MIN": "Minnesota Timberwolves",
+    "NOP": "New Orleans Pelicans","NYK": "New York Knicks",
+    "OKC": "Oklahoma City Thunder","ORL": "Orlando Magic",
+    "PHI": "Philadelphia 76ers",  "PHX": "Phoenix Suns",
+    "POR": "Portland Trail Blazers","SAC": "Sacramento Kings",
+    "SAS": "San Antonio Spurs",   "TOR": "Toronto Raptors",
+    "UTA": "Utah Jazz",           "WAS": "Washington Wizards",
+}
+_NBA_NAME_TO_ABR = {v: k for k, v in _NBA_ABR_TO_NAME.items()}
+
+_nba_team_lookup: dict = {}
+
+
+def _cargar_nba_team_lookup() -> dict:
+    global _nba_team_lookup
+    if _nba_team_lookup:
+        return _nba_team_lookup
+    path = BASE_DIR / "models" / "nba_team_lookup_2024.json"
+    if path.exists():
+        with open(path) as f:
+            raw = json.load(f)
+        # Convertir abreviaciones → nombres completos
+        _nba_team_lookup = {_NBA_ABR_TO_NAME.get(k, k): v for k, v in raw.items()}
+    return _nba_team_lookup
+
+
+def _construir_features_nba(home: str, away: str, nba_feats: dict,
+                              team_lookup: dict, feature_cols: list) -> dict:
+    """
+    Mapea nba_features.py + nba_team_lookup_2024.json al vector del modelo v2.
+    Box score avanzado (fg%, reb, ast, tov) usa lookup de entrenamiento como prior.
+    win_pct_l10 + rest_days de nba_features (tiempo real) sobreescriben el lookup.
+    """
+    h = nba_feats.get("home", {})
+    a = nba_feats.get("away", {})
+    th = team_lookup.get(home, {})
+    ta = team_lookup.get(away, {})
+
+    wr10_h = h.get("win_pct_l10", th.get("wr10", 0.5))
+    wr10_a = a.get("win_pct_l10", ta.get("wr10", 0.5))
+    net10_h = th.get("net10", 0.0)
+    net10_a = ta.get("net10", 0.0)
+    rest_h  = float(h.get("rest_days", 1))
+    rest_a  = float(a.get("rest_days", 1))
+
+    feats = {
+        # win rate (x5 y x10 → misma fuente win_pct_l10 como proxy)
+        "wr5_home":   wr10_h, "wr5_away":  wr10_a, "wr5_diff":  wr10_h - wr10_a,
+        "wr10_home":  wr10_h, "wr10_away": wr10_a, "wr10_diff": wr10_h - wr10_a,
+        # net rating
+        "net5_home":  net10_h, "net5_away":  net10_a, "net5_diff":  net10_h - net10_a,
+        "net10_home": net10_h, "net10_away": net10_a, "net10_diff": net10_h - net10_a,
+        # box score del lookup (prior de entrenamiento)
+        "fg5_home":   th.get("fg10", 0.47), "fg5_away":  ta.get("fg10", 0.47),
+        "fg5_diff":   th.get("fg10", 0.47) - ta.get("fg10", 0.47),
+        "fg35_home":  th.get("fg310", 0.36), "fg35_away": ta.get("fg310", 0.36),
+        "fg35_diff":  th.get("fg310", 0.36) - ta.get("fg310", 0.36),
+        "fg10_home":  th.get("fg10", 0.47), "fg10_away": ta.get("fg10", 0.47),
+        "fg10_diff":  th.get("fg10", 0.47) - ta.get("fg10", 0.47),
+        "fg310_home": th.get("fg310", 0.36), "fg310_away": ta.get("fg310", 0.36),
+        "fg310_diff": th.get("fg310", 0.36) - ta.get("fg310", 0.36),
+        "reb5_home":  th.get("reb10", 44.0), "reb5_away": ta.get("reb10", 44.0),
+        "reb5_diff":  th.get("reb10", 44.0) - ta.get("reb10", 44.0),
+        "reb10_home": th.get("reb10", 44.0), "reb10_away": ta.get("reb10", 44.0),
+        "reb10_diff": th.get("reb10", 44.0) - ta.get("reb10", 44.0),
+        "ast5_home":  th.get("ast10", 25.0), "ast5_away": ta.get("ast10", 25.0),
+        "ast5_diff":  th.get("ast10", 25.0) - ta.get("ast10", 25.0),
+        "ast10_home": th.get("ast10", 25.0), "ast10_away": ta.get("ast10", 25.0),
+        "ast10_diff": th.get("ast10", 25.0) - ta.get("ast10", 25.0),
+        "tov5_home":  th.get("tov10", 14.0), "tov5_away": ta.get("tov10", 14.0),
+        "tov5_diff":  th.get("tov10", 14.0) - ta.get("tov10", 14.0),
+        "tov10_home": th.get("tov10", 14.0), "tov10_away": ta.get("tov10", 14.0),
+        "tov10_diff": th.get("tov10", 14.0) - ta.get("tov10", 14.0),
+        # season stats
+        "season_wr_home": th.get("season_wr", wr10_h),
+        "season_wr_away": ta.get("season_wr", wr10_a),
+        "season_wr_diff": th.get("season_wr", wr10_h) - ta.get("season_wr", wr10_a),
+        # rest
+        "days_rest_home": rest_h,
+        "days_rest_away": rest_a,
+        "b2b_home":       float(rest_h <= 1),
+        "b2b_away":       float(rest_a <= 1),
+        "rest_diff":      rest_h - rest_a,
+        # H2H
+        "h2h_home_wr":    0.5,
+    }
+    for col in feature_cols:
+        feats.setdefault(col, 0.0)
+    return feats
+
+
+def predecir_nba_hoy() -> list:
+    """
+    Predice partidos NBA de hoy con xgboost_nba_v2.pkl (AUC 0.6804).
+    Fixtures via api-sports Basketball (liga 12 = NBA).
+    """
+    log("[NBA] Iniciando predictor NBA v2...")
+
+    pkl_path  = BASE_DIR / "models" / "xgboost_nba_v2.pkl"
+    meta_path = BASE_DIR / "models" / "xgboost_nba_v2_meta.json"
+    if not pkl_path.exists():
+        log("[NBA] xgboost_nba_v2.pkl no encontrado — skip")
+        return []
+    try:
+        modelo_nba = joblib.load(pkl_path)
+        with open(meta_path) as f:
+            meta = json.load(f)
+        feature_cols = meta.get("feature_cols", [])
+        log(f"[NBA] Modelo cargado — AUC {meta.get('cv_auc_mean','?')} | {len(feature_cols)} features")
+    except Exception as e:
+        log(f"[NBA] Error cargando modelo: {e}")
+        return []
+
+    team_lookup = _cargar_nba_team_lookup()
+
+    # Fixtures via api-sports Basketball
+    try:
+        from fixtures_collector import get_fixtures_basketball
+        partidos_raw = get_fixtures_basketball(liga_id=12)  # 12 = NBA
+    except Exception as e:
+        log(f"[NBA] fixtures_collector error: {e}")
+        return []
+
+    partidos_hoy = [p for p in partidos_raw
+                    if p.get("estado_short") in ("NS", "Not Started")]
+    if not partidos_hoy:
+        log(f"[NBA] Sin partidos NBA hoy ({date.today()})")
+        return []
+
+    log(f"[NBA] {len(partidos_hoy)} partidos hoy")
+
+    try:
+        from odds_collector import get_odds_partido
+    except Exception:
+        get_odds_partido = None
+
+    try:
+        from nba_features import get_nba_features
+    except Exception:
+        get_nba_features = None
+
+    UMBRAL_NBA   = 0.62
+    VALUE_MIN_NBA = 0.05
+    recomendaciones = []
+
+    for partido in partidos_hoy:
+        home = partido.get("home_nombre", "")
+        away = partido.get("away_nombre", "")
+        if not home or not away:
+            continue
+
+        log(f"[NBA] Analizando: {away} @ {home}")
+
+        nba_feats = {"home": {}, "away": {}}
+        if get_nba_features:
+            try:
+                nba_feats = get_nba_features(home, away)
+            except Exception as e:
+                log(f"[NBA] nba_features error: {e}")
+
+        features = _construir_features_nba(home, away, nba_feats, team_lookup, feature_cols)
+        X = pd.DataFrame([features])[feature_cols].fillna(0.0)
+
+        try:
+            proba = modelo_nba.predict_proba(X.values)[0]
+        except Exception as e:
+            log(f"[NBA] predict_proba error {home} vs {away}: {e}")
+            continue
+
+        prob_home = float(proba[1])
+        prob_away = float(proba[0])
+        pred_str  = "home_win" if prob_home >= prob_away else "away_win"
+        confianza = max(prob_home, prob_away)
+
+        if confianza < UMBRAL_NBA:
+            log(f"[NBA] {home} vs {away} — conf {confianza:.1%} < {UMBRAL_NBA:.0%} → skip")
+            continue
+
+        h2h_odds = {}
+        if get_odds_partido:
+            try:
+                cuotas = get_odds_partido(home_nombre=home, away_nombre=away,
+                                          liga_nombre="NBA", markets=["h2h"])
+                if cuotas:
+                    h2h_odds = cuotas.get("h2h", {})
+            except Exception:
+                pass
+
+        cuota = h2h_odds.get("home") if pred_str == "home_win" else h2h_odds.get("away")
+        if not cuota or cuota <= 1.0:
+            log(f"[NBA] Sin cuota para {home} vs {away} → skip")
+            continue
+
+        value = confianza * cuota - 1
+        if value < VALUE_MIN_NBA:
+            log(f"[NBA] {home} vs {away} — value {value:.1%} < {VALUE_MIN_NBA:.0%} → skip")
+            continue
+
+        kelly = (confianza * cuota - 1) / (cuota - 1)
+        monto_kelly = int(kelly * 0.25 * BANKROLL)
+        try:
+            from config import MONTO_AUTONOMO
+            monto = min(monto_kelly, MONTO_AUTONOMO)
+        except Exception:
+            monto = monto_kelly
+
+        rec = {
+            "fixture_id":        partido.get("fixture_id") or f"nba_{home}_{away}",
+            "liga":              "NBA",
+            "liga_id":           12,
+            "deporte":           "basketball",
+            "home":              home,
+            "away":              away,
+            "fecha":             str(date.today()),
+            "fecha_partido":     str(date.today()),
+            "hora":              partido.get("fecha", ""),
+            "tipo_apuesta":      "MONEYLINE",
+            "seleccion":         "HOME" if pred_str == "home_win" else "AWAY",
+            "prob_modelo":       round(confianza, 4),
+            "pred_clase":        pred_str,
+            "seleccion_legible": f"{home} gana" if pred_str == "home_win" else f"{away} gana",
+            "nombre_betano":     "1 (Local)" if pred_str == "home_win" else "2 (Visitante)",
+            "confianza":         round(confianza, 4),
+            "prob_home":         round(prob_home, 4),
+            "prob_away":         round(prob_away, 4),
+            "prob_draw":         0.0,
+            "cuota":             round(float(cuota), 2),
+            "value":             round(float(value), 4),
+            "monto_kelly_clp":   monto_kelly,
+            "monto_autonomo":    monto,
+            "pi_diff":           0.0,
+            "pi_rating_home":    0.0,
+            "pi_rating_away":    0.0,
+            "xg_diff_home":      0.0,
+            "net10_home":        round(features.get("net10_home", 0.0), 2),
+            "net10_away":        round(features.get("net10_away", 0.0), 2),
+            "b2b_home":          bool(features.get("b2b_home", 0)),
+            "b2b_away":          bool(features.get("b2b_away", 0)),
+            "fuente":            "ml_xgboost_nba_v2",
+        }
+
+        log(f"[NBA] RECOMENDACION: {home} vs {away} | {rec['seleccion_legible']} | "
+            f"conf={confianza:.1%} | value={value:.1%} | cuota={cuota}")
+        recomendaciones.append(rec)
+
+    log(f"[NBA] Predictor finalizado — {len(recomendaciones)} recomendaciones")
+    return recomendaciones
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NFL  (xgboost_nfl.pkl — AUC 0.6435)
+# Fuente fixtures: api-sports American Football (v1.american-football.api-sports.io)
+# Fuente features: nfl_team_lookup_2024.json + weather_collector.py
+# Temporada: septiembre–febrero. Fuera de temporada → retorna []
+# ─────────────────────────────────────────────────────────────────────────────
+
+_nfl_team_lookup: dict = {}
+APISPORTS_NFL = "https://v1.american-football.api-sports.io"
+
+
+def _cargar_nfl_team_lookup() -> dict:
+    global _nfl_team_lookup
+    if _nfl_team_lookup:
+        return _nfl_team_lookup
+    path = BASE_DIR / "models" / "nfl_team_lookup_2024.json"
+    if path.exists():
+        with open(path) as f:
+            _nfl_team_lookup = json.load(f)
+    return _nfl_team_lookup
+
+
+def _get_nfl_fixtures_hoy() -> list[dict]:
+    """Obtiene partidos NFL del día vía api-sports American Football."""
+    import requests
+    try:
+        from config import HEADERS_APISPORTS
+        resp = requests.get(
+            f"{APISPORTS_NFL}/games",
+            headers=HEADERS_APISPORTS,
+            params={"date": date.today().isoformat(), "league": 1, "season": 2025},
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            return []
+        data = resp.json()
+        partidos = []
+        for g in data.get("response", []):
+            estado = g.get("game", {}).get("status", {}).get("short", "")
+            if estado not in ("NS", "Not Started"):
+                continue
+            partidos.append({
+                "fixture_id":  g.get("game", {}).get("id"),
+                "home":        g.get("teams", {}).get("home", {}).get("name", ""),
+                "away":        g.get("teams", {}).get("away", {}).get("name", ""),
+                "venue":       g.get("game", {}).get("venue", {}).get("name", ""),
+                "ciudad":      g.get("game", {}).get("venue", {}).get("city", ""),
+                "fecha":       g.get("game", {}).get("date", {}).get("date", str(date.today())),
+                "week":        g.get("game", {}).get("week", ""),
+                "is_playoff":  int(str(g.get("game", {}).get("week", "")).lower() in
+                                   ("wild card", "divisional", "conference", "super bowl")),
+            })
+        return partidos
+    except Exception as e:
+        log(f"[NFL] Fixtures no disponibles: {e}")
+        return []
+
+
+def _construir_features_nfl(home: str, away: str, fixture: dict,
+                              team_lookup: dict, feature_cols: list) -> dict:
+    th = team_lookup.get(home, {})
+    ta = team_lookup.get(away, {})
+
+    wr6_h = th.get("wr6", 0.5)
+    wr6_a = ta.get("wr6", 0.5)
+    net6_h = th.get("net6", 0.0)
+    net6_a = ta.get("net6", 0.0)
+
+    # Weather via weather_collector
+    temp, wind, is_dome = 70.0, 5.0, int(th.get("is_dome", 0))
+    is_rain = is_snow = is_cold = is_windy = bad_weather = 0
+    if not is_dome:
+        try:
+            from weather_collector import get_weather
+            w = get_weather(fixture.get("ciudad", ""), fixture.get("fecha", ""))
+            if w and w.get("disponible"):
+                temp    = float(w.get("temp_f", 70))
+                wind    = float(w.get("wind_mph", 5))
+                is_rain = int(w.get("is_rain", 0))
+                is_snow = int(w.get("is_snow", 0))
+                is_cold = int(temp < 32)
+                is_windy = int(wind > 15)
+                bad_weather = int(is_rain or is_snow or is_cold or is_windy)
+        except Exception:
+            pass
+
+    week_str = str(fixture.get("week", "1"))
+    try:
+        week_num = int(week_str)
+    except (ValueError, TypeError):
+        week_num = 1
+
+    feats = {
+        "home_wr3":       wr6_h, "away_wr3":       wr6_a, "wr3_diff":       wr6_h - wr6_a,
+        "home_net3":      net6_h, "away_net3":      net6_a, "net3_diff":      net6_h - net6_a,
+        "home_pts3":      th.get("pts3", 24.0), "away_pts3": ta.get("pts3", 24.0),
+        "home_def3":      th.get("def3", 24.0), "away_def3": ta.get("def3", 24.0),
+        "home_wr6":       wr6_h, "away_wr6":       wr6_a, "wr6_diff":       wr6_h - wr6_a,
+        "home_net6":      net6_h, "away_net6":      net6_a, "net6_diff":      net6_h - net6_a,
+        "home_season_wr": th.get("season_wr", 0.5), "away_season_wr": ta.get("season_wr", 0.5),
+        "season_wr_diff": th.get("season_wr", 0.5) - ta.get("season_wr", 0.5),
+        "home_days_rest": 7.0, "away_days_rest": 7.0,
+        "home_short_wk":  0.0, "away_short_wk":  0.0, "rest_diff": 0.0,
+        "h2h_home_wr":    0.5, "h2h_n":          0.0,
+        "temp":           temp, "wind":           wind,
+        "is_dome":        float(is_dome), "is_rain": float(is_rain),
+        "is_snow":        float(is_snow), "is_cold": float(is_cold),
+        "is_windy":       float(is_windy), "bad_weather": float(bad_weather),
+        "week_num":       float(week_num),
+        "is_playoff":     float(fixture.get("is_playoff", 0)),
+        "neutral_site":   0.0,
+    }
+    for col in feature_cols:
+        feats.setdefault(col, 0.0)
+    return feats
+
+
+def predecir_nfl_hoy() -> list:
+    """
+    Predice partidos NFL de hoy con xgboost_nfl.pkl (AUC 0.6435).
+    Fuera de temporada (no hay fixtures) → retorna [] sin error.
+    """
+    log("[NFL] Iniciando predictor NFL...")
+
+    pkl_path  = BASE_DIR / "models" / "xgboost_nfl.pkl"
+    meta_path = BASE_DIR / "models" / "xgboost_nfl_meta.json"
+    if not pkl_path.exists():
+        log("[NFL] xgboost_nfl.pkl no encontrado — skip")
+        return []
+    try:
+        modelo_nfl = joblib.load(pkl_path)
+        with open(meta_path) as f:
+            meta = json.load(f)
+        feature_cols = meta.get("feature_cols") or meta.get("features", [])
+        log(f"[NFL] Modelo cargado — AUC {meta.get('cv_auc_mean') or meta.get('cv_auc','?')} | {len(feature_cols)} features")
+    except Exception as e:
+        log(f"[NFL] Error cargando modelo: {e}")
+        return []
+
+    team_lookup = _cargar_nfl_team_lookup()
+    partidos    = _get_nfl_fixtures_hoy()
+
+    if not partidos:
+        log(f"[NFL] Sin partidos NFL hoy (temporada sep-feb, hoy={date.today()})")
+        return []
+
+    log(f"[NFL] {len(partidos)} partidos hoy")
+
+    try:
+        from odds_collector import get_odds_partido
+    except Exception:
+        get_odds_partido = None
+
+    UMBRAL_NFL   = 0.60
+    VALUE_MIN_NFL = 0.05
+    recomendaciones = []
+
+    for fixture in partidos:
+        home, away = fixture["home"], fixture["away"]
+        if not home or not away:
+            continue
+
+        log(f"[NFL] Analizando: {away} @ {home}")
+
+        features = _construir_features_nfl(home, away, fixture, team_lookup, feature_cols)
+        X = pd.DataFrame([features])[feature_cols].fillna(0.0)
+
+        try:
+            proba = modelo_nfl.predict_proba(X.values)[0]
+        except Exception as e:
+            log(f"[NFL] predict_proba error {home} vs {away}: {e}")
+            continue
+
+        prob_home = float(proba[1])
+        prob_away = float(proba[0])
+        pred_str  = "home_win" if prob_home >= prob_away else "away_win"
+        confianza = max(prob_home, prob_away)
+
+        if confianza < UMBRAL_NFL:
+            log(f"[NFL] {home} vs {away} — conf {confianza:.1%} < {UMBRAL_NFL:.0%} → skip")
+            continue
+
+        h2h_odds = {}
+        if get_odds_partido:
+            try:
+                cuotas = get_odds_partido(home_nombre=home, away_nombre=away,
+                                          liga_nombre="NFL", markets=["h2h"])
+                if cuotas:
+                    h2h_odds = cuotas.get("h2h", {})
+            except Exception:
+                pass
+
+        cuota = h2h_odds.get("home") if pred_str == "home_win" else h2h_odds.get("away")
+        if not cuota or cuota <= 1.0:
+            log(f"[NFL] Sin cuota para {home} vs {away} → skip")
+            continue
+
+        value = confianza * cuota - 1
+        if value < VALUE_MIN_NFL:
+            log(f"[NFL] {home} vs {away} — value {value:.1%} → skip")
+            continue
+
+        kelly = (confianza * cuota - 1) / (cuota - 1)
+        monto_kelly = int(kelly * 0.25 * BANKROLL)
+        try:
+            from config import MONTO_AUTONOMO
+            monto = min(monto_kelly, MONTO_AUTONOMO)
+        except Exception:
+            monto = monto_kelly
+
+        rec = {
+            "fixture_id":        fixture.get("fixture_id") or f"nfl_{home}_{away}",
+            "liga":              "NFL",
+            "liga_id":           None,
+            "deporte":           "americanfootball",
+            "home":              home,
+            "away":              away,
+            "fecha":             fixture.get("fecha", str(date.today())),
+            "fecha_partido":     fixture.get("fecha", str(date.today())),
+            "hora":              "",
+            "tipo_apuesta":      "MONEYLINE",
+            "seleccion":         "HOME" if pred_str == "home_win" else "AWAY",
+            "prob_modelo":       round(confianza, 4),
+            "pred_clase":        pred_str,
+            "seleccion_legible": f"{home} gana" if pred_str == "home_win" else f"{away} gana",
+            "nombre_betano":     "1 (Local)" if pred_str == "home_win" else "2 (Visitante)",
+            "confianza":         round(confianza, 4),
+            "prob_home":         round(prob_home, 4),
+            "prob_away":         round(prob_away, 4),
+            "prob_draw":         0.0,
+            "cuota":             round(float(cuota), 2),
+            "value":             round(float(value), 4),
+            "monto_kelly_clp":   monto_kelly,
+            "monto_autonomo":    monto,
+            "pi_diff":           0.0,
+            "pi_rating_home":    0.0,
+            "pi_rating_away":    0.0,
+            "xg_diff_home":      0.0,
+            "weather_bad":       bool(features.get("bad_weather", 0)),
+            "is_dome":           bool(features.get("is_dome", 0)),
+            "is_playoff":        bool(fixture.get("is_playoff", 0)),
+            "fuente":            "ml_xgboost_nfl",
+        }
+
+        log(f"[NFL] RECOMENDACION: {home} vs {away} | {rec['seleccion_legible']} | "
+            f"conf={confianza:.1%} | value={value:.1%} | cuota={cuota}")
+        recomendaciones.append(rec)
+
+    log(f"[NFL] Predictor finalizado — {len(recomendaciones)} recomendaciones")
+    return recomendaciones
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # TEST
 # ─────────────────────────────────────────────────────────────────────────────
 

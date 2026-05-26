@@ -122,6 +122,36 @@ https://www.retrosheet.org/gamelogs/gl{year}.zip
 - Para draw/away_win → v2 da P(home) como metadata sin afectar la predicción
 - Log: `[v2] {home} vs {away} — P(home)={p:.3f}` para cada partido
 
+**xgboost_tenis_v2.pkl integrado (2026-05-25):**
+- `tenis_features.py` (módulo independiente): fixtures via api-sports Tennis, 30 features, lookups JSON (elo_state, rank_state, h2h, winrate)
+- `predecir_tenis_hoy()` en predictor_tiempo_real.py, umbral UMBRAL_TENIS=0.62
+- Fav = mejor ranked; modelo predice P(fav gana); graceful degradation si lookup vacío
+
+**xgboost_mlb_v3.pkl integrado (2026-05-25):**
+- `predecir_mlb_hoy()`: fixtures via MLB-StatsAPI (gratis), features rolling + SP ERA/FIP real-time
+- `mlb_team_lookup_2023.json`: mapeo Retrosheet codes → nombres StatsAPI (30 equipos)
+- sp_fip = sp_era × 1.05 como proxy cuando FanGraphs no disponible
+- Umbral UMBRAL_MLB=0.58, umbral EV EV_UMBRAL_MLB=0.04
+
+**xgboost_nba_v2.pkl integrado (2026-05-25):**
+- `predecir_nba_hoy()`: fixtures via api-sports Basketball (liga_id=12)
+- `nba_team_lookup_2024.json`: 30 equipos con wr10/net10/fg/reb/ast/tov como prior
+- `_NBA_ABR_TO_NAME` mapeo abreviaciones dataset → nombres api-sports
+- 51 features (rolling 5/10, box score prior, season_wr, back2back, H2H)
+- Umbral UMBRAL_NBA=0.62
+
+**xgboost_nfl.pkl integrado (2026-05-25):**
+- `predecir_nfl_hoy()`: fixtures via api-sports American Football (`v1.american-football.api-sports.io`, liga=1, season=2025)
+- `nfl_team_lookup_2024.json`: 32 equipos con season_wr/wr6/net6/pts3/def3/is_dome
+- Weather real via `weather_collector.py` (temp/wind/rain/snow/bad_weather)
+- Off-season (mayo-agosto): retorna [] silenciosamente sin error
+- Umbral UMBRAL_NFL=0.60
+
+**run_agent.py integración completa (2026-05-25):**
+- Paso 3c: MLB (⚾), Paso 3d: Tenis (🎾), Paso 3e: NBA (🏀), Paso 3f: NFL (🏈)
+- `_enviar_recs_ml_telegram(recs, deporte, icono)`: helper unificado Telegram
+- Todos con graceful degradation (try/except, log WARNING en fallo)
+
 ## Pendiente
 
 - [x] xgboost_tenis_v2.pkl integrado en predictor_tiempo_real.py (2026-05-25)
@@ -130,6 +160,9 @@ https://www.retrosheet.org/gamelogs/gl{year}.zip
 - [x] MLB v2: pitcher ERA, AUC 0.6548 (2026-05-25)
 - [x] MLB v3: ERA+FIP, AUC 0.6637 (2026-05-25)
 - [x] NBA upgrade: completado, AUC 0.6804 (mejora marginal +0.0007, no significativa estadisticamente)
+- [x] NBA v2 integrado en producción (2026-05-25)
+- [x] NFL integrado en producción (2026-05-25)
+- [x] run_agent.py: Pasos 3c-3f completos — MLB/Tenis/NBA/NFL (2026-05-25)
 
 ## Datos confirmados — Retrosheet pitcher fields (0-indexed)
 - Field 93 = Home starting pitcher retroID (ej: "strom001")

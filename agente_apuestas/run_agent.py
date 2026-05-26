@@ -118,15 +118,21 @@ except ImportError:
 ML_DISPONIBLE       = False
 MLB_ML_DISPONIBLE   = False
 TENIS_ML_DISPONIBLE = False
+NBA_ML_DISPONIBLE   = False
+NFL_ML_DISPONIBLE   = False
 predecir_partidos_hoy = predecir_mlb_hoy = predecir_tenis_hoy = None
+predecir_nba_hoy = predecir_nfl_hoy = None
 try:
     from predictor_tiempo_real import (
         predecir_partidos_hoy,
         predecir_mlb_hoy,
         predecir_tenis_hoy,
+        predecir_nba_hoy,
+        predecir_nfl_hoy,
     )
     ML_DISPONIBLE = MLB_ML_DISPONIBLE = TENIS_ML_DISPONIBLE = True
-    log.info("[OK] Predictor ML cargado — XGBoost fútbol + MLB v3 + Tenis ATP v2")
+    NBA_ML_DISPONIBLE = NFL_ML_DISPONIBLE = True
+    log.info("[OK] Predictor ML cargado — XGBoost fútbol + MLB v3 + Tenis ATP v2 + NBA v2 + NFL")
 except Exception as _ml_err:
     log.warning(f"[WARN] Predictor ML no disponible: {_ml_err}")
     log.info("[INFO] Usando sistema de reglas como fallback")
@@ -1134,6 +1140,34 @@ def main():
                 log.info("[INFO] Tenis: sin recomendaciones para hoy (sin fixtures o sin value)")
         except Exception as e:
             log.warning(f"[WARN] Error en predictor Tenis: {e}")
+
+    # 3e. Predictor ML NBA
+    if NBA_ML_DISPONIBLE:
+        log.info("")
+        log.info("── Paso 3e: predictor ML NBA v2 ────────────────────────────")
+        try:
+            recs_nba = predecir_nba_hoy()
+            if recs_nba:
+                log.info(f"[OK] NBA: {len(recs_nba)} recomendaciones")
+                _enviar_recs_ml_telegram(recs_nba, "nba", "🏀")
+            else:
+                log.info("[INFO] NBA: sin recomendaciones para hoy (sin partidos o sin value)")
+        except Exception as e:
+            log.warning(f"[WARN] Error en predictor NBA: {e}")
+
+    # 3f. Predictor ML NFL
+    if NFL_ML_DISPONIBLE:
+        log.info("")
+        log.info("── Paso 3f: predictor ML NFL ───────────────────────────────")
+        try:
+            recs_nfl = predecir_nfl_hoy()
+            if recs_nfl:
+                log.info(f"[OK] NFL: {len(recs_nfl)} recomendaciones")
+                _enviar_recs_ml_telegram(recs_nfl, "nfl", "🏈")
+            else:
+                log.info("[INFO] NFL: sin recomendaciones para hoy (off-season o sin value)")
+        except Exception as e:
+            log.warning(f"[WARN] Error en predictor NFL: {e}")
 
     # 4. Priorizar y limitar
     todos = _priorizar(todos)[:MAX_FIXTURES]
