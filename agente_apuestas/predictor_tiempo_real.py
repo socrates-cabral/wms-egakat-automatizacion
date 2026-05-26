@@ -338,12 +338,11 @@ def _cargar_modelo_clubes_v2():
         return None, None
     try:
         model = joblib.load(path)
+        meta = {}
         if meta_path.exists():
             with open(meta_path, "r") as f:
                 meta = json.load(f)
-            feat_cols = meta.get("feature_cols", [])
-        else:
-            feat_cols = []
+        feat_cols = meta.get("feature_cols", [])
         log(f"[OK] Clubes v2 cargado — AUC entrenamiento {meta.get('cv_auc_mean', '?')} | {len(feat_cols)} features")
         return model, feat_cols
     except Exception as e:
@@ -1173,7 +1172,10 @@ def predecir_tenis_hoy() -> list:
             except Exception:
                 pass
 
+        # pred_es_p1: ¿apostamos por p1? (ganador predicho == p1)
         pred_es_p1 = (ganador_pred == p1)
+        # fav_es_p1: ¿el favorito es p1? (para asignar prob_home/prob_away correctamente)
+        fav_es_p1 = (fav == p1)
         cuota = h2h_odds.get("home") if pred_es_p1 else h2h_odds.get("away")
         if not cuota or cuota <= 1.0:
             log(f"[TENIS] Sin cuota para {p1} vs {p2} ({ganador_pred}) → skip")
@@ -1209,8 +1211,8 @@ def predecir_tenis_hoy() -> list:
             "seleccion_legible": f"{ganador_pred} gana",
             "nombre_betano":     f"{ganador_pred}",
             "confianza":         round(confianza, 4),
-            "prob_home":         round(prob_fav if pred_es_p1 else prob_und, 4),
-            "prob_away":         round(prob_und if pred_es_p1 else prob_fav, 4),
+            "prob_home":         round(prob_fav if fav_es_p1 else prob_und, 4),
+            "prob_away":         round(prob_und if fav_es_p1 else prob_fav, 4),
             "prob_draw":         0.0,
             "cuota":             round(float(cuota), 2),
             "value":             round(float(value), 4),
