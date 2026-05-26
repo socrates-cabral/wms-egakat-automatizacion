@@ -43,6 +43,9 @@ except ImportError:
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
+# Obsidian vault = directorio memory de Claude
+OBSIDIAN_VAULT = Path(r"C:\Users\Socrates Cabral\.claude\projects\C--ClaudeWork\memory")
+
 
 def _log(msg: str):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] [MIROFISH-KPI] {msg}", flush=True)
@@ -454,6 +457,90 @@ def ejecutar_simulacion(kpi_path: Path) -> None:
             "generado": datetime.now().isoformat(),
         }, f, ensure_ascii=False, indent=2)
     _log(f"Reporte guardado en {out_path}")
+
+    # ── Export a Obsidian vault ───────────────────────────────────────────────
+    _exportar_obsidian(kpi, top_riesgos, bajo_objetivo, otif, fillrate, sim_id)
+
+
+# ── EXPORT OBSIDIAN ──────────────────────────────────────────────────────────
+
+def _exportar_obsidian(kpi: dict, top_riesgos: list, bajo_objetivo: list,
+                       otif: dict, fillrate: dict, sim_id: str) -> None:
+    """Guarda nota Markdown en el vault de Obsidian (= directorio memory de Claude)."""
+    try:
+        periodo  = kpi.get("nnss", {}).get("periodo", {})
+        anio     = periodo.get("anio", datetime.now().year)
+        mes      = periodo.get("mes",  datetime.now().month)
+        MESES    = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",
+                    7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
+        mes_nombre = MESES.get(mes, str(mes))
+        semana   = datetime.now().strftime("%Y-W%W")
+        fecha    = datetime.now().strftime("%Y-%m-%d")
+
+        # Clientes bajo objetivo como lista YAML
+        clientes_riesgo_yaml = (
+            "[" + ", ".join(f'"{c["cliente"]}"' for c in bajo_objetivo) + "]"
+            if bajo_objetivo else "[]"
+        )
+
+        carpeta = OBSIDIAN_VAULT / "kpi_ops"
+        carpeta.mkdir(exist_ok=True)
+        nota_path = carpeta / f"KPI_Ops_{anio}_{mes:02d}.md"
+
+        riesgos_md = "\n\n".join(
+            f"**{i}.** {r}" for i, r in enumerate(top_riesgos, 1)
+        )
+
+        bajo_obj_md = "\n".join(
+            f"| {c['cliente']} | {_fmt_pct(c.get('pct_otif'))} | "
+            f"{_fmt_pct(c.get('pct_on_time'))} | {_fmt_pct(c.get('pct_in_full'))} |"
+            for c in bajo_objetivo
+        ) or "_(ninguno)_"
+
+        contenido = f"""---
+title: KPI Ops {mes_nombre} {anio}
+date: {fecha}
+semana: {semana}
+type: kpi-ops
+otif_global: {otif.get('pct_otif', 0)}
+fillrate_global: {fillrate.get('promedio_fr', 0)}
+pedidos_evaluados: {otif.get('pedidos_evaluados', 0)}
+clientes_riesgo: {clientes_riesgo_yaml}
+sim_id: {sim_id}
+tags: [kpi-ops, mirofish, egakat]
+---
+
+# KPI Operativo — {mes_nombre} {anio}
+
+## Indicadores globales
+
+| Métrica | Valor |
+|---------|-------|
+| OTIF global | **{_fmt_pct(otif.get('pct_otif'))}** |
+| On Time | {_fmt_pct(otif.get('pct_on_time'))} |
+| In Full | {_fmt_pct(otif.get('pct_in_full'))} |
+| Fill Rate promedio | **{_fmt_pct(fillrate.get('promedio_fr'))}** |
+| Pedidos evaluados | {otif.get('pedidos_evaluados', 0)} |
+
+## Clientes bajo objetivo OTIF (<95%)
+
+| Cliente | OTIF | On Time | In Full |
+|---------|------|---------|---------|
+{bajo_obj_md}
+
+## 🐟 Riesgos identificados por MiroFish
+
+> Simulación `{sim_id}` — 200 agentes debatiendo el reporte operacional
+
+{riesgos_md}
+
+---
+*Generado automáticamente por [[mirofish_kpi_ops]] · {fecha}*
+"""
+        nota_path.write_text(contenido, encoding="utf-8")
+        _log(f"Nota Obsidian guardada: {nota_path}")
+    except Exception as e:
+        _log(f"WARNING: No se pudo exportar a Obsidian: {e}")
 
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
