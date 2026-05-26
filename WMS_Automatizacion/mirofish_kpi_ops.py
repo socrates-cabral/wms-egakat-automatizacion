@@ -19,6 +19,7 @@ import os
 import re
 import json
 import time
+import html as html_mod
 import argparse
 import requests
 from datetime import datetime
@@ -31,17 +32,18 @@ CLAUDEWORK    = BASE_DIR.parent
 LOGS_DIR      = CLAUDEWORK / "logs"
 MIROFISH_BASE = "http://localhost:5001/api"
 POLL_INTERVAL = 20   # seg entre polls
-POLL_TIMEOUT  = 3600 # máximo 1 hora
+POLL_TIMEOUT  = 7200 # máximo 2 horas (rondas finales son más lentas)
 
 # ── .env ───────────────────────────────────────────────────────────────────────
 try:
     from dotenv import load_dotenv
-    load_dotenv(CLAUDEWORK / ".env")
+    load_dotenv(CLAUDEWORK / "Softnet_Ventas" / ".env", override=False)
+    load_dotenv(CLAUDEWORK / ".env", override=False)
 except ImportError:
     pass
 
-TELEGRAM_TOKEN   = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN_OPS", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_GRUPO_OPS_ID", "")
 
 # Obsidian vault = directorio memory de Claude
 OBSIDIAN_VAULT = Path(r"C:\Users\Socrates Cabral\.claude\projects\C--ClaudeWork\memory")
@@ -54,15 +56,26 @@ def _log(msg: str):
 # ── TELEGRAM ───────────────────────────────────────────────────────────────────
 
 def _telegram(msg: str):
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+    token   = os.getenv("TELEGRAM_TOKEN_OPS", "")
+    chat_id = os.getenv("TELEGRAM_GRUPO_OPS_ID", "")
+    if not token or not chat_id:
         _log(f"[TELEGRAM MOCK] {msg[:120]}")
         return
     try:
-        requests.post(
-            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-            json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "HTML"},
+        r = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": msg, "parse_mode": "HTML"},
             timeout=15,
         )
+        if not r.ok:
+            _log(f"Telegram HTML error {r.status_code}, reintentando sin parse_mode...")
+            r2 = requests.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={"chat_id": chat_id, "text": msg},
+                timeout=15,
+            )
+            if not r2.ok:
+                _log(f"Telegram error {r2.status_code}: {r2.text[:200]}")
     except Exception as e:
         _log(f"Telegram error: {e}")
 
@@ -89,13 +102,14 @@ def _fmt_pct(val) -> str:
 
 def construir_documento_kpi(kpi: dict) -> tuple[str, str]:
     """
-    Convierte el JSON KPI en texto estructurado para MiroFish.
-    Retorna (documento_txt, titulo_simulacion).
+    Convierte el JSON KPI en documento denso para MiroFish.
+    Incluye OTIF histórico, productividad, inventario, staging, ocupación y recepciones.
     """
     fecha_gen = kpi.get("fecha_generacion", "")
     nnss      = kpi.get("nnss", {})
     prod      = kpi.get("productividad", {})
     inv       = kpi.get("inventario", {})
+    hist      = kpi.get("historico", {})
     alertas   = kpi.get("alertas", [])
     recs      = kpi.get("recomendaciones", [])
     periodo   = nnss.get("periodo", {})
@@ -106,129 +120,289 @@ def construir_documento_kpi(kpi: dict) -> tuple[str, str]:
     mes_nombre = MESES.get(mes, str(mes))
     titulo     = f"KPI Operativo Egakat — {mes_nombre} {anio}"
 
-    # OTIF global
     otif     = nnss.get("otif", {})
     fillrate = nnss.get("fillrate", {})
     pend     = nnss.get("pendientes", {})
 
-    lineas_otif = [
-        f"  OTIF global:   {_fmt_pct(otif.get('pct_otif'))} ({otif.get('pedidos_evaluados',0)} pedidos)",
-        f"  On Time:       {_fmt_pct(otif.get('pct_on_time'))}",
-        f"  In Full:       {_fmt_pct(otif.get('pct_in_full'))}",
-        f"  Fill Rate prom: {_fmt_pct(fillrate.get('promedio_fr'))}",
-    ]
-
-    # OTIF por cliente (solo con data)
-    clientes_otif = [
-        c for c in (otif.get("por_cliente") or [])
-        if c.get("pedidos_evaluados", 0) > 0
-    ]
-    clientes_otif_txt = "\n".join(
-        f"  {c['cliente']:25s}  OTIF={_fmt_pct(c.get('pct_otif'))}  "
-        f"OT={_fmt_pct(c.get('pct_on_time'))}  IF={_fmt_pct(c.get('pct_in_full'))}  "
-        f"({c['pedidos_evaluados']} ped)"
-        for c in sorted(clientes_otif, key=lambda x: x.get("pct_otif") or 100)
+    # ── OTIF por CD ────────────────────────────────────────────────────────────
+    otif_cd_txt = "\n".join(
+        f"  {cd.get('cd','?'):12s}  OTIF={_fmt_pct(cd.get('pct_otif'))}  "
+        f"OT={_fmt_pct(cd.get('pct_on_time'))}  IF={_fmt_pct(cd.get('pct_in_full'))}  "
+        f"({cd.get('pedidos_evaluados',0)} ped)"
+        for cd in (otif.get("por_cd") or [])
     ) or "  Sin datos"
 
-    # FillRate por cliente (solo evaluables)
-    fr_clientes = [
-        c for c in (fillrate.get("por_cliente") or [])
-        if c.get("tiene_datos_evaluables")
-    ]
+    # ── OTIF por cliente con motivos no In Full ────────────────────────────────
+    clientes_otif = sorted(
+        [c for c in (otif.get("por_cliente") or []) if c.get("pedidos_evaluados", 0) > 0],
+        key=lambda x: x.get("pct_otif") or 100
+    )
+    cli_otif_lines = []
+    for c in clientes_otif:
+        line = (
+            f"  {c['cliente']:25s}  OTIF={_fmt_pct(c.get('pct_otif'))}  "
+            f"OT={_fmt_pct(c.get('pct_on_time'))}  IF={_fmt_pct(c.get('pct_in_full'))}  "
+            f"({c.get('pedidos_evaluados',0)} ped "
+            f"/ {c.get('pedidos_no_in_full',0)} no-IF)"
+        )
+        for m in (c.get("motivos_no_in_full") or []):
+            line += f"\n    → No-IF motivo: '{m['motivo']}' ({m['lineas']} líneas)"
+        arr = c.get("arrastres", {})
+        if arr and arr.get("total", 0) > 0:
+            line += (
+                f"\n    → Arrastres: {arr['total']} ped "
+                f"({_fmt_pct(arr.get('pct_on_time_arrastres'))} OT arrastres)"
+            )
+        cli_otif_lines.append(line)
+    clientes_otif_txt = "\n".join(cli_otif_lines) or "  Sin datos"
+
+    # ── Fill Rate por cliente ──────────────────────────────────────────────────
     fr_clientes_txt = "\n".join(
-        f"  {c['cliente']:25s}  FR={_fmt_pct(c.get('promedio_fr'))}  ({c.get('lineas',0)} líneas)"
-        for c in sorted(fr_clientes, key=lambda x: x.get("promedio_fr") or 100)
+        f"  {c['cliente']:25s}  FR={_fmt_pct(c.get('promedio_fr'))}  "
+        f"({c.get('lineas',0)} líns / {c.get('pedidos',0)} ped)"
+        for c in sorted(
+            [c for c in (fillrate.get("por_cliente") or []) if c.get("tiene_datos_evaluables")],
+            key=lambda x: x.get("promedio_fr") or 100
+        )
     ) or "  Sin datos"
 
-    # Pedidos pendientes
-    pend_txt = (
-        f"  Total pendientes: {pend.get('total_pedidos',0)} pedidos "
-        f"/ {pend.get('total_unidades',0)} unidades\n"
-    )
-    if pend.get("mayores_7_dias"):
-        atrasados = pend["mayores_7_dias"][:5]
-        pend_txt += f"  ⚠ ATRASADOS >7 días ({len(pend.get('mayores_7_dias',0))} total):\n"
-        for p in atrasados:
-            pend_txt += f"    - {p['cliente']} | Pedido {p['nro_pedido']} | {p['dias_abierto']} días | {p['unidades']} uds\n"
+    # ── Pedidos pendientes ─────────────────────────────────────────────────────
+    pend_txt = f"  Total: {pend.get('total_pedidos',0)} pedidos / {pend.get('total_unidades',0)} uds\n"
+    for p in (pend.get("mayores_7_dias") or [])[:5]:
+        ini = p.get("fecha_inicio_preparacion") or "sin registro de inicio"
+        dias = p.get("dias_abierto", 0) or 0
+        # >3650 días = fecha epoch (WMS timestamp=0): no es antigüedad real
+        dias_str = f"{dias} dias" if dias <= 3650 else f"FECHA INVALIDA EN WMS (valor: {dias} dias)"
+        pend_txt += (
+            f"  CRITICO: {p['cliente']} | Ped.{p['nro_pedido']} | Estado: {p.get('estado','')} | "
+            f"{dias_str} | Inicio prep: {ini} | {p.get('unidades',0)} uds\n"
+        )
 
-    # Productividad global
+    # ── Histórico OTIF YTD ────────────────────────────────────────────────────
+    ytd = hist.get("nnss", {}).get("otif_ytd", [])
+    ytd_txt = "\n".join(
+        f"  {y['cliente']:25s}  OTIF-YTD={_fmt_pct(y.get('pct_otif'))}  "
+        f"({y.get('pedidos_evaluados_acum',0)} ped  meses:{y.get('meses_incluidos',[])})"
+        for y in sorted([y for y in ytd if y.get("disponible")], key=lambda x: x.get("pct_otif") or 100)[:10]
+    ) or "  Sin datos YTD"
+
+    # ── Tendencia mensual clientes clave ──────────────────────────────────────
+    otif_mensual = hist.get("nnss", {}).get("otif_mensual", [])
+    CLIENTES_CLAVE = {"MASCOTAS LATINAS", "UNILEVER", "DAIKIN", "POCHTECA", "BARENTZ"}
+    tendencia: dict = {}
+    for r in otif_mensual:
+        cli = r.get("cliente")
+        if cli in CLIENTES_CLAVE and r.get("pct_otif") is not None:
+            tendencia.setdefault(cli, []).append(
+                f"{r.get('mes_nombre','?')[:3]}:{_fmt_pct(r.get('pct_otif'))}({r.get('pedidos_evaluados',0)}p)"
+            )
+    tendencia_txt = "\n".join(
+        f"  {cli}: {' | '.join(meses)}" for cli, meses in tendencia.items()
+    ) or "  Sin datos tendencia"
+
+    # ── Productividad ──────────────────────────────────────────────────────────
     glb = prod.get("global", {})
-    prod_txt = (
-        f"  Líneas procesadas:  {glb.get('lineas',0):,}\n"
-        f"  Unidades:           {glb.get('unidades',0):,.0f}\n"
-        f"  Pedidos:            {glb.get('pedidos',0):,}\n"
-        f"  Días trabajados:    {glb.get('dias_trabajados',0)}\n"
-        f"  Prod. líneas/día:   {glb.get('productividad_lineas_dia',0):,.1f}\n"
-        f"  Prod. uds/hora:     {glb.get('productividad_unidades_hora',0):,.1f}\n"
+    prod_cd_txt = "\n".join(
+        f"  {c.get('Centro','?'):15s}  {c.get('lineas',0):7,} líns  "
+        f"{c.get('unidades',0):10,.0f} uds  {c.get('participacion_lineas_pct',0):.1f}%"
+        for c in (prod.get("por_cd") or [])
     )
-
-    # Productividad por cliente (top 5)
-    prod_clientes = sorted(
-        (prod.get("por_cliente") or []),
-        key=lambda x: x.get("lineas", 0),
-        reverse=True
-    )[:7]
     prod_cli_txt = "\n".join(
-        f"  {c.get('cliente','?'):25s}  {c.get('lineas',0):6,} líneas  {c.get('unidades',0):8,.0f} uds"
-        for c in prod_clientes
-    ) or "  Sin datos"
+        f"  {c.get('cliente','?'):25s}  {c.get('lineas',0):7,} líns  "
+        f"{c.get('unidades',0):10,.0f} uds  {c.get('pedidos',0)} ped  "
+        f"({c.get('participacion_lineas_pct',0):.1f}%)"
+        for c in sorted(prod.get("por_cliente") or [], key=lambda x: x.get("lineas",0), reverse=True)[:8]
+    )
+    derco = prod.get("derco", {})
+    derco_txt = ""
+    if derco.get("disponible"):
+        ap = derco.get("ap_total", {})
+        derco_txt = f"  AP total: {ap.get('lineas',0):,} líns / {ap.get('unidades',0):,.0f} uds\n"
+        for d in (derco.get("ap_detalle") or []):
+            derco_txt += f"    {d['canal_detalle']:22s}: {d['lineas']:,} líns / {d['unidades']:,.0f} uds\n"
+        for c in (derco.get("canales") or []):
+            derco_txt += f"  Canal {c['canal']:10s}: {c['lineas']:,} líns / {c['unidades']:,.0f} uds / {c['pedidos']} ped\n"
 
-    # Inventario
-    stock    = inv.get("stock", {})
-    staging  = inv.get("staging", {})
-    inv_txt  = (
-        f"  Stock total:       {stock.get('total_skus',stock.get('total_posiciones','N/D'))} posiciones\n"
-        f"  Stock bloqueado:   {inv.get('stock_bloqueado_wms', {}).get('total_skus','N/D')}\n"
-        f"  Staging pendiente: {staging.get('total_documentos','N/D')} documentos\n"
+    # ── Inventario ─────────────────────────────────────────────────────────────
+    stock     = inv.get("stock", {})
+    blq       = inv.get("stock_bloqueado_wms", {})
+    staging   = inv.get("staging", {})
+    ocu       = inv.get("ocupacion", {})
+    ant       = inv.get("staging_antiguedad", {})
+    ira_ila   = inv.get("ira_ila", {}).get("wms", {})
+
+    stock_cli_txt = "\n".join(
+        f"  {c.get('cliente','?'):25s} {c.get('cd','?'):12s}  "
+        f"{c.get('unidades',0):10,.0f} uds  {c.get('plts',0):5} plts  {c.get('skus',0)} SKUs"
+        for c in (stock.get("por_cliente") or [])[:8]
+    )
+    stg_in  = next((s['plts'] for s in (staging.get("por_estado") or []) if s['estado_staging']=='STAGING IN'), 0)
+    stg_out = next((s['plts'] for s in (staging.get("por_estado") or []) if s['estado_staging']=='STAGING OUT'), 0)
+
+    ant_txt = "\n".join(
+        f"  {b.get('balde_antiguedad','?'):22s}: {b.get('plts',0):4} plts / "
+        f"{b.get('unidades',0):8,.0f} uds / {b.get('skus',0)} SKUs"
+        for b in (ant.get("por_balde") or [])
+    )
+    ant_cli_txt = "\n".join(
+        f"  {c.get('cliente','?'):25s} {c.get('cd','?'):12s}  "
+        f"{c.get('plts',0)} plts tot  {c.get('plts_mayor_21_dias',0)} plts >21d  "
+        f"[balde: {c.get('balde_principal','?')}]"
+        for c in (ant.get("por_cliente") or []) if c.get("plts_mayor_21_dias", 0) > 0
+    ) or "  Ninguno"
+
+    ocu_cd_txt = "\n".join(
+        f"  {c.get('cd','?'):12s}  Ocup={c.get('ocupacion_pct',0):.1f}%  "
+        f"({c.get('ocupadas',0):,} ocup / {c.get('total_ubicaciones_layout',0):,.0f} total)  "
+        f"Libres: {c.get('libres',0):,}"
+        for c in (ocu.get("por_cd") or [])
+    )
+    ocu_loc_txt = "\n".join(
+        f"  {c.get('cd','?')} {c.get('locacion','?'):15s}: {c.get('ocupacion_pct',0):.1f}%  "
+        f"({c.get('ocupadas',0):,}/{c.get('total',0):,})"
+        for c in (ocu.get("por_locacion") or [])
     )
 
-    # Alertas y recomendaciones
-    alertas_txt = "\n".join(f"  ⚠ {a}" for a in alertas[:8]) or "  Sin alertas críticas"
-    recs_txt    = "\n".join(f"  → {r}" for r in recs[:6]) or "  Sin recomendaciones"
+    # ── Recepciones del período ────────────────────────────────────────────────
+    rec_his = hist.get("recepciones", {})
+    rec_mes = [r for r in (rec_his.get("por_cliente") or [])
+               if r.get("mes") == mes and r.get("anio") == anio]
+    rec_txt = "\n".join(
+        f"  {r.get('cliente','?'):25s} {r.get('cd','?')[:12]:12s}  "
+        f"ORs:{r.get('or_unicas',0)}  Plts:{r.get('pallets_recibidos',0)}  "
+        f"Backlog:{r.get('backlog_or',0)} ORs ({r.get('backlog_pct',0):.1f}%)  "
+        f"TPR:{r.get('tpr_dias_por_or',0):.2f}d/OR"
+        for r in rec_mes[:8]
+    ) or "  Sin datos de recepciones"
+
+    # ── Armado del documento ───────────────────────────────────────────────────
+    arr_global = otif.get("arrastres", {})
 
     doc = f"""REPORTE KPI OPERATIVO — EGAKAT SPA (3PL CHILE)
-Período: {mes_nombre} {anio}  |  Generado: {fecha_gen}
+Periodo: {mes_nombre} {anio}  |  Generado: {fecha_gen}
+CDs: QUILICURA (principal) | PUDAHUEL | PUDAHUEL UNITARIO
+Objetivos: OTIF >=95% | Fill Rate >=99% | IRA >=99% | ILA >=99%
 
-═══════════════════════════════════════════════════
-INDICADORES PRINCIPALES (NNSS)
-═══════════════════════════════════════════════════
-{chr(10).join(lineas_otif)}
+=====================================
+1. OTIF Y FILL RATE DEL PERIODO
+=====================================
 
-OTIF POR CLIENTE:
+GLOBAL:
+  Pedidos evaluados: {otif.get('pedidos_evaluados',0)}
+  OTIF:     {_fmt_pct(otif.get('pct_otif'))}  [obj >=95%]
+  On Time:  {_fmt_pct(otif.get('pct_on_time'))}
+  In Full:  {_fmt_pct(otif.get('pct_in_full'))}
+  Fill Rate promedio: {_fmt_pct(fillrate.get('promedio_fr'))}  [obj >=99%]
+  Arrastres mes anterior: {arr_global.get('total',0)} ped ({arr_global.get('arrastres_tardios',0)} tardios)
+
+POR CENTRO DE DISTRIBUCION:
+{otif_cd_txt}
+
+POR CLIENTE (peor a mejor OTIF):
 {clientes_otif_txt}
 
-FILL RATE POR CLIENTE:
+FILL RATE POR CLIENTE (peor a mejor):
 {fr_clientes_txt}
 
-PEDIDOS PENDIENTES:
+=====================================
+2. PEDIDOS PENDIENTES
+=====================================
+
 {pend_txt}
-═══════════════════════════════════════════════════
-PRODUCTIVIDAD OPERACIONAL
-═══════════════════════════════════════════════════
-{prod_txt}
-TOP CLIENTES POR VOLUMEN:
+=====================================
+3. TENDENCIA HISTORICA 2026 (YTD Ene-{mes_nombre})
+=====================================
+
+OTIF ACUMULADO AÑO (YTD):
+{ytd_txt}
+
+EVOLUCION MENSUAL OTIF — CLIENTES CLAVE:
+{tendencia_txt}
+
+=====================================
+4. PRODUCTIVIDAD OPERACIONAL
+=====================================
+
+GLOBAL:
+  Lineas:          {glb.get('lineas',0):,}
+  Unidades:        {glb.get('unidades',0):,.0f}
+  Pedidos:         {glb.get('pedidos',0):,}
+  Dias trabajados: {glb.get('dias_trabajados',0)}
+  Lineas/dia:      {glb.get('productividad_lineas_dia',0):,.1f}
+  Uds/hora:        {glb.get('productividad_unidades_hora',0):,.1f}
+  Horas trabajadas:{glb.get('horas_trabajadas_total',0):,.1f}
+
+POR CENTRO:
+{prod_cd_txt}
+
+POR CLIENTE (top volumen):
 {prod_cli_txt}
 
-═══════════════════════════════════════════════════
-INVENTARIO / STOCK
-═══════════════════════════════════════════════════
-{inv_txt}
-═══════════════════════════════════════════════════
-ALERTAS DEL SISTEMA
-═══════════════════════════════════════════════════
-{alertas_txt}
+DERCO — DESGLOSE CANALES:
+{derco_txt if derco_txt else '  Sin datos DERCO'}
 
-RECOMENDACIONES AUTOMÁTICAS:
-{recs_txt}
+=====================================
+5. INVENTARIO — STOCK, STAGING, OCUPACION
+=====================================
 
-═══════════════════════════════════════════════════
+STOCK WMS:
+  Total unidades: {stock.get('total_unidades',0):,.0f}
+  Total pallets:  {stock.get('total_plts',0):,}
+  SKUs activos:   {stock.get('total_skus',0):,}
+  Stock bloqueado WMS: {blq.get('total_skus','N/D')} SKUs / {blq.get('total_unidades','N/D')} uds
+
+STOCK POR CLIENTE:
+{stock_cli_txt}
+
+IRA/ILA (Precision de Inventario):
+  IRA: {_fmt_pct(ira_ila.get('ira_ponderado_pct'))}  [obj >=99%]
+  ILA: {_fmt_pct(ira_ila.get('ila_ponderado_pct'))}  [obj >=99%]
+
+STAGING EN PROCESO:
+  Total pallets: {staging.get('total_plts',0)}  ({stg_in} STAGING IN / {stg_out} STAGING OUT)
+  Total uds: {staging.get('total_unidades',0):,.0f}
+
+ANTIGUEDAD STAGING (critico para gestion):
+{ant_txt}
+
+CLIENTES CON PALLETS >21 DIAS EN STAGING:
+{ant_cli_txt}
+
+OCUPACION DE BODEGAS:
+  Global: {ocu.get('ocupacion_pct',0):.1f}%  ({ocu.get('ocupadas',0):,}/{ocu.get('total_ubicaciones_layout',0):,.0f})  Libres:{ocu.get('libres',0):,}
+
+POR CD:
+{ocu_cd_txt}
+
+POR TIPO DE UBICACION:
+{ocu_loc_txt}
+
+=====================================
+6. RECEPCIONES DEL PERIODO
+=====================================
+
+{rec_txt}
+
+=====================================
+7. ALERTAS Y RECOMENDACIONES
+=====================================
+
+ALERTAS:
+{chr(10).join(f'  ! {a}' for a in alertas[:10]) or '  Sin alertas'}
+
+RECOMENDACIONES:
+{chr(10).join(f'  > {r}' for r in recs[:8]) or '  Sin recomendaciones'}
+
+=====================================
 CONTEXTO EGAKAT SPA
-═══════════════════════════════════════════════════
-Egakat SPA es un 3PL (Third Party Logistics) chileno con dos centros de
-distribución: Pudahuel y Quilicura. Opera para 14+ clientes incluyendo
-DERCO (automotriz), Mascotas Latinas, Barentz, Daikin, Pochteca, entre otros.
-KPIs principales: OTIF (On-Time In-Full), Fill Rate, Productividad por CD.
-Objetivo OTIF: ≥95%. Objetivo Fill Rate: ≥99%.
+=====================================
+Egakat SPA: 3PL chileno, CDs Quilicura y Pudahuel.
+Clientes: DERCO (automotriz, 97% del volumen), MASCOTAS LATINAS, UNILEVER,
+  BARENTZ, DAIKIN, POCHTECA, OMNITECH, RUNO SPA, CEPAS CHILE y otros.
+Indicadores servicio: OTIF y Fill Rate. Precision inventario: IRA e ILA.
+Pedidos "no In Full" sin motivo registrado = campo vacio en WMS, no diagnosticado.
+Staging >21 dias = pallet con permanencia anomala, riesgo de obsolescencia o bloqueo operativo.
+Pedidos con fecha 1970 = anomalia de datos en WMS, requiere investigacion.
 """
     return doc, titulo
 
@@ -237,7 +411,12 @@ Objetivo OTIF: ≥95%. Objetivo Fill Rate: ≥99%.
 
 def _post(endpoint: str, **kwargs) -> dict:
     resp = requests.post(f"{MIROFISH_BASE}{endpoint}", timeout=90, **kwargs)
-    resp.raise_for_status()
+    if not resp.ok:
+        try:
+            body = resp.json()
+        except Exception:
+            body = resp.text[:400]
+        raise RuntimeError(f"MiroFish {endpoint} → {resp.status_code}: {body}")
     data = resp.json()
     if not data.get("success"):
         raise RuntimeError(f"MiroFish error en {endpoint}: {data.get('error','')}")
@@ -254,9 +433,11 @@ def _poll_task(task_id: str, campo: str, timeout: int = 300) -> str:
     deadline = time.time() + timeout
     while time.time() < deadline:
         data = _get(f"/graph/task/{task_id}")
-        status = (data.get("data") or data).get("status")
+        inner = data.get("data") or data
+        status = inner.get("status")
         if status == "completed":
-            return (data.get("data") or data).get(campo)
+            # graph_id está en result.graph_id, no en el nivel del task
+            return inner.get("result", {}).get(campo) or inner.get(campo)
         if status == "failed":
             raise RuntimeError(f"Task {task_id} falló")
         time.sleep(10)
@@ -282,20 +463,25 @@ def _poll_run(sim_id: str) -> None:
     deadline = time.time() + POLL_TIMEOUT
     while time.time() < deadline:
         data = _get(f"/simulation/{sim_id}/run-status")
-        status = (data.get("data") or data).get("status")
+        inner = data.get("data") or data
+        # El campo real es "runner_status", no "status"
+        status = inner.get("runner_status")
         if status == "completed":
             return
-        if status == "error":
-            raise RuntimeError(f"Simulación {sim_id} terminó en error")
-        _log(f"  Simulación {sim_id}: {status}")
+        if status in ("failed", "error"):
+            raise RuntimeError(f"Simulación {sim_id} terminó en error: {inner}")
+        pct   = inner.get("progress_percent", 0)
+        ronda = inner.get("current_round", 0)
+        total = inner.get("total_rounds", "?")
+        _log(f"  Simulación {sim_id}: {status} | ronda {ronda}/{total} ({pct:.1f}%)")
         time.sleep(POLL_INTERVAL)
     raise TimeoutError(f"Simulación no completó en {POLL_TIMEOUT}s")
 
 
 def _extraer_riesgos(resultados: dict) -> list[str]:
     """
-    Extrae las respuestas de los agentes y las agrupa por frecuencia de términos clave.
-    Retorna lista de las respuestas más representativas (top 5).
+    Sintetiza las respuestas de los agentes con Claude.
+    Retorna 3-5 bullets accionables en español.
     """
     respuestas = []
     for val in resultados.values():
@@ -306,9 +492,57 @@ def _extraer_riesgos(resultados: dict) -> list[str]:
     if not respuestas:
         return ["Sin respuestas de agentes"]
 
-    # Ordenar por longitud descendente (respuestas más elaboradas primero)
-    respuestas.sort(key=len, reverse=True)
-    return respuestas[:5]
+    # Intentar síntesis con Claude
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+        combined = "\n\n---\n\n".join(respuestas[:16])
+        prompt = (
+            "Eres analista senior de Egakat SPA (3PL chileno). "
+            f"Tienes {len(respuestas)} analisis de agentes que debatieron los KPIs operativos.\n\n"
+            "REGLA CRITICA: solo incluye clientes, metricas y hechos que aparezcan "
+            "en MULTIPLES respuestas de agentes. Si un dato solo lo menciona un agente, "
+            "ignora ese dato. No inventes causas raiz, protocolos ni referencias externas.\n\n"
+            "TAREA: sintetizar exactamente 5 bullets — 3 operacionales + 2 estrategicos.\n\n"
+            "Bullets 1-3 (OPERACIONAL) — accion esta semana:\n"
+            "Formato: '• [Cliente]: [problema con cifra real] → [accion concreta]'\n"
+            "Ejemplo valido: '• MASCOTAS LATINAS: OTIF 84.4% (7 ped no-IF sin motivo) → "
+            "revisar causas de incumplimiento en WMS esta semana'\n\n"
+            "Bullets 4-5 (ESTRATEGICO) — para gerencia, no para operaciones del dia:\n"
+            "Formato: '• [Area/tema]: [observacion con dato] → [implicancia estrategica]'\n"
+            "Ejemplo valido: '• Concentracion: DERCO representa 97% del volumen productividad "
+            "→ riesgo operacional ante baja demanda de un solo cliente'\n\n"
+            "Respeta el formato exacto. Maximo 130 chars por bullet. "
+            "Si no hay consenso en un tema, no lo incluyas.\n\n"
+            f"Respuestas de agentes:\n{combined[:10000]}"
+        )
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=600,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        sintesis = msg.content[0].text.strip()
+        bullets = [b.strip() for b in sintesis.split("\n") if b.strip().startswith("•")]
+        if bullets:
+            return bullets
+    except Exception as e:
+        _log(f"Síntesis Claude falló ({e}), usando extracción manual")
+
+    # Fallback: extraer sección "Acción concreta" de cada respuesta
+    acciones = []
+    for r in respuestas:
+        for marker in ["Acción concreta recomendada", "Acción concreta", "Recomendación"]:
+            idx = r.find(marker)
+            if idx != -1:
+                fragmento = r[idx:idx+250].replace("\n", " ").strip()
+                acciones.append(fragmento)
+                break
+    if acciones:
+        return list(dict.fromkeys(acciones))[:3]  # deduplicar, top 3
+
+    # Último fallback: primeras 2 oraciones de las respuestas más cortas
+    respuestas.sort(key=len)
+    return [r[:200] for r in respuestas[:3]]
 
 
 # ── PIPELINE COMPLETO (SINCRÓNICO) ────────────────────────────────────────────
@@ -330,12 +564,12 @@ def ejecutar_simulacion(kpi_path: Path) -> None:
             requests.get(f"{MIROFISH_BASE}/graph/task/test", timeout=5)
         except requests.exceptions.ConnectionError:
             _log("ERROR: MiroFish no está corriendo. Ejecutar: cd MiroFish && npm run dev")
-            _telegram("🐟 <b>MiroFish KPI</b>\nError: servidor MiroFish no disponible en localhost:5001")
+            _telegram("🐟 <b>MiroFish KPI</b>\n❌ Error: servidor MiroFish no disponible en localhost:5001")
             sys.exit(1)
         except Exception:
             pass  # 404 es OK, significa que el servidor sí está up
 
-    _telegram(f"🐟 <b>MiroFish KPI Ops iniciado</b>\nPeríodo: {mes_anio}\nSimulación en curso (~20-40 min)...")
+    _telegram(f"🐟 <b>MiroFish KPI Ops iniciado</b>\n📅 Período: <b>{html_mod.escape(mes_anio)}</b>\n⏳ Simulación en curso (~20-40 min)...")
 
     # 1. Ontology
     _log("Paso 1/7: Generando ontología...")
@@ -389,9 +623,28 @@ def ejecutar_simulacion(kpi_path: Path) -> None:
     # 7. Interview
     _log("Paso 7/7: Entrevistando agentes...")
     pregunta = (
-        "En base al reporte KPI operativo de Egakat, describe el riesgo operacional "
-        "más crítico que identificas para la próxima semana y qué acción concreta recomiendas. "
-        "Sé específico con clientes o métricas."
+        f"Analiza el reporte KPI operativo de Egakat SPA — {mes_anio}. "
+        "REGLA ABSOLUTA E INNEGOCIABLE: cita EXCLUSIVAMENTE cifras, clientes y hechos "
+        "que esten en el documento de esta simulacion. Si algo no tiene explicacion en "
+        "los datos (ej. 'Sin motivo registrado'), di exactamente eso. "
+        "No inventes protocolos, procedimientos, codigos de incidente ni causas raiz "
+        "que no aparezcan explicitamente en el reporte. "
+        "\n\nEstructura tu respuesta en TRES secciones obligatorias:\n"
+        "\n[ALERTA OPERACIONAL]\n"
+        "El problema mas critico que requiere accion en las proximas 48 horas. "
+        "Especifica: cliente exacto, indicador afectado con su valor real vs objetivo, "
+        "magnitud del desvio (puntos porcentuales o dias de retraso), e impacto en nivel de servicio.\n"
+        "\n[RIESGO SEMANA]\n"
+        "El riesgo principal para el cierre operativo de la proxima semana. "
+        "Sustenta con al menos un dato especifico del reporte (porcentaje, volumen, "
+        "numero de pedidos, antiguedad de staging, ocupacion de CD). "
+        "Indica que puede empeorar si no se actua y que cliente o area se ve afectada.\n"
+        "\n[SEÑAL ESTRATEGICA]\n"
+        "Una observacion relevante para gerencia, no para operaciones del dia. "
+        "Puede ser sobre: concentracion de volumen en un cliente, desequilibrio de "
+        "ocupacion entre CDs, tendencia acumulada YTD de un KPI, calidad de datos "
+        "(campos vacios, fechas anomalas), o riesgo de capacidad a mediano plazo. "
+        "Sustentado en datos del reporte, no en supuestos."
     )
     d7 = _post("/simulation/interview/all",
                json={"simulation_id": sim_id, "prompt": pregunta})
@@ -407,13 +660,29 @@ def ejecutar_simulacion(kpi_path: Path) -> None:
     fillrate= kpi.get("nnss", {}).get("fillrate", {})
     alertas = kpi.get("alertas", [])
 
-    header = (
-        f"🐟 <b>MiroFish — Análisis KPI Ops</b>\n"
-        f"📅 Período: <b>{mes_anio}</b> | {n_respuestas} agentes\n\n"
-        f"📊 <b>KPIs del período:</b>\n"
-        f"  OTIF: <b>{_fmt_pct(otif.get('pct_otif'))}</b>  "
-        f"OT: {_fmt_pct(otif.get('pct_on_time'))}  IF: {_fmt_pct(otif.get('pct_in_full'))}\n"
-        f"  Fill Rate: <b>{_fmt_pct(fillrate.get('promedio_fr'))}</b>\n\n"
+    h = html_mod.escape  # shorthand para escapar valores dinámicos
+
+    otif_pct = otif.get("pct_otif")
+    fr_pct   = fillrate.get("promedio_fr")
+    n_ped    = otif.get("pedidos_evaluados", 0)
+
+    emoji_otif = "✅" if (otif_pct or 0) >= 95 else ("⚠️" if (otif_pct or 0) >= 85 else "🔴")
+    emoji_fr   = "✅" if (fr_pct or 0) >= 95 else ("⚠️" if (fr_pct or 0) >= 85 else "🔴")
+
+    MESES_NOM = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",
+                 7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
+    periodo   = kpi.get("nnss", {}).get("periodo", {})
+    mes_nom   = MESES_NOM.get(periodo.get("mes"), mes_anio)
+    anio_nom  = periodo.get("anio", "")
+
+    msg = (
+        f"🐟 <b>MiroFish · Análisis Operacional</b>\n"
+        f"📅 <b>{h(mes_nom)} {anio_nom}</b>  ·  {n_respuestas} agentes\n\n"
+        f"<b>¿Cómo cerró el período?</b>\n"
+        f"{emoji_otif} OTIF: <b>{h(_fmt_pct(otif_pct))}</b>  "
+        f"(OT: {h(_fmt_pct(otif.get('pct_on_time')))} · IF: {h(_fmt_pct(otif.get('pct_in_full')))})\n"
+        f"{emoji_fr} Fill Rate: <b>{h(_fmt_pct(fr_pct))}</b>\n"
+        f"📦 Pedidos evaluados: {n_ped:,}\n"
     )
 
     # Clientes con OTIF < 95% (bajo objetivo)
@@ -422,25 +691,39 @@ def ejecutar_simulacion(kpi_path: Path) -> None:
         if c.get("pedidos_evaluados", 0) > 0 and (c.get("pct_otif") or 100) < 95
     ]
     if bajo_objetivo:
-        header += "⚠️ <b>Clientes bajo objetivo OTIF (&lt;95%):</b>\n"
+        msg += f"\n⚠️ <b>Clientes bajo objetivo OTIF (&lt;95%):</b>\n"
         for c in sorted(bajo_objetivo, key=lambda x: x.get("pct_otif") or 100):
-            header += f"  • {c['cliente']}: {_fmt_pct(c.get('pct_otif'))}\n"
-        header += "\n"
+            diff = round(95 - (c.get("pct_otif") or 0), 1)
+            msg += f"  • <b>{h(c['cliente'])}</b>: {h(_fmt_pct(c.get('pct_otif')))} <i>(-{diff} pts)</i>\n"
 
     if alertas:
-        header += "🔔 <b>Alertas activas:</b>\n"
-        for a in alertas[:4]:
-            header += f"  • {a[:90]}\n"
-        header += "\n"
+        msg += f"\n🔔 <b>Alertas activas:</b>\n"
+        for a in alertas[:3]:
+            msg += f"  • {h(str(a)[:100])}\n"
 
-    riesgos_txt = "🤖 <b>Consenso MiroFish — Top riesgos identificados:</b>\n\n"
-    for i, r in enumerate(top_riesgos, 1):
-        fragmento = r[:280].replace("<", "&lt;").replace(">", "&gt;")
-        riesgos_txt += f"<b>{i}.</b> {fragmento}...\n\n"
+    # Haiku devuelve 5 bullets: primeros 3 ops, últimos 2 estratégicos
+    ops_bullets    = top_riesgos[:3]
+    estrat_bullets = top_riesgos[3:]
 
-    # Telegram tiene límite de 4096 chars — enviar en 2 mensajes si es necesario
-    msg1 = header + riesgos_txt[:3800 - len(header)]
-    _telegram(msg1)
+    if ops_bullets:
+        msg += f"\n🔧 <b>Acciones operacionales esta semana:</b>\n"
+        for r in ops_bullets:
+            msg += f"\n{h(r.replace('**','').replace('*',''))}\n"
+
+    if estrat_bullets:
+        msg += f"\n📈 <b>Señales estratégicas para gerencia:</b>\n"
+        for r in estrat_bullets:
+            msg += f"\n{h(r.replace('**','').replace('*',''))}\n"
+
+    if not top_riesgos:
+        msg += f"\n🤖 <b>Sin consenso de agentes disponible</b>\n"
+
+    msg += f"\n<i>Simulación MiroFish · {datetime.now().strftime('%d/%m/%Y %H:%M')}</i>"
+
+    # Telegram tiene límite de 4096 chars — truncar si es necesario
+    if len(msg) > 4000:
+        msg = msg[:3950] + "\n<i>[truncado]</i>"
+    _telegram(msg)
 
     _log("Análisis completado y enviado a Telegram.")
 

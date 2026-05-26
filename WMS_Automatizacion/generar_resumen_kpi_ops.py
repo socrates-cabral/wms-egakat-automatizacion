@@ -366,7 +366,11 @@ def es_fecha_valida(valor: Any) -> bool:
         return False
     if pd is not None and pd.isna(valor):
         return False
-    return isinstance(valor, (datetime, date))
+    if not isinstance(valor, (datetime, date)):
+        return False
+    # Rechazar Unix epoch y fechas anteriores a 2000 (WMS exporta timestamp=0 como 1970-01-01)
+    anio = valor.year if isinstance(valor, (datetime, date)) else None
+    return anio is not None and anio >= 2000
 
 
 def primer_visible_xlsx(path: Path) -> str | None:
