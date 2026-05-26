@@ -114,12 +114,19 @@ try:
 except ImportError:
     pass
 
-# ── Predictor ML (Sprint 10) ──────────────────────────────────────────────────
-ML_DISPONIBLE = False
+# ── Predictor ML (Sprint 10 + multi-deporte) ─────────────────────────────────
+ML_DISPONIBLE       = False
+MLB_ML_DISPONIBLE   = False
+TENIS_ML_DISPONIBLE = False
+predecir_partidos_hoy = predecir_mlb_hoy = predecir_tenis_hoy = None
 try:
-    from predictor_tiempo_real import predecir_partidos_hoy
-    ML_DISPONIBLE = True
-    log.info("[OK] Predictor ML cargado — usando modelo XGBoost")
+    from predictor_tiempo_real import (
+        predecir_partidos_hoy,
+        predecir_mlb_hoy,
+        predecir_tenis_hoy,
+    )
+    ML_DISPONIBLE = MLB_ML_DISPONIBLE = TENIS_ML_DISPONIBLE = True
+    log.info("[OK] Predictor ML cargado — XGBoost fútbol + MLB v3 + Tenis ATP v2")
 except Exception as _ml_err:
     log.warning(f"[WARN] Predictor ML no disponible: {_ml_err}")
     log.info("[INFO] Usando sistema de reglas como fallback")
@@ -889,6 +896,72 @@ def _notificar_y_registrar(partidos_analizados: list[dict], riesgo: dict) -> int
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# HELPERS ML TELEGRAM
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _enviar_recs_ml_telegram(recs: list, deporte: str, icono: str):
+    """
+    Envía por Telegram las recomendaciones de los modelos ML multi-deporte.
+    Formato unificado para MLB, Tenis ATP y fútbol extra-ligas.
+    """
+    if not TELEGRAM_DISPONIBLE or not recs:
+        return
+    for rec in recs:
+        try:
+            conf_pct = rec["confianza"] * 100
+            val_pct  = rec["value"] * 100
+            conf_emoji = "🟢" if conf_pct >= 70 else ("🟡" if conf_pct >= 65 else "🔴")
+            paper_tag = "🟡 <b>[PAPER TRADING — apuesta ficticia]</b>\n" if MODO_PAPER_TRADING else ""
+
+            # Línea extra según deporte
+            extra = ""
+            if deporte == "mlb":
+                ph = rec.get("pitcher_home", "")
+                pa = rec.get("pitcher_away", "")
+                eh = rec.get("era_sp_home", 0)
+                ea = rec.get("era_sp_away", 0)
+                if ph or pa:
+                    extra = (f"<b>Abridores:</b> {ph} (ERA {eh:.2f}) vs "
+                             f"{pa} (ERA {ea:.2f})\n")
+            elif deporte == "tenis":
+                extra = (f"<b>Favorito:</b> {rec.get('fav','')} "
+                         f"(ELO {rec.get('elo_fav',0):.0f})\n"
+                         f"<b>Underdog:</b> {rec.get('und','')} "
+                         f"(ELO {rec.get('elo_und',0):.0f})\n"
+                         f"<b>P(fav):</b> {rec.get('proba_elo_fav',0):.1%} (ELO)\n"
+                         f"<b>Superficie:</b> {rec.get('surface','')}"
+                         f"{' | Best-of-5' if rec.get('is_best_of_5') else ''}\n")
+
+            msg = (
+                f"{paper_tag}"
+                f"<b>{icono} PREDICCION ML ({deporte.upper()})</b>\n"
+                f"─────────────────────────\n"
+                f"<b>{rec.get('liga','')}</b>\n"
+                f"{rec['home']} vs {rec['away']}\n"
+                f"\n"
+                f"<b>Mercado:</b> {rec.get('tipo_apuesta','MONEYLINE')}\n"
+                f"<b>Seleccion:</b> <b>{rec['seleccion_legible']}</b>\n"
+                f"<b>Cuota:</b> {rec['cuota']}\n"
+                f"<b>Value:</b> +{val_pct:.1f}%\n"
+                f"\n"
+                f"<b>Confianza ML:</b> {conf_emoji} {conf_pct:.1f}%\n"
+                f"{extra}"
+                f"\n"
+                f"<b>💰 MONTO SUGERIDO</b>\n"
+                f"Kelly (25%): ${rec['monto_kelly_clp']:,.0f} CLP\n"
+                f"Autonomo: ${rec['monto_autonomo']:,.0f} CLP\n"
+                f"\n"
+                f"─────────────────────────\n"
+                f"Modelo: XGBoost {deporte.upper()} | Umbral: {rec['confianza']*100:.0f}%"
+            )
+            enviar_texto(msg)
+            log.info(f"  [OK] Telegram {deporte.upper()}: "
+                     f"{rec['home']} vs {rec['away']} — {rec['seleccion_legible']}")
+        except Exception as e:
+            log.warning(f"  [WARN] Telegram {deporte.upper()}: {e}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1030,9 +1103,37 @@ def main():
             else:
                 log.info("[INFO] ML: sin recomendaciones Serie A para hoy")
         except Exception as e:
-            log.warning(f"[WARN] Error en predictor ML: {e}")
+            log.warning(f"[WARN] Error en predictor ML fútbol: {e}")
     else:
         log.info("[INFO] Predictor ML no disponible — usando solo sistema de reglas")
+
+    # 3c. Predictor ML MLB
+    if MLB_ML_DISPONIBLE:
+        log.info("")
+        log.info("── Paso 3c: predictor ML MLB v3 ────────────────────────────")
+        try:
+            recs_mlb = predecir_mlb_hoy()
+            if recs_mlb:
+                log.info(f"[OK] MLB: {len(recs_mlb)} recomendaciones")
+                _enviar_recs_ml_telegram(recs_mlb, "mlb", "⚾")
+            else:
+                log.info("[INFO] MLB: sin recomendaciones para hoy (sin partidos pendientes o sin value)")
+        except Exception as e:
+            log.warning(f"[WARN] Error en predictor MLB: {e}")
+
+    # 3d. Predictor ML Tenis ATP
+    if TENIS_ML_DISPONIBLE:
+        log.info("")
+        log.info("── Paso 3d: predictor ML Tenis ATP v2 ──────────────────────")
+        try:
+            recs_tenis = predecir_tenis_hoy()
+            if recs_tenis:
+                log.info(f"[OK] Tenis: {len(recs_tenis)} recomendaciones")
+                _enviar_recs_ml_telegram(recs_tenis, "tenis", "🎾")
+            else:
+                log.info("[INFO] Tenis: sin recomendaciones para hoy (sin fixtures o sin value)")
+        except Exception as e:
+            log.warning(f"[WARN] Error en predictor Tenis: {e}")
 
     # 4. Priorizar y limitar
     todos = _priorizar(todos)[:MAX_FIXTURES]
