@@ -124,8 +124,8 @@ https://www.retrosheet.org/gamelogs/gl{year}.zip
 
 ## Pendiente
 
-- [ ] Integrar xgboost_tenis_v2.pkl en predictor_tiempo_real.py
-- [ ] MLB en predictor_tiempo_real.py
+- [x] xgboost_tenis_v2.pkl integrado en predictor_tiempo_real.py (2026-05-25)
+- [x] MLB en predictor_tiempo_real.py (2026-05-25)
 - [x] xgboost_clubes_v2.pkl integrado en producción (ensemble home_win, 2026-05-25)
 - [x] MLB v2: pitcher ERA, AUC 0.6548 (2026-05-25)
 - [x] MLB v3: ERA+FIP, AUC 0.6637 (2026-05-25)

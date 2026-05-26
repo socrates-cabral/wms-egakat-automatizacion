@@ -789,6 +789,457 @@ def predecir_partidos_hoy() -> list:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# MLB  (xgboost_mlb_v3.pkl — AUC 0.6637)
+# Fuente fixtures: MLB StatsAPI (gratis, sin key)
+# Fuente features: mlb_features.py (statsapi) + mlb_team_lookup_2023.json
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Mapeo Retrosheet código → nombre StatsAPI
+_RETRO_TO_MLB = {
+    "ANA": "Los Angeles Angels",  "ARI": "Arizona Diamondbacks",
+    "ATL": "Atlanta Braves",      "BAL": "Baltimore Orioles",
+    "BOS": "Boston Red Sox",      "CHA": "Chicago White Sox",
+    "CHN": "Chicago Cubs",        "CIN": "Cincinnati Reds",
+    "CLE": "Cleveland Guardians", "COL": "Colorado Rockies",
+    "DET": "Detroit Tigers",      "FLO": "Miami Marlins",
+    "HOU": "Houston Astros",      "KCA": "Kansas City Royals",
+    "LAN": "Los Angeles Dodgers", "MIA": "Miami Marlins",
+    "MIL": "Milwaukee Brewers",   "MIN": "Minnesota Twins",
+    "NYA": "New York Yankees",    "NYN": "New York Mets",
+    "OAK": "Athletics",           "PHI": "Philadelphia Phillies",
+    "PIT": "Pittsburgh Pirates",  "SDN": "San Diego Padres",
+    "SEA": "Seattle Mariners",    "SFN": "San Francisco Giants",
+    "SLN": "St. Louis Cardinals", "TBA": "Tampa Bay Rays",
+    "TEX": "Texas Rangers",       "TOR": "Toronto Blue Jays",
+    "WAS": "Washington Nationals",
+}
+_MLB_TO_RETRO = {v: k for k, v in _RETRO_TO_MLB.items()}
+
+_mlb_team_lookup: dict = {}
+
+
+def _cargar_mlb_team_lookup() -> dict:
+    global _mlb_team_lookup
+    if _mlb_team_lookup:
+        return _mlb_team_lookup
+    path = BASE_DIR / "models" / "mlb_team_lookup_2023.json"
+    if path.exists():
+        with open(path) as f:
+            raw = json.load(f)
+        # Convertir claves Retrosheet → nombres StatsAPI
+        _mlb_team_lookup = {_RETRO_TO_MLB.get(k, k): v for k, v in raw.items()}
+    return _mlb_team_lookup
+
+
+def _construir_features_mlb(home: str, away: str, mlb_feats: dict,
+                              team_lookup: dict, feature_cols: list) -> dict:
+    """
+    Mapea los datos de mlb_features.py (statsapi) al vector del modelo v3.
+    Fallback 0.0 para features no disponibles en tiempo real (wr20, b2b, etc.).
+    """
+    h = mlb_feats.get("home", {})
+    a = mlb_feats.get("away", {})
+    th = team_lookup.get(home, {})
+    ta = team_lookup.get(away, {})
+
+    # win_pct_l10 → wr10; runs_pg → rd10 proxy; era_sp → sp_era
+    wr10_h = h.get("win_pct_l10", th.get("season_wr_home", 0.5))
+    wr10_a = a.get("win_pct_l10", ta.get("season_wr_away", 0.5))
+    rd10_h = h.get("runs_pg", 4.5) - h.get("runs_against_pg", 4.5)
+    rd10_a = a.get("runs_pg", 4.5) - a.get("runs_against_pg", 4.5)
+
+    sp_era_h = h.get("era_sp", th.get("prev_era", 4.5))
+    sp_era_a = a.get("era_sp", ta.get("prev_era", 4.5))
+
+    rest_h = float(h.get("rest_days", 1))
+    rest_a = float(a.get("rest_days", 1))
+
+    feats = {
+        "wr10_home":      wr10_h,
+        "wr10_away":      wr10_a,
+        "wr10_diff":      wr10_h - wr10_a,
+        "rd10_home":      rd10_h,
+        "rd10_away":      rd10_a,
+        "rd10_diff":      rd10_h - rd10_a,
+        # wr20/rd20 → fallback a wr10/rd10 como mejor aproximación
+        "wr20_home":      wr10_h,
+        "wr20_away":      wr10_a,
+        "wr20_diff":      wr10_h - wr10_a,
+        "rd20_home":      rd10_h,
+        "rd20_away":      rd10_a,
+        "rd20_diff":      rd10_h - rd10_a,
+        # Season WR
+        "season_wr_home": th.get("season_wr_home", wr10_h),
+        "season_wr_away": ta.get("season_wr_away", wr10_a),
+        "season_wr_diff": th.get("season_wr_home", wr10_h) - ta.get("season_wr_away", wr10_a),
+        "home_field_wr":  th.get("home_field_wr", 0.54),
+        "road_wr_away":   ta.get("road_wr", 0.46),
+        # Rest
+        "days_rest_home": rest_h,
+        "days_rest_away": rest_a,
+        "rest_diff":      rest_h - rest_a,
+        "b2b_home":       float(rest_h <= 1),
+        "b2b_away":       float(rest_a <= 1),
+        # H2H (no disponible en tiempo real)
+        "h2h_home_wr":    0.5,
+        # Prior season team stats
+        "prev_era_home":  th.get("prev_era", 4.5),
+        "prev_era_away":  ta.get("prev_era", 4.5),
+        "prev_era_diff":  th.get("prev_era", 4.5) - ta.get("prev_era", 4.5),
+        "prev_rpg_home":  th.get("prev_rpg", 4.5),
+        "prev_rpg_away":  ta.get("prev_rpg", 4.5),
+        "prev_rpg_diff":  th.get("prev_rpg", 4.5) - ta.get("prev_rpg", 4.5),
+        "prev_ba_home":   th.get("prev_ba", 0.25),
+        "prev_ba_away":   ta.get("prev_ba", 0.25),
+        # SP ERA (temporada actual via statsapi) + FIP (fallback = ERA * 1.05)
+        "sp_era_home":    sp_era_h,
+        "sp_era_away":    sp_era_a,
+        "sp_era_diff":    sp_era_h - sp_era_a,
+        "sp_fip_home":    sp_era_h * 1.05,
+        "sp_fip_away":    sp_era_a * 1.05,
+        "sp_fip_diff":    (sp_era_h - sp_era_a) * 1.05,
+    }
+
+    for col in feature_cols:
+        feats.setdefault(col, 0.0)
+
+    return feats
+
+
+def predecir_mlb_hoy() -> list:
+    """
+    Predice partidos MLB de hoy con xgboost_mlb_v3.pkl.
+    Usa MLB StatsAPI (gratis) para fixtures + ERA del abridor + forma reciente.
+    Retorna misma estructura de rec que predecir_partidos_hoy().
+    """
+    log("[MLB] Iniciando predictor MLB v3...")
+
+    # Cargar modelo
+    pkl_path = BASE_DIR / "models" / "xgboost_mlb_v3.pkl"
+    meta_path = BASE_DIR / "models" / "xgboost_mlb_v3_meta.json"
+    if not pkl_path.exists():
+        log("[MLB] xgboost_mlb_v3.pkl no encontrado — skip")
+        return []
+    try:
+        modelo_mlb = joblib.load(pkl_path)
+        with open(meta_path) as f:
+            meta = json.load(f)
+        feature_cols = meta.get("features", [])
+        log(f"[MLB] Modelo cargado — AUC {meta.get('cv_auc', '?')} | {len(feature_cols)} features")
+    except Exception as e:
+        log(f"[MLB] Error cargando modelo: {e}")
+        return []
+
+    team_lookup = _cargar_mlb_team_lookup()
+
+    # Obtener fixtures del día via statsapi
+    try:
+        import statsapi
+        partidos_raw = statsapi.schedule(date=date.today().isoformat())
+    except Exception as e:
+        log(f"[MLB] statsapi no disponible: {e}")
+        return []
+
+    if not partidos_raw:
+        log(f"[MLB] Sin partidos MLB hoy ({date.today()})")
+        return []
+
+    log(f"[MLB] {len(partidos_raw)} partidos hoy")
+
+    # Cuotas MLB via The Odds API
+    try:
+        from odds_collector import get_odds_partido
+    except Exception:
+        get_odds_partido = None
+
+    recomendaciones = []
+    UMBRAL_MLB = 0.60
+    VALUE_MIN_MLB = 0.05
+
+    for g in partidos_raw:
+        estado = g.get("status", "")
+        if estado not in ("Preview", "Scheduled", "Pre-Game", "Warmup"):
+            continue
+
+        home = g.get("home_name", "")
+        away = g.get("away_name", "")
+        if not home or not away:
+            continue
+
+        log(f"[MLB] Analizando: {away} @ {home}")
+
+        # Features via mlb_features.py
+        try:
+            from mlb_features import get_mlb_features
+            mlb_feats = get_mlb_features(home, away)
+        except Exception as e:
+            log(f"[MLB] mlb_features.py error: {e}")
+            mlb_feats = {"home": {}, "away": {}}
+
+        # Construir vector
+        features = _construir_features_mlb(home, away, mlb_feats, team_lookup, feature_cols)
+        X = pd.DataFrame([features])[feature_cols].fillna(0.0)
+
+        # Predecir
+        try:
+            proba = modelo_mlb.predict_proba(X.values)[0]
+        except Exception as e:
+            log(f"[MLB] predict_proba error {home} vs {away}: {e}")
+            continue
+
+        # Modelo binario: índice 1 = home wins, índice 0 = away wins
+        prob_home = float(proba[1])
+        prob_away = float(proba[0])
+        if prob_home >= prob_away:
+            pred_str, confianza = "home_win", prob_home
+        else:
+            pred_str, confianza = "away_win", prob_away
+
+        if confianza < UMBRAL_MLB:
+            log(f"[MLB] {home} vs {away} — conf {confianza:.1%} < {UMBRAL_MLB:.0%} → skip")
+            continue
+
+        # Cuotas
+        h2h_odds = {}
+        if get_odds_partido:
+            try:
+                cuotas = get_odds_partido(home_nombre=home, away_nombre=away,
+                                          liga_nombre="MLB", markets=["h2h"])
+                if cuotas:
+                    h2h_odds = cuotas.get("h2h", {})
+            except Exception:
+                pass
+
+        cuota = (h2h_odds.get("home") if pred_str == "home_win"
+                 else h2h_odds.get("away"))
+        if not cuota or cuota <= 1.0:
+            log(f"[MLB] Sin cuota para {home} vs {away} ({pred_str}) → skip")
+            continue
+
+        value = confianza * cuota - 1
+        if value < VALUE_MIN_MLB:
+            log(f"[MLB] {home} vs {away} — value {value:.1%} < {VALUE_MIN_MLB:.0%} → skip")
+            continue
+
+        kelly = (confianza * cuota - 1) / (cuota - 1)
+        monto_kelly = int(kelly * 0.25 * BANKROLL)
+        try:
+            from config import MONTO_AUTONOMO
+            monto = min(monto_kelly, MONTO_AUTONOMO)
+        except Exception:
+            monto = monto_kelly
+
+        pitcher_home = mlb_feats.get("home", {}).get("pitcher_name", "")
+        pitcher_away = mlb_feats.get("away", {}).get("pitcher_name", "")
+
+        rec = {
+            "fixture_id":        f"mlb_{g.get('game_id', '')}",
+            "liga":              "MLB",
+            "liga_id":           None,
+            "deporte":           "baseball",
+            "home":              home,
+            "away":              away,
+            "fecha":             str(date.today()),
+            "fecha_partido":     str(date.today()),
+            "hora":              g.get("game_datetime", ""),
+            "tipo_apuesta":      "MONEYLINE",
+            "seleccion":         "HOME" if pred_str == "home_win" else "AWAY",
+            "prob_modelo":       round(confianza, 4),
+            "pred_clase":        pred_str,
+            "seleccion_legible": f"{home} gana" if pred_str == "home_win" else f"{away} gana",
+            "nombre_betano":     "1 (Local)" if pred_str == "home_win" else "2 (Visitante)",
+            "confianza":         round(confianza, 4),
+            "prob_home":         round(prob_home, 4),
+            "prob_away":         round(prob_away, 4),
+            "prob_draw":         0.0,
+            "cuota":             round(float(cuota), 2),
+            "value":             round(float(value), 4),
+            "monto_kelly_clp":   monto_kelly,
+            "monto_autonomo":    monto,
+            "pi_diff":           0.0,
+            "pi_rating_home":    0.0,
+            "pi_rating_away":    0.0,
+            "xg_diff_home":      0.0,
+            "pitcher_home":      pitcher_home,
+            "pitcher_away":      pitcher_away,
+            "era_sp_home":       round(features.get("sp_era_home", 0.0), 2),
+            "era_sp_away":       round(features.get("sp_era_away", 0.0), 2),
+            "fuente":            "ml_xgboost_mlb_v3",
+        }
+
+        log(f"[MLB] RECOMENDACION: {home} vs {away} | {rec['seleccion_legible']} | "
+            f"conf={confianza:.1%} | value={value:.1%} | cuota={cuota}")
+        recomendaciones.append(rec)
+
+    log(f"[MLB] Predictor finalizado — {len(recomendaciones)} recomendaciones")
+    return recomendaciones
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TENIS ATP  (xgboost_tenis_v2.pkl — AUC 0.6739 / backtest ROI 51.54%)
+# Fuente fixtures: api-sports Tennis (v1.tennis.api-sports.io)
+# Fuente features: tenis_elo_state.json, tenis_rank_state.json, tenis_h2h.json
+# ─────────────────────────────────────────────────────────────────────────────
+
+def predecir_tenis_hoy() -> list:
+    """
+    Predice partidos ATP de hoy con xgboost_tenis_v2.pkl.
+    El modelo retorna P(favorito gana) — favorito = mejor ranked.
+    """
+    log("[TENIS] Iniciando predictor ATP v2...")
+
+    pkl_path  = BASE_DIR / "models" / "xgboost_tenis_v2.pkl"
+    meta_path = BASE_DIR / "models" / "xgboost_tenis_v2_meta.json"
+    if not pkl_path.exists():
+        log("[TENIS] xgboost_tenis_v2.pkl no encontrado — skip")
+        return []
+    try:
+        modelo_tenis = joblib.load(pkl_path)
+        with open(meta_path) as f:
+            meta = json.load(f)
+        feature_cols = meta.get("feature_cols", [])
+        log(f"[TENIS] Modelo cargado — AUC {meta.get('cv_auc_mean','?')} | {len(feature_cols)} features")
+    except Exception as e:
+        log(f"[TENIS] Error cargando modelo: {e}")
+        return []
+
+    # Fixtures ATP del día
+    try:
+        from tenis_features import get_tenis_fixtures_hoy, construir_features_tenis
+    except Exception as e:
+        log(f"[TENIS] tenis_features.py no disponible: {e}")
+        return []
+
+    partidos = get_tenis_fixtures_hoy()
+    if not partidos:
+        log(f"[TENIS] Sin partidos ATP hoy ({date.today()})")
+        return []
+
+    # Cuotas via The Odds API
+    try:
+        from odds_collector import get_odds_partido
+    except Exception:
+        get_odds_partido = None
+
+    UMBRAL_TENIS = 0.65
+    VALUE_MIN_TENIS = 0.05
+    recomendaciones = []
+
+    for fixture in partidos:
+        p1, p2 = fixture["p1"], fixture["p2"]
+        log(f"[TENIS] Analizando: {p1} vs {p2} ({fixture.get('tournament','')})")
+
+        result = construir_features_tenis(fixture)
+        if not result:
+            continue
+
+        fav, und = result["fav"], result["und"]
+        feats = result["features"]
+        X = pd.DataFrame([feats])[feature_cols].fillna(0.0)
+
+        try:
+            proba = modelo_tenis.predict_proba(X.values)[0]
+        except Exception as e:
+            log(f"[TENIS] predict_proba error {p1} vs {p2}: {e}")
+            continue
+
+        # Modelo: 1=fav gana, 0=upset
+        prob_fav = float(proba[1])
+        prob_und = float(proba[0])
+
+        # Quién fue favorito en el modelo vs quién juega como p1/p2 en el fixture
+        pred_p1_wins = (fav == p1)
+        if prob_fav >= 0.5:
+            pred_str  = "fav_wins"
+            confianza = prob_fav
+            ganador_pred = fav
+        else:
+            pred_str  = "und_wins"
+            confianza = prob_und
+            ganador_pred = und
+
+        if confianza < UMBRAL_TENIS:
+            log(f"[TENIS] {fav} vs {und} — conf {confianza:.1%} < {UMBRAL_TENIS:.0%} → skip")
+            continue
+
+        # Cuotas
+        h2h_odds = {}
+        if get_odds_partido:
+            try:
+                cuotas = get_odds_partido(home_nombre=p1, away_nombre=p2,
+                                          liga_nombre="ATP Tennis", markets=["h2h"])
+                if cuotas:
+                    h2h_odds = cuotas.get("h2h", {})
+            except Exception:
+                pass
+
+        pred_es_p1 = (ganador_pred == p1)
+        cuota = h2h_odds.get("home") if pred_es_p1 else h2h_odds.get("away")
+        if not cuota or cuota <= 1.0:
+            log(f"[TENIS] Sin cuota para {p1} vs {p2} ({ganador_pred}) → skip")
+            continue
+
+        value = confianza * cuota - 1
+        if value < VALUE_MIN_TENIS:
+            log(f"[TENIS] {p1} vs {p2} — value {value:.1%} < {VALUE_MIN_TENIS:.0%} → skip")
+            continue
+
+        kelly = (confianza * cuota - 1) / (cuota - 1)
+        monto_kelly = int(kelly * 0.25 * BANKROLL)
+        try:
+            from config import MONTO_AUTONOMO
+            monto = min(monto_kelly, MONTO_AUTONOMO)
+        except Exception:
+            monto = monto_kelly
+
+        rec = {
+            "fixture_id":        fixture.get("fixture_id") or f"atp_{p1}_{p2}",
+            "liga":              "ATP Tennis",
+            "liga_id":           None,
+            "deporte":           "tenis",
+            "home":              p1,
+            "away":              p2,
+            "fecha":             fixture.get("fecha", str(date.today())),
+            "fecha_partido":     fixture.get("fecha", str(date.today())),
+            "hora":              "",
+            "tipo_apuesta":      "MONEYLINE",
+            "seleccion":         "HOME" if pred_es_p1 else "AWAY",
+            "prob_modelo":       round(confianza, 4),
+            "pred_clase":        pred_str,
+            "seleccion_legible": f"{ganador_pred} gana",
+            "nombre_betano":     f"{ganador_pred}",
+            "confianza":         round(confianza, 4),
+            "prob_home":         round(prob_fav if pred_es_p1 else prob_und, 4),
+            "prob_away":         round(prob_und if pred_es_p1 else prob_fav, 4),
+            "prob_draw":         0.0,
+            "cuota":             round(float(cuota), 2),
+            "value":             round(float(value), 4),
+            "monto_kelly_clp":   monto_kelly,
+            "monto_autonomo":    monto,
+            "pi_diff":           0.0,
+            "pi_rating_home":    0.0,
+            "pi_rating_away":    0.0,
+            "xg_diff_home":      0.0,
+            "fav":               fav,
+            "und":               und,
+            "elo_fav":           round(result["elo_fav"], 1),
+            "elo_und":           round(result["elo_und"], 1),
+            "proba_elo_fav":     round(result["proba_elo_fav"], 4),
+            "tournament":        fixture.get("tournament", ""),
+            "surface":           fixture.get("surface", ""),
+            "is_best_of_5":      fixture.get("is_best_of_5", 0),
+            "fuente":            "ml_xgboost_tenis_v2",
+        }
+
+        log(f"[TENIS] RECOMENDACION: {p1} vs {p2} | {rec['seleccion_legible']} | "
+            f"conf={confianza:.1%} | value={value:.1%} | cuota={cuota}")
+        recomendaciones.append(rec)
+
+    log(f"[TENIS] Predictor finalizado — {len(recomendaciones)} recomendaciones")
+    return recomendaciones
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # TEST
 # ─────────────────────────────────────────────────────────────────────────────
 

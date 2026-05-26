@@ -1,0 +1,212 @@
+{
+  "SLN": {
+    "prev_era": 3.79,
+    "prev_rpg": 4.7654,
+    "prev_ba": 0.2522,
+    "home_field_wr": 0.425,
+    "road_wr": 0.45
+  },
+  "PIT": {
+    "prev_era": 4.66,
+    "prev_rpg": 3.6481,
+    "prev_ba": 0.2225,
+    "home_field_wr": 0.475,
+    "road_wr": 0.45
+  },
+  "COL": {
+    "prev_era": 5.06,
+    "prev_rpg": 4.3086,
+    "prev_ba": 0.2542,
+    "home_field_wr": 0.45,
+    "road_wr": 0.275
+  },
+  "NYN": {
+    "prev_era": 3.57,
+    "prev_rpg": 4.7654,
+    "prev_ba": 0.2591,
+    "home_field_wr": 0.5375,
+    "road_wr": 0.4
+  },
+  "SEA": {
+    "prev_era": 3.59,
+    "prev_rpg": 4.2593,
+    "prev_ba": 0.23,
+    "home_field_wr": 0.55,
+    "road_wr": 0.5375
+  },
+  "OAK": {
+    "prev_era": 4.52,
+    "prev_rpg": 3.5062,
+    "prev_ba": 0.2158,
+    "home_field_wr": 0.325,
+    "road_wr": 0.3
+  },
+  "CHN": {
+    "prev_era": 4.0,
+    "prev_rpg": 4.0556,
+    "prev_ba": 0.2383,
+    "home_field_wr": 0.55,
+    "road_wr": 0.475
+  },
+  "CLE": {
+    "prev_era": 3.46,
+    "prev_rpg": 4.3086,
+    "prev_ba": 0.2537,
+    "home_field_wr": 0.5125,
+    "road_wr": 0.425
+  },
+  "MIL": {
+    "prev_era": 3.83,
+    "prev_rpg": 4.4753,
+    "prev_ba": 0.2346,
+    "home_field_wr": 0.6,
+    "road_wr": 0.5375
+  },
+  "TOR": {
+    "prev_era": 3.87,
+    "prev_rpg": 4.784,
+    "prev_ba": 0.2635,
+    "home_field_wr": 0.5375,
+    "road_wr": 0.5625
+  },
+  "CHA": {
+    "prev_era": 3.92,
+    "prev_rpg": 4.2346,
+    "prev_ba": 0.2557,
+    "home_field_wr": 0.3875,
+    "road_wr": 0.3625
+  },
+  "LAN": {
+    "prev_era": 2.8,
+    "prev_rpg": 5.2284,
+    "prev_ba": 0.2566,
+    "home_field_wr": 0.65,
+    "road_wr": 0.575
+  },
+  "TEX": {
+    "prev_era": 4.22,
+    "prev_rpg": 4.3642,
+    "prev_ba": 0.2388,
+    "home_field_wr": 0.6125,
+    "road_wr": 0.5
+  },
+  "TBA": {
+    "prev_era": 3.41,
+    "prev_rpg": 4.1111,
+    "prev_ba": 0.2391,
+    "home_field_wr": 0.6625,
+    "road_wr": 0.5625
+  },
+  "BOS": {
+    "prev_era": 4.53,
+    "prev_rpg": 4.537,
+    "prev_ba": 0.2576,
+    "home_field_wr": 0.4875,
+    "road_wr": 0.475
+  },
+  "NYA": {
+    "prev_era": 3.3,
+    "prev_rpg": 4.9815,
+    "prev_ba": 0.2412,
+    "home_field_wr": 0.5125,
+    "road_wr": 0.5
+  },
+  "CIN": {
+    "prev_era": 4.86,
+    "prev_rpg": 4.0,
+    "prev_ba": 0.2349,
+    "home_field_wr": 0.4625,
+    "road_wr": 0.55
+  },
+  "KCA": {
+    "prev_era": 4.7,
+    "prev_rpg": 3.9506,
+    "prev_ba": 0.2441,
+    "home_field_wr": 0.4,
+    "road_wr": 0.2875
+  },
+  "MIA": {
+    "prev_era": 3.86,
+    "prev_rpg": 3.6173,
+    "prev_ba": 0.23,
+    "home_field_wr": 0.5625,
+    "road_wr": 0.475
+  },
+  "ARI": {
+    "prev_era": 4.25,
+    "prev_rpg": 4.3333,
+    "prev_ba": 0.2302,
+    "home_field_wr": 0.5375,
+    "road_wr": 0.5125
+  },
+  "MIN": {
+    "prev_era": 3.98,
+    "prev_rpg": 4.2963,
+    "prev_ba": 0.2476,
+    "home_field_wr": 0.5875,
+    "road_wr": 0.5
+  },
+  "PHI": {
+    "prev_era": 3.97,
+    "prev_rpg": 4.6111,
+    "prev_ba": 0.2533,
+    "home_field_wr": 0.6125,
+    "road_wr": 0.5
+  },
+  "SDN": {
+    "prev_era": 3.81,
+    "prev_rpg": 4.3519,
+    "prev_ba": 0.2409,
+    "home_field_wr": 0.5375,
+    "road_wr": 0.4625
+  },
+  "BAL": {
+    "prev_era": 3.97,
+    "prev_rpg": 4.1605,
+    "prev_ba": 0.236,
+    "home_field_wr": 0.6125,
+    "road_wr": 0.6375
+  },
+  "HOU": {
+    "prev_era": 2.9,
+    "prev_rpg": 4.5494,
+    "prev_ba": 0.2479,
+    "home_field_wr": 0.4875,
+    "road_wr": 0.625
+  },
+  "ATL": {
+    "prev_era": 3.46,
+    "prev_rpg": 4.8704,
+    "prev_ba": 0.253,
+    "home_field_wr": 0.65,
+    "road_wr": 0.6456
+  },
+  "WAS": {
+    "prev_era": 5.0,
+    "prev_rpg": 3.7222,
+    "prev_ba": 0.2486,
+    "home_field_wr": 0.4177,
+    "road_wr": 0.45
+  },
+  "ANA": {
+    "prev_era": 3.77,
+    "prev_rpg": 3.8457,
+    "prev_ba": 0.2333,
+    "home_field_wr": 0.4625,
+    "road_wr": 0.4375
+  },
+  "SFN": {
+    "prev_era": 3.85,
+    "prev_rpg": 4.4198,
+    "prev_ba": 0.2339,
+    "home_field_wr": 0.5625,
+    "road_wr": 0.425
+  },
+  "DET": {
+    "prev_era": 4.04,
+    "prev_rpg": 3.4383,
+    "prev_ba": 0.2306,
+    "home_field_wr": 0.45,
+    "road_wr": 0.5
+  }
+}
