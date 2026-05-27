@@ -12,9 +12,17 @@ BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "crypto_bot.db"
 
 
+def _connect():
+    """Conexión SQLite con timeout y WAL para tolerar ciclos paralelos."""
+    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
+    return conn
+
+
 def init_db():
     """Inicializa base de datos SQLite con schema."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     # Tabla de trades históricos
@@ -71,7 +79,7 @@ def guardar_trade(par: str, tipo: str, precio: float, qty: float,
     if timestamp is None:
         timestamp = datetime.now().isoformat()
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -102,7 +110,7 @@ def guardar_estado_grid(par: str, pnl_realizado: float, precio_ultimo: float,
     if timestamp is None:
         timestamp = datetime.now().isoformat()
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -124,7 +132,7 @@ def recuperar_pnl_acumulado(par: str) -> float:
     Returns:
         PnL total acumulado (suma de todos los PnL de ventas)
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -150,7 +158,7 @@ def recuperar_trades_historico(par: str, limit: int = 100) -> List[Dict]:
     Returns:
         Lista de trades ordenados por timestamp descendente
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -187,7 +195,7 @@ def recuperar_ultimo_estado_grid(par: str) -> Optional[Dict]:
     Returns:
         Diccionario con estado del grid o None si no existe
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     cursor.execute("""

@@ -3,6 +3,36 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-05-27] update | Crypto Bot go-live Kraken + MLB odds-io fix + Despacho timing/label fix
+
+**Tipo:** Go-live producción + bug fixes
+
+**Crypto Bot — go-live REAL en Kraken (2026-05-27):**
+- Decisión: Kraken en vez de Crypto.com (fondos ya en Kraken Earn $22,631 USDT ~3.55% APY flexible, evita transferencia + delay).
+- Capital real: $200 BTC_USDT + $100 ETH_USDT. MODO_PAPER_TRADING=False.
+- Bug fixes aplicados: `persistence.init_db()` al inicio de `main()` (no such table fix), `_connect()` helper con WAL+timeout=30s, fallback `KRAKEN_API_KEY_TRADING`, fallback `TELEGRAM_CHAT_ID_APUESTAS`, `EMA_FILTER_ACTIVO` configurable vía env ("auto"/"true"/"false"), KeyError guard `n.get("estado")`.
+- EMA filter OFF para $300 (`EMA_FILTER_ACTIVO=false` en .env). Activar "auto" a $1K+.
+- Paper state respaldado: `crypto_bot.paper_backup.db` (13MB) + `estado_grid.paper_backup.json`.
+- Task Scheduler corriendo cada 5 min. Telegram verificado (mismo chat que apuestas).
+
+**Agente Apuestas — fixes MLBs + odds-io:**
+- `odds_io_collector.py`: `_safe_float()` helper para manejar 'N/A' de API (float('N/A') lanzaba ValueError bloqueando odds-io).
+- `UMBRAL_MLB` 0.60 → 0.55 (modelo v3 AUC 0.6637 produce probs 50-56% en real). ⚠️ pendiente backtest validación.
+- Tenis ATP pausado: `v1.tennis.api-sports.io` no está en plan gratuito api-sports (subscripción separada).
+- The Odds API: cuota 500/500 agotada; odds-io opera como fuente primaria.
+- Temporada fútbol terminada → sin movimientos esperados hasta agosto/septiembre.
+
+**WMS Despacho — timing + label fix:**
+- Footer label: "Módulos: N" → "Viajes: N" (era incorrecto para este reporte).
+- Header tiempo: calculado como `hora_inicio + duracion_total_seg` en lugar de `datetime.now()` al inicio del reporte (inconsistencia entre header y footer eliminada).
+
+**Páginas wiki actualizadas:**
+- `wiki/proyectos/crypto-bot.md` — reescrita completa con go-live info
+- `wiki/proyectos/agente-apuestas-modelos-ml.md` — sección fixes 2026-05-27 agregada
+- `memory/project_crypto_bot.md` — go-live checklist + Kraken details
+
+---
+
 ## [2026-05-27] update | Timing footer + deep bug fixes HackeaMetabolismo + finanzas_personales
 
 **Tipo:** Features + bug fixes producción

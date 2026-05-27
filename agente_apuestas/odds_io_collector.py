@@ -81,8 +81,18 @@ def _sim(a: str, b: str) -> float:
     return SequenceMatcher(None, a.lower().strip(), b.lower().strip()).ratio()
 
 
+def _safe_float(val, default: float = 0.0) -> float:
+    """Convierte a float ignorando 'N/A', None, bool y strings no numéricos."""
+    if val is None or isinstance(val, bool) or isinstance(val, (list, dict, tuple)):
+        return default
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+
+
 def _avg_float(lst: list) -> float | None:
-    vals = [float(x) for x in lst if x is not None]
+    vals = [_safe_float(x) for x in lst if x is not None and str(x) != 'N/A']
     return round(sum(vals) / len(vals), 3) if vals else None
 
 
@@ -203,9 +213,9 @@ def parsear_cuotas_io(odds_raw: dict, bookmaker: str = BOOKMAKER_PRIMARY) -> dic
         # ── 1X2 (ML = Money Line) ────────────────────────────────────────────
         if name == "ML":
             resultado["h2h"] = {
-                "home":       float(first.get("home", 0) or 0),
-                "draw":       float(first.get("draw", 0) or 0),
-                "away":       float(first.get("away", 0) or 0),
+                "home":       _safe_float(first.get("home")),
+                "draw":       _safe_float(first.get("draw")),
+                "away":       _safe_float(first.get("away")),
                 "bookmakers": 1,
             }
 
@@ -216,9 +226,9 @@ def parsear_cuotas_io(odds_raw: dict, bookmaker: str = BOOKMAKER_PRIMARY) -> dic
                 if hdp is None:
                     continue
                 resultado["totals"].append({
-                    "punto": float(hdp),
-                    "over":  float(o.get("over", 0) or 0),
-                    "under": float(o.get("under", 0) or 0),
+                    "punto": _safe_float(hdp),
+                    "over":  _safe_float(o.get("over")),
+                    "under": _safe_float(o.get("under")),
                 })
             # Ordenar por cercanía a 2.5 (línea más común en fútbol)
             resultado["totals"].sort(key=lambda x: abs(x["punto"] - 2.5))
@@ -230,16 +240,16 @@ def parsear_cuotas_io(odds_raw: dict, bookmaker: str = BOOKMAKER_PRIMARY) -> dic
                 if hdp is None:
                     continue
                 resultado["spreads"].append({
-                    "punto": float(hdp),
-                    "home":  float(o.get("home", 0) or 0),
-                    "away":  float(o.get("away", 0) or 0),
+                    "punto": _safe_float(hdp),
+                    "home":  _safe_float(o.get("home")),
+                    "away":  _safe_float(o.get("away")),
                 })
 
         # ── BTTS ─────────────────────────────────────────────────────────────
         elif name == "Both Teams To Score":
             resultado["btts"] = {
-                "yes": float(first.get("yes", 0) or 0),
-                "no":  float(first.get("no", 0) or 0),
+                "yes": _safe_float(first.get("yes")),
+                "no":  _safe_float(first.get("no")),
             }
 
         # ── Corners Totals ────────────────────────────────────────────────────
@@ -249,9 +259,9 @@ def parsear_cuotas_io(odds_raw: dict, bookmaker: str = BOOKMAKER_PRIMARY) -> dic
                 if hdp is None:
                     continue
                 resultado["corners_totals"].append({
-                    "punto": float(hdp),
-                    "over":  float(o.get("over", 0) or 0),
-                    "under": float(o.get("under", 0) or 0),
+                    "punto": _safe_float(hdp),
+                    "over":  _safe_float(o.get("over")),
+                    "under": _safe_float(o.get("under")),
                 })
             resultado["corners_totals"].sort(key=lambda x: abs(x["punto"] - 9.5))
 
@@ -262,9 +272,9 @@ def parsear_cuotas_io(odds_raw: dict, bookmaker: str = BOOKMAKER_PRIMARY) -> dic
                 if hdp is None:
                     continue
                 resultado["corners_spread"].append({
-                    "punto": float(hdp),
-                    "home":  float(o.get("home", 0) or 0),
-                    "away":  float(o.get("away", 0) or 0),
+                    "punto": _safe_float(hdp),
+                    "home":  _safe_float(o.get("home")),
+                    "away":  _safe_float(o.get("away")),
                 })
 
     return resultado

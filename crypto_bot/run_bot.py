@@ -250,6 +250,10 @@ def main():
     from crypto_bot.exchange_client import get_exchange
     from crypto_bot import risk_manager, trend_filter, grid_strategy, notifier
 
+    # Garantizar que las tablas SQLite existen siempre (independiente del flujo de init_grid)
+    from crypto_bot import persistence
+    persistence.init_db()
+
     modo = "[PAPER]" if config.MODO_PAPER_TRADING else "[REAL]"
     logger.info(f"=== Crypto Bot {modo} — Pares: {config.PARES_ACTIVOS} ===")
 
@@ -280,7 +284,7 @@ def main():
                     with open(ep, encoding="utf-8") as f:
                         e = json.load(f)
                     pnl = e.get("pnl_realizado_usdt", 0)
-                    open_n = sum(1 for n in e.get("niveles", []) if n["estado"] != "idle")
+                    open_n = sum(1 for n in e.get("niveles", []) if n.get("estado") != "idle")
                     precio = e.get("precio_ultimo", 0)
                     lineas.append(f"{par}: PnL {pnl:+.4f} USDT | {open_n} abiertos | ${precio:,.2f}")
             if lineas:

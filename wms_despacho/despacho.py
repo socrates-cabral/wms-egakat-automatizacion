@@ -399,7 +399,17 @@ def enviar_resumen(empresa, deposito, viajes_procesados, viajes_saltados,
         return
 
     ahora         = datetime.now()
-    hora          = ahora.strftime("%H:%M")
+    # Calcular hora de fin real desde inicio + duración (no datetime.now() que captura antes del HTML)
+    if hora_inicio is not None and duracion_total_seg is not None:
+        try:
+            from datetime import datetime as _dt, timedelta
+            _t0 = _dt.strptime(hora_inicio, "%H:%M:%S")
+            _t1 = _t0 + timedelta(seconds=duracion_total_seg)
+            hora = _t1.strftime("%H:%M")
+        except Exception:
+            hora = ahora.strftime("%H:%M")
+    else:
+        hora = ahora.strftime("%H:%M")
     sin_viajes    = len(resultados_viaje) == 0 and not abortado
     any_failures  = abortado or any(not r["saltado"] and r["plts"] == 0 for r in resultados_viaje)
 
@@ -418,7 +428,7 @@ def enviar_resumen(empresa, deposito, viajes_procesados, viajes_saltados,
 
     tabla = _build_tabla_viajes(resultados_viaje)
     _footer = (
-        f"\U0001f550 Inicio: {hora_inicio}  |  Duración total: {duracion_total_seg // 60}m {duracion_total_seg % 60}s  |  Módulos: {n_modulos}"
+        f"\U0001f550 Inicio: {hora_inicio}  |  Duración total: {duracion_total_seg // 60}m {duracion_total_seg % 60}s  |  Viajes: {n_modulos}"
         if hora_inicio is not None else
         "Notificaci&oacute;n autom&aacute;tica generada por Sistema Automatizado WMS Egakat."
     )

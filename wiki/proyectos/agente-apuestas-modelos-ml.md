@@ -3,7 +3,7 @@ title: Agente Apuestas - Modelos ML Multi-Deporte
 type: proyecto
 sources: []
 related: [wiki/proyectos/agente-apuestas-fixes-2026-04-29, wiki/proyectos/agente-apuestas-orquestador, wiki/conceptos/pi-rating]
-updated: 2026-05-25
+updated: 2026-05-27
 confidence: high
 ---
 
@@ -152,6 +152,39 @@ https://www.retrosheet.org/gamelogs/gl{year}.zip
 - `_enviar_recs_ml_telegram(recs, deporte, icono)`: helper unificado Telegram
 - Todos con graceful degradation (try/except, log WARNING en fallo)
 
+## Fixes y Diagnósticos (2026-05-27)
+
+### odds_io_collector.py — crash en `float('N/A')`
+`parsear_cuotas_io()` hacía `float(first.get("home", 0) or 0)`. El problema: `'N/A' or 0` devuelve `'N/A'` (string truthy), luego `float('N/A')` lanza `ValueError`.
+
+**Fix:** helper `_safe_float()` con try/except:
+```python
+def _safe_float(val, default: float = 0.0) -> float:
+    if val is None or isinstance(val, bool) or isinstance(val, (list, dict, tuple)):
+        return default
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+```
+Aplicado en todos los campos de `parsear_cuotas_io()` y en `_avg_float()`.
+Este crash bloqueaba odds-io (fuente primaria) cuando la API devuelve 'N/A' para cuotas indisponibles.
+
+### UMBRAL_MLB 0.60 → 0.55 (⚠️ pendiente validación backtest)
+El modelo MLB v3 (AUC 0.6637) producía probabilidades 50-56% en partidos reales, nunca alcanzando 0.60.
+**Ajuste:** `UMBRAL_MLB = 0.55` en `predictor_tiempo_real.py`.
+**Riesgo:** 5pp sobre coin flip en un modelo binario es un margen pequeño. Requiere backtest con este umbral antes de confirmar.
+**Validar:** ROI esperado a UMBRAL=0.55 en datos históricos 2021-2023.
+
+### Tenis ATP — API fuera de plan gratuito
+`v1.tennis.api-sports.io` falla con DNS lookup error. Root cause: el plan gratuito de api-sports.io **no incluye** Tennis API (es subscripción separada). Solo incluye Football, Basketball, Baseball, American Football.
+**Decisión:** Tenis pausado hasta que ROI del bot justifique pagar plan de tenis.
+**Alternativas evaluadas:** RapidAPI/Kaggle para fixtures tenis en tiempo real → ninguna gratuita y confiable encontrada.
+
+### The Odds API — quota mensual agotada
+500/500 requests usados. `odds_collector.py` (The Odds API) queda como fallback inactivo hasta renovación mensual.
+`odds_io_collector.py` opera como fuente primaria con bookmaker 1xbet (primario) y Bet365 (fallback).
+
 ## Pendiente
 
 - [x] xgboost_tenis_v2.pkl integrado en predictor_tiempo_real.py (2026-05-25)
@@ -163,6 +196,9 @@ https://www.retrosheet.org/gamelogs/gl{year}.zip
 - [x] NBA v2 integrado en producción (2026-05-25)
 - [x] NFL integrado en producción (2026-05-25)
 - [x] run_agent.py: Pasos 3c-3f completos — MLB/Tenis/NBA/NFL (2026-05-25)
+- [x] odds-io _safe_float() fix — float('N/A') crash (2026-05-27)
+- [ ] **UMBRAL_MLB 0.55 — validar backtest histórico antes de confirmar** (pendiente)
+- [ ] Tenis API — re-evaluar cuando ROI justifique subscripción api-sports Tennis
 
 ## Datos confirmados — Retrosheet pitcher fields (0-indexed)
 - Field 93 = Home starting pitcher retroID (ej: "strom001")

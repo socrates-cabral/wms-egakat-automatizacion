@@ -8,13 +8,15 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
 # Exchange
-EXCHANGE_ACTIVO  = os.getenv("CRYPTO_EXCHANGE", "crypto_com")
-MODO_PAPER_TRADING = True  # NUNCA cambiar a False sin 30 dias paper OK
+EXCHANGE_ACTIVO  = os.getenv("CRYPTO_EXCHANGE", "kraken")
+MODO_PAPER_TRADING = False  # 34 días paper OK — go-live 2026-05-27 con Kraken ($200 BTC + $100 ETH)
 
 # Tendencia
 EMA_PERIODO   = 200
 EMA_TIMEFRAME = "1D"
-EMA_FILTER_ACTIVO = not MODO_PAPER_TRADING
+# EMA_FILTER: "auto" = activo solo en real | "true" = siempre activo | "false" = siempre inactivo
+_ema_env = os.getenv("EMA_FILTER_ACTIVO", "false").lower()
+EMA_FILTER_ACTIVO = (not MODO_PAPER_TRADING) if _ema_env == "auto" else (_ema_env == "true")
 
 # Riesgo global
 MAX_DRAWDOWN_PCT = 10
@@ -26,12 +28,12 @@ NOTIF_CADA_ORDEN = True
 # APIs
 CRYPTO_COM_API_KEY    = os.getenv("CRYPTO_COM_API_KEY", "")
 CRYPTO_COM_API_SECRET = os.getenv("CRYPTO_COM_API_SECRET", "")
-KRAKEN_API_KEY        = os.getenv("KRAKEN_API_KEY", "")
-KRAKEN_API_SECRET     = os.getenv("KRAKEN_API_SECRET", "")
+KRAKEN_API_KEY        = os.getenv("KRAKEN_API_KEY_TRADING", os.getenv("KRAKEN_API_KEY", ""))
+KRAKEN_API_SECRET     = os.getenv("KRAKEN_API_SECRET_TRADING", os.getenv("KRAKEN_API_SECRET", ""))
 
 # Telegram
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID", "")
+TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID", os.getenv("TELEGRAM_CHAT_ID_APUESTAS", ""))
 
 # Paths base
 BASE_DIR       = Path(__file__).parent

@@ -2,15 +2,21 @@
 title: Crypto Bot — Grid Trading + EMA 200
 type: proyecto
 sources: []
-related: [wiki/decisiones/, wiki/entidades/]
-updated: 2026-05-21
+related: [wiki/decisiones/decision-crypto-bot-grid]
+updated: 2026-05-27
 confidence: high
 ---
 
 # Crypto Bot — Grid Trading + EMA 200
 
 ## Estado
-**Decisión go-live: 2026-05-21** — $300 USD real ($200 BTC + $100 ETH). Pendiente crear cuenta Crypto.com.
+**Go-live REAL: 2026-05-27** — Exchange: **Kraken** (no Crypto.com). Capital $300 USD ($200 BTC + $100 ETH).
+
+### Por qué Kraken en vez de Crypto.com
+- Fondos ya en Kraken Earn ($22,631 USDT al ~3.55% APY flexible)
+- Evita transferencia + delay. KrakenExchange adapter ya existía.
+- Para $300, diferencia de fees (~$6/mes) no justifica fricción de mover fondos.
+- Escalar a $1K+ → re-evaluar Crypto.com (fees 0.075% vs Kraken 0.16% maker).
 
 ### PnL paper trading (34 días, al 2026-05-21)
 | Par | Trades | PnL |
@@ -19,95 +25,87 @@ confidence: high
 | ETH_USDT | 63 | **+116.16 USDT** |
 | **Total** | 250 | **+310.73 USDT** (+15.5% ROI) |
 
-Última op BTC: 2026-05-21 SELL @ $77,000 (+2.60 USDT). ETH: posición abierta @ $2,160.
+Paper backup: `crypto_bot.paper_backup.db` (13MB), `estado_grid.paper_backup.json`
 
-### Checklist go-live (pendiente)
-- [ ] Crear cuenta Crypto.com Exchange (exchange.crypto.com) + KYC
-- [ ] Activar 2FA (Authenticator, no SMS)
-- [ ] Depositar $300 USDT (TRC-20 recomendado)
-- [ ] API Key: Spot Trading ON, Withdrawal OFF
-- [ ] `.env`: `CRYPTO_COM_API_KEY`, `CRYPTO_COM_API_SECRET`, `BTC_CAPITAL=200`, `ETH_CAPITAL=100`
-- [ ] `config.py` L12: `MODO_PAPER_TRADING = False`
-- [ ] VPS Hetzner CX22 (~€4/mes) — recomendado antes de escalar a $1,000+
+## Configuración go-live (2026-05-27)
 
-## Estrategia
-Grid Trading clásico con filtro de tendencia EMA 200:
-- N niveles entre GRID_LOWER y GRID_UPPER, espaciados uniformemente
-- Cruce precio hacia abajo → BUY en ese nivel (si idle)
-- Cruce precio hacia arriba → SELL en ese nivel (si tiene BTC)
-- Si precio < EMA 200 → solo sells, no nuevas compras
+### Variables .env
+```
+CRYPTO_EXCHANGE=kraken
+KRAKEN_API_KEY_TRADING=...    ← key con permisos trading (no withdrawal)
+KRAKEN_API_SECRET_TRADING=... ← config lee _TRADING primero, fallback _KEY
+BTC_CAPITAL=200
+ETH_CAPITAL=100
+BTC_GRID_LEVELS=10
+ETH_GRID_LEVELS=10
+EMA_FILTER_ACTIVO=false       ← OFF para $300, usar "auto" si capital > $1K
+TELEGRAM_CHAT_ID_APUESTAS=... ← crypto usa mismo chat que apuestas
+```
 
-## Parámetros actuales (post sesión 2026-05-06)
+### Parámetros de grid
 | Param | BTC_USDT | ETH_USDT |
 |-------|----------|----------|
 | Rango | $65,000 – $85,000 | $1,800 – $2,700 |
 | Niveles | 10 (step $2,000) | 10 (step $90) |
-| Capital paper | $1,000 USDT | $1,000 USDT |
 | Capital real | **$200 USDT** | **$100 USDT** |
-| EMA filter | Auto (desactivado en paper) | Auto |
+| EMA filter | OFF (configurable) | OFF |
 | Ciclo | cada 5 min (Task Scheduler) | cada 5 min |
-| Drawdown max | 10% | 10% |
+| Drawdown max | 10% ($30) | 10% |
+
+## Estrategia
+Grid Trading clásico:
+- N niveles entre GRID_LOWER y GRID_UPPER, espaciados uniformemente
+- Cruce precio hacia abajo → BUY en ese nivel (si idle)
+- Cruce precio hacia arriba → SELL en ese nivel (si tiene cripto)
+- EMA filter (`EMA_FILTER_ACTIVO`): "auto"=ON en real | "true"=siempre | "false"=nunca
 
 ## Arquitectura
 ```
 C:\ClaudeWork\crypto_bot\
 ├── config.py              ← parámetros + .env loading
-├── run_bot.py             ← orquestador (entry point)
+├── run_bot.py             ← orquestador (entry point) + persistence.init_db() al inicio
 ├── grid_strategy.py       ← lógica core, estado_grid.json
 ├── trend_filter.py        ← EMA 200 diaria via pandas
 ├── risk_manager.py        ← drawdown + kill_switch.txt
-├── notifier.py            ← Telegram standalone
+├── notifier.py            ← Telegram (TELEGRAM_CHAT_ID fallback a _APUESTAS)
+├── persistence.py         ← SQLite con WAL + timeout=30s
 ├── exchange_client/
 │   ├── base.py            ← ABC: get_ticker, get_candles, place_order
 │   ├── crypto_com.py      ← Crypto.com REST API v1
-│   └── kraken.py          ← Kraken REST API
-├── estado_grid.json       ← estado persistente (creado en runtime)
-├── kill_switch.txt        ← si existe → bot para limpiamente
-└── setup_task.ps1         ← registra Task Scheduler (5 min)
+│   └── kraken.py          ← Kraken REST API (PAR_MAP: BTC_USDT→XBTUSDT)
+└── kill_switch.txt        ← si existe → bot para limpiamente
 ```
 
 ## Flujo por ciclo
-1. kill_switch.txt → exit 0
-2. risk_manager.verificar_riesgo() → si bloqueado: cancela órdenes + alerta + exit 1
-3. trend_filter.check_trend() → grid_activo True/False
-4. grid_strategy.run_cycle() → procesa cruces de precio
-5. Notifica órdenes ejecutadas por Telegram
+1. `kill_switch.txt` → exit 0
+2. `persistence.init_db()` → garantiza tablas SQLite (WAL mode)
+3. `risk_manager.verificar_riesgo()` → si bloqueado: cancela órdenes + alerta + exit 1
+4. `trend_filter.check_trend()` → grid_activo True/False (según EMA_FILTER_ACTIVO)
+5. `grid_strategy.run_cycle()` → procesa cruces de precio
+6. Notifica órdenes ejecutadas por Telegram
 
-## Notas de implementación
-- Crypto.com API usa `BTC_USDT` (underscore), no `BTC-USDT`
-- Candlestick retorna timestamps como ISO string, no int
-- Task Scheduler requiere `run_bot.bat` como intermediario — ruta python tiene espacios ("Socrates Cabral")
-- `EMA_FILTER_ACTIVO = not MODO_PAPER_TRADING` — se desactiva automáticamente en paper
-- Fees: 0.075% maker/taker Crypto.com — absorbible en grid trading
-- Cuenta Crypto.com Exchange pendiente de crear para producción (exchange.crypto.com)
+## Task Scheduler
+- Nombre: **"Crypto Bot - Grid Trading"**
+- Intervalo: **cada 5 minutos**
+- Comando: `C:\ClaudeWork\crypto_bot\run_bot.bat`
+- Python: `C:\Users\Socrates Cabral\AppData\Local\Python\pythoncore-3.14-64\python.exe`
+
+## Plan de escalado
+- $300 → validar 2-3 semanas real
+- Si ≥ 3-4%/mes real: escalar a $1K-$2K + `EMA_FILTER_ACTIVO=auto`
+- VPS Hetzner CX22 (~€4/mes) cuando se escale (laptop no garantiza 24/7)
 
 ## Bug fixes
 
+### 2026-05-27 (go-live Kraken)
+- `config.py`: `EXCHANGE_ACTIVO` default cambiado a `"kraken"`
+- `config.py`: `EMA_FILTER_ACTIVO` configurable vía env ("auto"/"true"/"false")
+- `config.py`: `KRAKEN_API_KEY_TRADING` como nombre de key, fallback a `KRAKEN_API_KEY`
+- `config.py`: `TELEGRAM_CHAT_ID` fallback a `TELEGRAM_CHAT_ID_APUESTAS`
+- `run_bot.py`: `persistence.init_db()` al inicio de `main()` (evita "no such table" si SQLite se borra y estado JSON existe)
+- `run_bot.py`: `n.get("estado")` en lugar de `n["estado"]` en resumen diario (KeyError guard)
+- `persistence.py`: `_connect()` helper con `timeout=30` + `PRAGMA journal_mode=WAL` (tolera ciclos paralelos)
+
 ### 2026-04-22
-- **`notifier.py`** — `enviar_orden()` tenía `"BTC"` hardcodeado en la línea de qty. Fix: `asset = par.split("_")[0]`. Ahora ETH muestra "ETH", BTC muestra "BTC".
-- **`run_bot.py`** — errores de red (SSL EOF, Max retries) usaban `enviar_alerta_riesgo` mezclándose con alertas de drawdown real. Fix: detectar keywords de conectividad y usar `enviar_texto` con título "CONECTIVIDAD". Keywords: `SSL`, `Max retries`, `ConnectionError`, `RemoteDisconnected`, `Timeout`, `EOF`.
-
-## Análisis sesión 2026-04-22
-- BTC PnL: +11.73 USDT (+1.17%) | ETH PnL: +11.54 USDT (+1.15%)
-- Comportamiento: 7 ciclos BUY+SELL en nivel $79k (churning normal por oscilación lateral)
-- Cada ciclo BUY+SELL en $79k: $1,000 step × 0.00063291 BTC = +$0.63 USDT
-- Error SSL al final: error de red, no de lógica — ahora reporta como CONECTIVIDAD
-
-## Roadmap
-| Fase | Estado | Condición |
-|------|--------|-----------|
-| Paper trading | ✅ Completado (34 días, +15.5% ROI) | — |
-| Capital real $300 | **Pendiente** (cuenta Crypto.com) | Checklist arriba |
-| VPS Hetzner | Pendiente | Antes de escalar |
-| Escala a $1,000 | Futuro | VPS activo + 1 mes real estable |
-
-## Variables .env requeridas
-```
-CRYPTO_COM_API_KEY=          # pendiente (API Crypto.com)
-CRYPTO_COM_API_SECRET=       # pendiente
-BTC_CAPITAL=200              # USDT real BTC
-ETH_CAPITAL=100              # USDT real ETH
-KRAKEN_API_KEY=              # ya existe (alternativa)
-KRAKEN_API_SECRET=           # ya existe
-```
-Telegram ya configurado (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID).
+- `notifier.py`: coin hardcodeado → `par.split("_")[0]`
+- `run_bot.py`: errores SSL/timeout → `enviar_texto` con título "CONECTIVIDAD"

@@ -952,7 +952,7 @@ def predecir_mlb_hoy() -> list:
         get_odds_partido = None
 
     recomendaciones = []
-    UMBRAL_MLB = 0.60
+    UMBRAL_MLB = 0.55
     VALUE_MIN_MLB = 0.05
 
     for g in partidos_raw:
