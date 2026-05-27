@@ -3,6 +3,33 @@ Registro cronológico append-only. Formato: `## [YYYY-MM-DD] tipo | Título`
 
 ---
 
+## [2026-05-27] update | Timing footer + deep bug fixes HackeaMetabolismo + finanzas_personales
+
+**Tipo:** Features + bug fixes producción
+
+**Timing footer en 3 reportes HTML (FillRate, Productividad, Despacho):**
+- Footer `🕐 Inicio: HH:MM:SS  |  Duración total: Xm Ys  |  Módulos: N` agregado a los correos de cierre.
+- Consistente con los otros módulos del pipeline matutino que ya lo tenían.
+- Archivos: `fillrate_utils.py`, `fillrate_descarga.py`, `productividad_utils.py`, `productividad_diario.py`, `wms_despacho/despacho.py`, `wms_despacho/confirmar_salida.py`.
+- Despacho pipeline: `started_at_iso` guardado en `pipeline_resumen_temp.json` para traspaso entre procesos.
+
+**HackeaMetabolismo — 30 bugs corregidos (subagente code-reviewer):**
+- `now_cl` import faltante en `01_Onboarding.py` (NameError garantizado).
+- `_execute_update` soporta múltiples condiciones AND en WHERE (`helpers.py`).
+- 20/20 tests pasan. Sintaxis limpia.
+
+**finanzas_personales — 48 bugs corregidos (subagente code-reviewer encontró 57):**
+- `_contexto_chile_dinamico()` inyecta fecha actual en cada llamada LLM (fix AI usaba 2024/2025).
+- Multi-tenant cache fix: `uid` como cache key en todos los `@st.cache_data`.
+- ZoneInfo Chile en 5+ archivos, `_parse_monto()` fix off-by-100x, None-safe guards.
+- 9 bugs omitidos: falsos positivos del agente o limitaciones de diseño conocidas.
+
+**Nueva regla #CRITICO guardada:**
+- `git-pr-workflows:code-reviewer` obligatorio antes de cualquier "listo". Guardado en CLAUDE.md + feedback_style.md.
+- Categoría "prompts AI sin fecha actual" agregada al checklist del reviewer.
+
+---
+
 ## [2026-05-21] update | Crypto Bot go-live + markitdown fix + SessionStart hook removido
 
 **Tipo:** Infraestructura / decisión
