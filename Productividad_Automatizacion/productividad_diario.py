@@ -950,7 +950,7 @@ def _process_client(
 # Email de cierre
 # ---------------------------------------------------------------------------
 
-def _send_final_email(results: Dict[str, dict], log_path: Path) -> None:
+def _send_final_email(results: Dict[str, dict], log_path: Path, started_at=None) -> None:
     summary_rows = []
     for client_key, r in results.items():
         client = _DAILY_CLIENTS.get(client_key, {})
@@ -979,10 +979,14 @@ def _send_final_email(results: Dict[str, dict], log_path: Path) -> None:
     active_ok = sum(1 for r in results.values() if r["ok"])
     has_failures = any(not r["ok"] for r in results.values())
 
+    _ahora = datetime.now()
     subject, html_body, payload = build_productividad_closure_email(
         summary_rows=summary_rows,
         active_clients_closed=active_ok,
         log_file=log_path,
+        hora_inicio=started_at.strftime("%H:%M:%S") if started_at else None,
+        duracion_total_seg=int((_ahora - started_at).total_seconds()) if started_at else None,
+        n_modulos=len(results),
     )
     if has_failures:
         subject = f"[FALLO PARCIAL] {subject}"
@@ -1032,7 +1036,8 @@ def main() -> int:
         elif nombre_feriado and args.force:
             log(f"[FORCE] Feriado: {nombre_feriado} ({today}) — ejecución forzada con --force.", log_path)
 
-        log(f"[INICIO] productividad_diario.py | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", log_path)
+        started_at = datetime.now()
+        log(f"[INICIO] productividad_diario.py | {started_at.strftime('%Y-%m-%d %H:%M:%S')}", log_path)
         log(f"[INFO] {len(feriados)} feriados cargados desde OneDrive.", log_path)
 
         checkpoint = _load_checkpoint()
@@ -1106,7 +1111,7 @@ def main() -> int:
         fail_count = len(results) - ok_count
         log(f"\n[TOTALES] ok={ok_count} | fallos={fail_count} | clientes={len(results)}", log_path)
 
-        _send_final_email(results, log_path)
+        _send_final_email(results, log_path, started_at=started_at)
 
         return 0 if fail_count == 0 else 2
 

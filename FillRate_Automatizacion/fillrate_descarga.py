@@ -827,7 +827,13 @@ def _run(args: argparse.Namespace, log_path: Path, started_at: datetime) -> int:
                 browser.close()
 
     if not args.skip_email:
-        html_body = build_summary_html(results, all_warning_items)
+        html_body = build_summary_html(
+            results,
+            all_warning_items,
+            hora_inicio=started_at.strftime("%H:%M:%S"),
+            duracion_total_seg=int((datetime.now() - started_at).total_seconds()),
+            n_modulos=len(results),
+        )
         has_errors = any(r.estado == "Error" for r in results)
         try:
             if send_summary_email(build_email_subject(started_at, has_failures=has_errors), html_body, log_path=log_path):

@@ -336,7 +336,7 @@ PIPELINE_JSON = LOG_DIR / "pipeline_resumen_temp.json"
 
 
 def guardar_resumen_pipeline(empresa, deposito, viajes_procesados, viajes_saltados,
-                              total_plts, resultados_viaje, abortado):
+                              total_plts, resultados_viaje, abortado, started_at=None):
     data = {
         "empresa":            empresa,
         "deposito":           deposito,
@@ -347,6 +347,7 @@ def guardar_resumen_pipeline(empresa, deposito, viajes_procesados, viajes_saltad
         "total_plts":         total_plts,
         "abortado":           abortado,
         "resultados_viaje":   resultados_viaje,
+        "started_at_iso":     started_at.isoformat() if started_at else None,
     }
     PIPELINE_JSON.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     log.info(f"📄 Resumen pipeline guardado → {PIPELINE_JSON.name}")
@@ -388,7 +389,8 @@ def _build_tabla_viajes(resultados_viaje: list[dict]) -> str:
 
 
 def enviar_resumen(empresa, deposito, viajes_procesados, viajes_saltados,
-                   total_plts, resultados_viaje: list[dict], abortado: bool):
+                   total_plts, resultados_viaje: list[dict], abortado: bool,
+                   hora_inicio: str = None, duracion_total_seg: int = None, n_modulos: int = None):
     email_to = os.getenv("EMAIL_DESTINO", EMAIL_FROM)
     email_cc = os.getenv("EMAIL_CC", "").strip()
 
@@ -415,6 +417,11 @@ def enviar_resumen(empresa, deposito, viajes_procesados, viajes_saltados,
         asunto       = f"[WMS Despacho] {empresa} — Completado {ahora.strftime('%d/%m/%Y')} {hora}"
 
     tabla = _build_tabla_viajes(resultados_viaje)
+    _footer = (
+        f"\U0001f550 Inicio: {hora_inicio}  |  Duración total: {duracion_total_seg // 60}m {duracion_total_seg % 60}s  |  Módulos: {n_modulos}"
+        if hora_inicio is not None else
+        "Notificaci&oacute;n autom&aacute;tica generada por Sistema Automatizado WMS Egakat."
+    )
 
     html = f"""
     <html><body style="margin:0;padding:0;background:#f4f4f4;font-family:Calibri,Arial,sans-serif">
@@ -443,7 +450,7 @@ def enviar_resumen(empresa, deposito, viajes_procesados, viajes_saltados,
               </table>
               {"<div style='margin-top:12px;padding:14px;background:#ebf5fb;border:1px solid #aed6f1;border-radius:6px;font-family:Calibri;font-size:14px;color:#1a5276;text-align:center'><strong>Sin viajes pendientes al momento de la ejecuci&oacute;n.</strong><br><span style=\"font-size:12px;color:#5d6d7e\">No se realizaron despachos en este turno.</span></div>" if sin_viajes else tabla}
               {"<div style='margin-top:12px;padding:10px 14px;background:#fdecea;border:1px solid #f5c6cb;border-radius:6px;font-family:Calibri;font-size:13px;color:#721c24'><strong>&#10060; Proceso abortado</strong> — revisar log del d&iacute;a.</div>" if abortado else ""}
-              <p style="color:#6b7280;font-size:11px;margin-top:16px">Notificaci&oacute;n autom&aacute;tica generada por Sistema Automatizado WMS Egakat.</p>
+              <p style="color:#6b7280;font-size:11px;margin-top:16px">{_footer}</p>
             </td>
           </tr>
         </table>
@@ -511,6 +518,7 @@ def main():
     deposito = args.deposito.upper()
 
     init_csv()
+    started_at = datetime.now()
     log.info("═" * 58)
     log.info("  WMS EGAKAT — DESPACHO AUTOMÁTICO")
     log.info(f"  Empresa  : {empresa}")
@@ -560,7 +568,10 @@ def main():
             log.info("✅ No hay viajes pendientes. Fin.")
             browser.close()
             if not args.dry_run:
-                enviar_resumen(empresa, deposito, 0, 0, 0, [], abortado=False)
+                enviar_resumen(empresa, deposito, 0, 0, 0, [], abortado=False,
+                               hora_inicio=started_at.strftime("%H:%M:%S"),
+                               duracion_total_seg=int((datetime.now() - started_at).total_seconds()),
+                               n_modulos=0)
             return
 
         log.info(f"\nViajes a procesar: {len(viajes)}")
@@ -655,7 +666,8 @@ def main():
 
         if not args.dry_run:
             guardar_resumen_pipeline(empresa, deposito, viajes_procesados,
-                                     viajes_saltados, total_plts, resultados_viaje, abortado)
+                                     viajes_saltados, total_plts, resultados_viaje, abortado,
+                                     started_at=started_at)
 
 
 if __name__ == "__main__":

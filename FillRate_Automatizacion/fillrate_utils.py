@@ -1370,7 +1370,7 @@ class ClientExecutionResult:
     otif: Optional[Dict[str, Any]] = None
 
 
-def build_summary_html(results: Sequence[ClientExecutionResult], warnings: Sequence[Dict[str, Any]]) -> str:
+def build_summary_html(results: Sequence[ClientExecutionResult], warnings: Sequence[Dict[str, Any]], *, hora_inicio: str = None, duracion_total_seg: int = None, n_modulos: int = None) -> str:
     total_clientes = len(results)
     ok_count = sum(1 for item in results if item.estado in ("OK", "Ya descargado"))
     sin_datos_count = sum(1 for item in results if item.estado == "Sin datos")
@@ -1622,6 +1622,12 @@ def build_summary_html(results: Sequence[ClientExecutionResult], warnings: Seque
     </table>
     """
 
+    _footer = (
+        f"\U0001f550 Inicio: {hora_inicio}  |  Duración total: {duracion_total_seg // 60}m {duracion_total_seg % 60}s  |  Módulos: {n_modulos}"
+        if hora_inicio is not None else
+        "Notificacion automatica generada por Sistema Automatizado WMS Egakat."
+    )
+
     return f"""
     <html>
       <body style="margin:0;padding:0;background:#eef3f8;font-family:Calibri,Arial,sans-serif;color:#1f2937">
@@ -1658,7 +1664,7 @@ def build_summary_html(results: Sequence[ClientExecutionResult], warnings: Seque
                     {otif_html}
                     {warnings_html}
                     <div style="font-size:12px;color:#5b6b7f;margin-top:18px">
-                      Notificacion automatica generada por Sistema Automatizado WMS Egakat.
+                      {_footer}
                     </div>
                   </td>
                 </tr>

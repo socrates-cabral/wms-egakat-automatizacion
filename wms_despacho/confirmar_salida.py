@@ -318,6 +318,28 @@ def enviar_resumen_pipeline(despacho: dict, salida_n: int, salida_resultado: str
 
     tabla_rf = _tabla_despacho(resultados)
 
+    _started_at_iso = despacho.get("started_at_iso")
+    if _started_at_iso:
+        try:
+            _started = datetime.fromisoformat(_started_at_iso)
+            _hora_inicio = _started.strftime("%H:%M:%S")
+            _duracion_seg = int((ahora - _started).total_seconds())
+            _n_modulos = vp
+        except Exception:
+            _hora_inicio = None
+            _duracion_seg = None
+            _n_modulos = None
+    else:
+        _hora_inicio = None
+        _duracion_seg = None
+        _n_modulos = None
+
+    _footer = (
+        f"\U0001f550 Inicio: {_hora_inicio}  |  Duración total: {_duracion_seg // 60}m {_duracion_seg % 60}s  |  Módulos: {_n_modulos}"
+        if _hora_inicio is not None else
+        "Notificaci&oacute;n autom&aacute;tica generada por Sistema Automatizado WMS Egakat."
+    )
+
     html = f"""
     <html><body style="margin:0;padding:0;background:#f4f4f4;font-family:Calibri,Arial,sans-serif">
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4">
@@ -358,7 +380,7 @@ def enviar_resumen_pipeline(despacho: dict, salida_n: int, salida_resultado: str
             {salida_html}
 
             {"<div style='margin-top:12px;padding:10px 14px;background:#fdecea;border:1px solid #f5c6cb;border-radius:6px;font-family:Calibri;font-size:13px;color:#721c24'><strong>&#10060; Proceso abortado</strong> — revisar log del d&iacute;a.</div>" if abortado else ""}
-            <p style="color:#6b7280;font-size:11px;margin-top:16px">Notificaci&oacute;n autom&aacute;tica generada por Sistema Automatizado WMS Egakat.</p>
+            <p style="color:#6b7280;font-size:11px;margin-top:16px">{_footer}</p>
           </td></tr>
         </table>
       </td></tr>

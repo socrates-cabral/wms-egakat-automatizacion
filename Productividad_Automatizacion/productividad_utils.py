@@ -1884,6 +1884,9 @@ def build_productividad_closure_email(
     active_clients_closed: int,
     log_file: Optional[Path] = None,
     generated_at: Optional[datetime] = None,
+    hora_inicio: str = None,
+    duracion_total_seg: int = None,
+    n_modulos: int = None,
 ) -> tuple[str, str, Dict[str, Any]]:
     generated_at = generated_at or datetime.now()
     any_failures = any(row["estado"] in {"FALLO", "PARCIAL", "ERROR"} for row in summary_rows)
@@ -1908,6 +1911,12 @@ def build_productividad_closure_email(
           <ul style="margin:0 0 0 18px;padding:0;color:#5f370e;font-size:13px">{items}</ul>
         </div>"""
 
+    _footer = (
+        f"\U0001f550 Inicio: {hora_inicio}  |  Duración total: {duracion_total_seg // 60}m {duracion_total_seg % 60}s  |  Módulos: {n_modulos}"
+        if hora_inicio is not None else
+        "Notificación automática generada por Sistema Automatizado WMS Egakat."
+    )
+
     html = f"""
     <html><body style="margin:0;padding:0;background:#f4f4f4;font-family:Calibri,Arial,sans-serif">
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4">
@@ -1930,7 +1939,7 @@ def build_productividad_closure_email(
               </p>
               {table_html}
               {incidencias_html}
-              <p style="color:#6b7280;font-size:11px;margin-top:16px">Notificación automática generada por Sistema Automatizado WMS Egakat.</p>
+              <p style="color:#6b7280;font-size:11px;margin-top:16px">{_footer}</p>
             </td>
           </tr>
         </table>
