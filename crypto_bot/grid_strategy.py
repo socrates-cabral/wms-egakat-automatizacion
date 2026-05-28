@@ -111,7 +111,9 @@ def run_cycle(exchange: BaseExchange, grid_activo: bool = True) -> dict:
                 continue  # Solo sells cuando precio < EMA200
             if open_count >= config.MAX_OPEN_LEVELS:
                 continue
-            qty = round(estado["capital_por_nivel"] / p, 8)
+            # 0.2% haircut: fill price ≤ grid level, Kraken fee ~0.16% from received BTC.
+            # Without haircut, calculated qty > net BTC received → SELL fails "EOrder:Insufficient".
+            qty = round(estado["capital_por_nivel"] / p * 0.998, 8)
             result = exchange.place_order(config.PAR, "BUY", qty, p)
             nivel["estado"] = "buy_open"
             nivel["btc_qty"] = qty
@@ -133,7 +135,33 @@ def run_cycle(exchange: BaseExchange, grid_activo: bool = True) -> dict:
         # Cruce hacia arriba -> SELL
         elif precio_actual > precio_previo and nivel["estado"] == "buy_open" and nivel["btc_qty"] > 0:
             qty = nivel["btc_qty"]
-            result = exchange.place_order(config.PAR, "SELL", qty, p)
+            try:
+                result = exchange.place_order(config.PAR, "SELL", qty, p)
+            except Exception as _e:
+                if "Insufficient funds" in str(_e) or "EOrder:Insufficient" in str(_e):
+                    if config.MODO_PAPER_TRADING:
+                        # Phantom position from paper trading — clear and continue
+                        nivel["estado"] = "idle"
+                        nivel["btc_qty"] = 0.0
+                        nivel["order_id"] = None
+                        open_count -= 1
+                    else:
+                        # Real mode: position stays open, alert via Telegram + log
+                        import logging as _log
+                        _log.getLogger("crypto_bot").error(
+                            f"[SELL BLOCKED] {config.PAR} nivel=${p:,.0f} | "
+                            f"qty={qty:.8f} | EOrder:Insufficient — BUY order may not have settled. "
+                            f"Position kept open. Will retry next cycle."
+                        )
+                        from crypto_bot import notifier as _notifier
+                        _notifier.enviar_alerta_riesgo(
+                            f"SELL BLOQUEADO [{config.PAR}]",
+                            f"Nivel: ${p:,.0f} | qty: {qty:.8f}\n"
+                            f"EOrder:Insufficient — posible race condition settlement Kraken.\n"
+                            f"Posicion mantiene buy_open, reintento en 5 min."
+                        )
+                    continue
+                raise
             cost_basis = p - estado["nivel_step"]
             pnl_nivel = round((p - cost_basis) * qty, 4)
             pnl_delta += pnl_nivel

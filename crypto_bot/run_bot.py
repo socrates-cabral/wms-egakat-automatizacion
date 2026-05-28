@@ -5,6 +5,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -14,6 +15,8 @@ _FLAG_FUERA_RANGO   = Path(__file__).parent / "data" / ".alerta_fuera_rango_{par
 _FLAG_PROXIMIDAD    = Path(__file__).parent / "data" / ".alerta_proximidad_{par}_{lado}"
 _ALERTA_COOLDOWN_H  = 4
 _PROXIMIDAD_COOLDOWN_H = 8
+_FLAG_FONDOS        = Path(__file__).parent / "data" / ".alerta_fondos_{par}"
+_FONDOS_COOLDOWN_H  = 4
 _PROXIMIDAD_PCT     = 3.0  # alerta si precio está dentro del 3% del borde del grid
 
 
@@ -234,9 +237,24 @@ def run_par(exchange, par: str, par_cfg: dict, logger, notifier, trend_filter, g
         logger.error(f"[FALLO] [{par}] Error en ciclo: {e}")
         err_str = str(e)
         _connectivity_keywords = ("SSL", "Max retries", "ConnectionError", "RemoteDisconnected", "Timeout", "timed out", "EOF")
+        _funds_keywords        = ("Insufficient funds", "EOrder:Insufficient")
         if any(k in err_str for k in _connectivity_keywords):
             prefijo = "[PAPER] " if config.MODO_PAPER_TRADING else ""
             notifier.enviar_texto(f"{prefijo}<b>CONECTIVIDAD [{par}]</b>\n{err_str[:300]}")
+        elif any(k in err_str for k in _funds_keywords):
+            # Cooldown 4h para no spamear en cada ciclo del scheduler
+            flag_path = Path(str(_FLAG_FONDOS).replace("{par}", par))
+            ahora = time.time()
+            ultima = float(flag_path.read_text().strip() or "0") if flag_path.exists() else 0.0
+            if ahora - ultima >= _FONDOS_COOLDOWN_H * 3600:
+                notifier.enviar_alerta_riesgo(
+                    f"FONDOS INSUFICIENTES [{par}]",
+                    err_str + "\n\nVerificar saldo Kraken o ejecutar kill_switch.txt para pausar el bot.",
+                )
+                flag_path.parent.mkdir(exist_ok=True)
+                flag_path.write_text(str(ahora))
+            else:
+                logger.warning(f"[{par}] Fondos insuficientes — alerta suprimida (cooldown {_FONDOS_COOLDOWN_H}h)")
         else:
             notifier.enviar_alerta_riesgo(f"ERROR CICLO [{par}]", err_str)
         return False
