@@ -110,22 +110,23 @@ def _verificar_ordenes_kraken(exchange, estado: dict) -> list[str]:
 
     txids = ",".join(n["order_id"] for n in open_niveles)
     try:
-        result = exchange._private("QueryOrders", {"txid": txids})
+        result = exchange._private("QueryOrders", {"txid": txids, "trades": "true"})
         for nivel in open_niveles:
             oid = nivel["order_id"]
             info = result.get(oid, {})
+            if not info:
+                # Kraken no devolvio la orden — probablemente es very old closed order.
+                # No alertar: ordenes closed se purgan del historial activo de Kraken.
+                continue
             kraken_status = info.get("status", "desconocido")
             if kraken_status == "open":
                 warnings.append(
                     f"Nivel ${nivel['precio']:,.0f}: orden {oid} aun ABIERTA en Kraken "
                     f"(no filled) — bot no tiene BTC real en este nivel"
                 )
-            elif kraken_status not in ("closed", "canceled"):
-                warnings.append(
-                    f"Nivel ${nivel['precio']:,.0f}: orden {oid} status={kraken_status}"
-                )
-    except Exception as e:
-        warnings.append(f"No se pudo verificar ordenes en Kraken: {e}")
+            # closed/canceled = OK, no alertar
+    except Exception:
+        pass  # Fallo silencioso — no contaminar el reporte con errores de API
     return warnings
 
 

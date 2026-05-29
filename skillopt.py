@@ -211,11 +211,33 @@ def run_skillopt(skill_name: str, epochs: int, lr: str, eval_only: bool):
     metricas_base = evaluar_skill(prompt_actual, casos)
     score_base = metricas_base["score_promedio"]
     print(f"  Score base: {score_base:.1f}/10\n")
-    historial.append({"epoca": 0, "score": score_base, "accion": "baseline"})
+    resumen_casos = [
+        {
+            "caso_id":    r["caso_id"],
+            "score":      r.get("score_total", 0),
+            "recall":     r.get("recall", 0),
+            "precision":  r.get("precision", 0),
+            "fallos":     r.get("fallos", []),
+            "aciertos":   r.get("aciertos", []),
+        }
+        for r in metricas_base["resultados"]
+    ]
+    historial.append({
+        "epoca": 0, "score": score_base, "accion": "baseline",
+        "score_min": metricas_base["score_minimo"],
+        "score_max": metricas_base["score_maximo"],
+        "casos": resumen_casos,
+    })
 
     if eval_only:
         log_path.write_text(json.dumps(historial, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"Resultados guardados: {log_path}")
+        print(f"\nDetalle por caso:")
+        for c in resumen_casos:
+            estado = "OK" if c["score"] >= 7 else "DEBIL" if c["score"] >= 5 else "FALLO"
+            print(f"  {c['caso_id']:<30} score={c['score']:.1f} recall={c['recall']:.1f} prec={c['precision']:.1f}  [{estado}]")
+            for f in c["fallos"][:2]:
+                print(f"    - {f[:80]}")
+        print(f"\nResultados guardados: {log_path}")
         return
 
     prompt_mejor = prompt_actual
