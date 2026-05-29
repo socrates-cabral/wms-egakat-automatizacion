@@ -1,0 +1,72 @@
+[
+  {
+    "id": "tc01_timezone",
+    "skill": "revisor",
+    "descripcion": "Script WMS con bug de timezone clasico del proyecto",
+    "code": "from datetime import datetime\nimport pandas as pd\n\ndef generar_reporte_fillrate(df: pd.DataFrame) -> dict:\n    fecha_generacion = datetime.now().strftime('%Y-%m-%d %H:%M')\n    total = len(df)\n    completados = df[df['estado'] == 'completo'].shape[0]\n    pct = completados / total * 100\n    return {\n        'fecha': fecha_generacion,\n        'total': total,\n        'pct_fillrate': round(pct, 2)\n    }\n",
+    "bugs_esperados": [
+      {"tipo": "🔴", "patron": "timezone", "descripcion": "datetime.now() sin UTC en linea 5"},
+      {"tipo": "🔴", "patron": "zerodivision", "descripcion": "division sin guardia si total==0 en linea 7"}
+    ],
+    "veredicto_esperado": "RECHAZADO",
+    "puntuacion_minima_recall": 8.0
+  },
+  {
+    "id": "tc02_keyerror_auth",
+    "skill": "revisor",
+    "descripcion": "Pagina Streamlit sin auth gate y con KeyError potencial",
+    "code": "import streamlit as st\nimport pandas as pd\n\nst.title('Dashboard Productividad')\n\ndef cargar_datos(cliente: str) -> pd.DataFrame:\n    df = pd.read_excel('data.xlsx')\n    return df[df['empresa'] == cliente]\n\ncliente = st.selectbox('Cliente', ['DERCO', 'OMNITECH'])\ndf = cargar_datos(cliente)\nst.metric('Productividad', df['productividad'][0])\n",
+    "bugs_esperados": [
+      {"tipo": "🟠", "patron": "auth_gate", "descripcion": "pagina sin verificacion de sesion/login al inicio"},
+      {"tipo": "🟠", "patron": "indexerror", "descripcion": "df['productividad'][0] sin verificar que df no esta vacio"}
+    ],
+    "veredicto_esperado": "APROBADO CON CONDICIONES",
+    "puntuacion_minima_recall": 7.0
+  },
+  {
+    "id": "tc03_api_timeout_prompt",
+    "skill": "revisor",
+    "descripcion": "Llamada a Claude API sin timeout y prompt sin fecha actual",
+    "code": "import anthropic\nimport os\n\ndef analizar_kpi(datos: str) -> str:\n    client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))\n    resp = client.messages.create(\n        model='claude-haiku-4-5-20251001',\n        max_tokens=1000,\n        system='Eres un analista logistico de Egakat SPA. Analiza los KPIs.',\n        messages=[{'role': 'user', 'content': datos}]\n    )\n    return resp.content[0].text\n",
+    "bugs_esperados": [
+      {"tipo": "🟠", "patron": "api_timeout", "descripcion": "client.messages.create sin timeout= parametro"},
+      {"tipo": "🟠", "patron": "prompt_sin_fecha", "descripcion": "system prompt sin fecha actual inyectada, modelo usara fecha del training"}
+    ],
+    "veredicto_esperado": "APROBADO CON CONDICIONES",
+    "puntuacion_minima_recall": 7.0
+  },
+  {
+    "id": "tc04_encoding_supabase",
+    "skill": "revisor",
+    "descripcion": "Lectura de archivo sin encoding y query Supabase sin manejo de error",
+    "code": "from pathlib import Path\nfrom supabase import create_client\nimport os\n\ndef sync_clientes(archivo: str):\n    contenido = Path(archivo).read_text()\n    lineas = contenido.split('\\n')\n    \n    client = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_KEY'))\n    for linea in lineas:\n        partes = linea.split(',')\n        client.table('clientes').insert({'nombre': partes[0], 'codigo': partes[1]}).execute()\n",
+    "bugs_esperados": [
+      {"tipo": "🟡", "patron": "encoding", "descripcion": "Path.read_text() sin encoding='utf-8'"},
+      {"tipo": "🟠", "patron": "supabase_error", "descripcion": ".execute() sin manejo de error, puede retornar None silenciosamente"},
+      {"tipo": "🟠", "patron": "indexerror", "descripcion": "partes[1] sin verificar que linea tiene al menos 2 campos"}
+    ],
+    "veredicto_esperado": "APROBADO CON CONDICIONES",
+    "puntuacion_minima_recall": 6.0
+  },
+  {
+    "id": "tc05_codigo_limpio",
+    "skill": "revisor",
+    "descripcion": "Codigo bien escrito, sin bugs - debe retornar APROBADO",
+    "code": "from datetime import datetime, timezone\nimport pandas as pd\nfrom pathlib import Path\n\ndef calcular_otif(df: pd.DataFrame, fecha: str) -> dict:\n    if df.empty:\n        return {'fecha': fecha, 'otif': 0.0, 'total': 0}\n    \n    total = len(df)\n    if total == 0:\n        return {'fecha': fecha, 'otif': 0.0, 'total': 0}\n    \n    a_tiempo = df[df['cumple_fecha'] == True].shape[0]\n    otif = round(a_tiempo / total * 100, 2)\n    \n    return {\n        'fecha': fecha,\n        'otif': otif,\n        'total': total,\n        'timestamp_utc': datetime.now(timezone.utc).isoformat()\n    }\n",
+    "bugs_esperados": [],
+    "veredicto_esperado": "APROBADO",
+    "puntuacion_minima_precision": 9.0
+  },
+  {
+    "id": "tc06_credenciales_nameerror",
+    "skill": "revisor",
+    "descripcion": "Credencial hardcodeada y variable usada antes de definir",
+    "code": "import requests\n\nTELEGRAM_TOKEN = 'bot123456:AABBCCDDEEFFaabbccddeeff'\n\ndef enviar_alerta(mensaje: str) -> bool:\n    url = f'https://api.telegram.org/{TELEGRAM_TOKEN}/sendMessage'\n    resp = requests.post(url, json={'chat_id': chat_id, 'text': mensaje})\n    return resp.status_code == 200\n\nchat_id = '-1001234567890'\n",
+    "bugs_esperados": [
+      {"tipo": "🔴", "patron": "credencial_hardcodeada", "descripcion": "TELEGRAM_TOKEN hardcodeado en linea 3, debe venir de os.getenv()"},
+      {"tipo": "🔴", "patron": "nameerror", "descripcion": "chat_id usado en linea 7 pero definido en linea 10 - NameError garantizado"}
+    ],
+    "veredicto_esperado": "RECHAZADO",
+    "puntuacion_minima_recall": 9.0
+  }
+]
