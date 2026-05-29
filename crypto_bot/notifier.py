@@ -1,6 +1,7 @@
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
+import logging as _logging
 import requests
 from datetime import datetime, timezone
 
@@ -14,8 +15,8 @@ def _send(token: str, chat_id: str, text: str):
             json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
             timeout=10,
         )
-    except Exception:
-        pass
+    except Exception as e:
+        _logging.getLogger("crypto_bot").debug(f"Telegram send failed: {e}")
 
 
 def enviar_texto(msg: str):

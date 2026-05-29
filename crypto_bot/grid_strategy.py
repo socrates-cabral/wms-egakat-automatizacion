@@ -9,6 +9,8 @@ from pathlib import Path
 from crypto_bot.exchange_client.base import BaseExchange
 from crypto_bot import persistence
 
+_KRAKEN_FEE_PCT = 0.0016  # ~0.16% maker fee Kraken (ambos lados)
+
 
 def _load_estado(path: Path) -> dict:
     if path.exists():
@@ -183,7 +185,8 @@ def run_cycle(exchange: BaseExchange, grid_activo: bool = True) -> dict:
                     continue
                 raise
             cost_basis = p - estado["nivel_step"]
-            pnl_nivel = round((p - cost_basis) * qty, 4)
+            fee_total = (cost_basis + p) * qty * _KRAKEN_FEE_PCT
+            pnl_nivel = round((p - cost_basis) * qty - fee_total, 4)
             pnl_delta += pnl_nivel
             nivel["estado"] = "idle"
             nivel["btc_qty"] = 0.0

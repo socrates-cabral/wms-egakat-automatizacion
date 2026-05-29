@@ -65,7 +65,10 @@ class KrakenExchange(BaseExchange):
     def get_ticker(self, par: str) -> dict:
         k_par = self._kraken_par(par)
         result = self._public("Ticker", {"pair": k_par})
-        t = list(result.values())[0]
+        values = list(result.values())
+        if not values:
+            raise RuntimeError(f"Kraken retornó resultado vacío para {k_par}")
+        t = values[0]
         return {
             "price": float(t["c"][0]),
             "bid": float(t["b"][0]),
@@ -77,7 +80,10 @@ class KrakenExchange(BaseExchange):
         k_par = self._kraken_par(par)
         iv = INTERVAL_MAP.get(interval, 1440)
         result = self._public("OHLC", {"pair": k_par, "interval": iv})
-        raw = list(result.values())[0]
+        values = list(result.values())
+        if not values:
+            raise RuntimeError(f"Kraken retornó resultado vacío para {k_par}")
+        raw = values[0]
         candles = [
             OHLCV(
                 timestamp=int(c[0]),

@@ -56,7 +56,7 @@ def push_operacion(op: dict, par: str) -> bool:
     if not client:
         return False
     try:
-        client.table("crypto_operaciones").insert({
+        client.table("crypto_operaciones").upsert({
             "par":       par,
             "tipo":      op["tipo"],
             "precio":    op["precio"],
@@ -64,7 +64,7 @@ def push_operacion(op: dict, par: str) -> bool:
             "pnl":       op.get("pnl"),
             "order_id":  op.get("order_id"),
             "timestamp": op.get("timestamp", datetime.now(timezone.utc).isoformat()),
-        }).execute()
+        }, on_conflict="order_id").execute()
         return True
     except Exception:
         return False

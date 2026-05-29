@@ -4,7 +4,7 @@ Previene pérdida de PnL y trades en reinicios.
 """
 import sqlite3
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Optional
 import json
 
@@ -77,7 +77,7 @@ def guardar_trade(par: str, tipo: str, precio: float, qty: float,
         timestamp: ISO timestamp (default: now)
     """
     if timestamp is None:
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
 
     conn = _connect()
     cursor = conn.cursor()
@@ -108,7 +108,7 @@ def guardar_estado_grid(par: str, pnl_realizado: float, precio_ultimo: float,
         timestamp: ISO timestamp (default: now)
     """
     if timestamp is None:
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
 
     conn = _connect()
     cursor = conn.cursor()

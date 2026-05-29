@@ -188,8 +188,8 @@ def main():
     output = {
         "fecha_backtest": datetime.now(timezone.utc).isoformat(),
         "velas_descargadas": len(candles),
-        "periodo_inicio": datetime.fromtimestamp(candles[0]["timestamp"]).isoformat(),
-        "periodo_fin":    datetime.fromtimestamp(candles[-1]["timestamp"]).isoformat(),
+        "periodo_inicio": datetime.fromtimestamp(candles[0]["timestamp"], tz=timezone.utc).isoformat(),
+        "periodo_fin":    datetime.fromtimestamp(candles[-1]["timestamp"], tz=timezone.utc).isoformat(),
         "capital_usdt": 1000.0,
         "fee_pct": FEE_PCT,
         "resultados_ordenados_roi": results_sorted,

@@ -100,6 +100,9 @@ def _verificar_ordenes_kraken(exchange, estado: dict) -> list[str]:
     Consulta Kraken para cada buy_open y verifica que el order este filled.
     Retorna lista de advertencias.
     """
+    from crypto_bot.exchange_client.kraken import KrakenExchange
+    if not isinstance(exchange, KrakenExchange):
+        return []
     warnings = []
     open_niveles = [
         n for n in estado.get("niveles", [])
