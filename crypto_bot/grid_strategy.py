@@ -153,6 +153,26 @@ def run_cycle(exchange: BaseExchange, grid_activo: bool = True) -> dict:
                             f"qty={qty:.8f} | EOrder:Insufficient — BUY order may not have settled. "
                             f"Position kept open. Will retry next cycle."
                         )
+                        # Corregir btc_qty con vol_exec real del BUY para el proximo reintento.
+                        # Si Kraken aun no liquidó el fill completo, vol_exec < qty calculado.
+                        buy_order_id = nivel.get("order_id")
+                        if buy_order_id:
+                            try:
+                                order_data = exchange._private(
+                                    "QueryOrders", {"txid": buy_order_id, "trades": "true"}
+                                )
+                                vol_exec = float(
+                                    order_data.get(buy_order_id, {}).get("vol_exec", 0) or 0
+                                )
+                                if 0 < vol_exec < qty:
+                                    # Aplica mismo haircut de fees que al colocar el BUY
+                                    nivel["btc_qty"] = round(vol_exec * 0.998, 8)
+                                    _log.getLogger("crypto_bot").info(
+                                        f"[SELL BLOCKED] btc_qty corregido: "
+                                        f"{qty:.8f} → {nivel['btc_qty']:.8f}"
+                                    )
+                            except Exception:
+                                pass  # Fallo silencioso — siguiente ciclo reintenta con qty original
                         from crypto_bot import notifier as _notifier
                         _notifier.enviar_alerta_riesgo(
                             f"SELL BLOQUEADO [{config.PAR}]",
