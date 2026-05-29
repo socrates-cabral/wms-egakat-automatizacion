@@ -32,7 +32,7 @@ Register-ScheduledTask `
     -Trigger $Trigger `
     -Settings $Settings `
     -Principal $Principal `
-    -Description "Grid Trading Bot BTC/USDT con filtro EMA 200. Paper trading mode."
+    -Description "Grid Trading Bot BTC/USDT + ETH/USDT con filtro EMA 200. Modo REAL — Kraken."
 
 Write-Host "Tarea '$TaskName' registrada. Intervalo: 5 minutos."
 Write-Host "Para detener: crear C:\ClaudeWork\crypto_bot\kill_switch.txt"
