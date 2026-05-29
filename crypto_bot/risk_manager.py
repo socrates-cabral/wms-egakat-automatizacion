@@ -39,7 +39,9 @@ def verificar_riesgo(estado_grid: dict) -> dict:
 def _calc_pnl_pct(estado_grid: dict) -> float:
     if not estado_grid:
         return 0.0
-    capital = estado_grid.get("capital_usdt", 1)
+    capital = estado_grid.get("capital_usdt")
+    if not capital:
+        return 0.0
     pnl = estado_grid.get("pnl_realizado_usdt", 0.0)
     return round((pnl / capital) * 100, 4)
 

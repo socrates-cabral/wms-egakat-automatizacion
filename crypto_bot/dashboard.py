@@ -17,6 +17,8 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
+from crypto_bot import config as bot_config
+
 BASE_DIR       = Path(__file__).parent
 ESTADO_PATH    = BASE_DIR / "estado_grid.json"
 HISTORICO_PATH = BASE_DIR / "data" / "historico_operaciones.json"
@@ -35,8 +37,18 @@ REFRESH_SEC = 30
 # ── fuente de datos (Supabase en cloud, JSON local en dev) ────────────────────
 
 def _supabase_client():
-    url = os.getenv("SUPABASE_URL") or st.secrets.get("SUPABASE_URL", "")
-    key = os.getenv("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY", "")
+    url = os.getenv("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_KEY", "")
+    if not url:
+        try:
+            url = st.secrets.get("SUPABASE_URL", "")
+        except AttributeError:
+            pass
+    if not key:
+        try:
+            key = st.secrets.get("SUPABASE_KEY", "")
+        except AttributeError:
+            pass
     if not url or not key:
         return None
     try:
@@ -111,7 +123,8 @@ def load_backtest() -> dict:
 # ── layout ───────────────────────────────────────────────────────────────────
 
 st.title("📈 Crypto Bot — Grid Trading BTC/USDT")
-st.caption(f"Modo: **PAPER TRADING** | Auto-refresh cada {REFRESH_SEC}s")
+_modo_label = "PAPER TRADING" if bot_config.MODO_PAPER_TRADING else "REAL"
+st.caption(f"Modo: **{_modo_label}** | Auto-refresh cada {REFRESH_SEC}s")
 
 estado   = load_estado()
 historico = load_historico()

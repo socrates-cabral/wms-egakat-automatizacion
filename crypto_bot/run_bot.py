@@ -122,7 +122,7 @@ def _verificar_rango(precio: float, par: str, par_cfg: dict, notifier) -> None:
 def setup_logging() -> tuple:
     from crypto_bot import config
     config.LOG_DIR.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
     log_path = config.LOG_DIR / f"crypto_bot_{ts}.log"
     logging.basicConfig(
         level=logging.INFO,
@@ -184,16 +184,18 @@ def run_par(exchange, par: str, par_cfg: dict, logger, notifier, trend_filter, g
         # Override temporalmente para init_grid
         _orig = (config.PAR, config.GRID_LOWER, config.GRID_UPPER, config.GRID_LEVELS,
                  config.CAPITAL_USDT, config.ESTADO_GRID_PATH, config.HISTORICO_PATH)
-        config.PAR = par
-        config.GRID_LOWER = grid_lower
-        config.GRID_UPPER = grid_upper
-        config.GRID_LEVELS = grid_levels
-        config.CAPITAL_USDT = capital
-        config.ESTADO_GRID_PATH = estado_path
-        config.HISTORICO_PATH = par_cfg["historico_path"]
-        estado_grid = grid_strategy.init_grid(exchange)
-        config.PAR, config.GRID_LOWER, config.GRID_UPPER, config.GRID_LEVELS, \
-            config.CAPITAL_USDT, config.ESTADO_GRID_PATH, config.HISTORICO_PATH = _orig
+        try:
+            config.PAR = par
+            config.GRID_LOWER = grid_lower
+            config.GRID_UPPER = grid_upper
+            config.GRID_LEVELS = grid_levels
+            config.CAPITAL_USDT = capital
+            config.ESTADO_GRID_PATH = estado_path
+            config.HISTORICO_PATH = par_cfg["historico_path"]
+            estado_grid = grid_strategy.init_grid(exchange)
+        finally:
+            config.PAR, config.GRID_LOWER, config.GRID_UPPER, config.GRID_LEVELS, \
+                config.CAPITAL_USDT, config.ESTADO_GRID_PATH, config.HISTORICO_PATH = _orig
         notifier.enviar_texto(
             f"{'[PAPER] ' if config.MODO_PAPER_TRADING else ''}Grid {par} iniciado.\n"
             f"Rango: ${grid_lower:,}–${grid_upper:,} | {grid_levels} niveles | ${capital:,.0f} USDT"
@@ -211,10 +213,11 @@ def run_par(exchange, par: str, par_cfg: dict, logger, notifier, trend_filter, g
         config.ESTADO_GRID_PATH = estado_path
         config.HISTORICO_PATH = par_cfg["historico_path"]
 
-        resumen = grid_strategy.run_cycle(exchange, grid_activo=trend["grid_activo"])
-
-        config.PAR, config.GRID_LOWER, config.GRID_UPPER, config.GRID_LEVELS, \
-            config.CAPITAL_USDT, config.ESTADO_GRID_PATH, config.HISTORICO_PATH = _orig
+        try:
+            resumen = grid_strategy.run_cycle(exchange, grid_activo=trend["grid_activo"])
+        finally:
+            config.PAR, config.GRID_LOWER, config.GRID_UPPER, config.GRID_LEVELS, \
+                config.CAPITAL_USDT, config.ESTADO_GRID_PATH, config.HISTORICO_PATH = _orig
 
         logger.info(
             f"[{par}] Ciclo OK — Precio: ${resumen['precio_actual']:,.2f} | "

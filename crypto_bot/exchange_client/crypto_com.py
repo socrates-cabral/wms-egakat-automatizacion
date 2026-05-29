@@ -61,7 +61,10 @@ class CryptoComExchange(BaseExchange):
 
     def get_ticker(self, par: str) -> dict:
         result = self._public_get("public/get-tickers", {"instrument_name": par})
-        t = result["data"][0]
+        data_list = result.get("data", [])
+        if not data_list:
+            raise RuntimeError(f"Crypto.com retornó data vacía para {par}")
+        t = data_list[0]
         return {
             "price": float(t.get("last") or t.get("a") or t.get("best_ask", 0)),
             "bid": float(t.get("best_bid") or t.get("b", 0)),
