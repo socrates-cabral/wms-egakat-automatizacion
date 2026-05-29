@@ -3,6 +3,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.stdout.reconfigure(encoding="utf-8")
 
+import os
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / ".env")
+import sentry_sdk
+sentry_sdk.init(dsn=os.getenv("SENTRY_DSN"), traces_sample_rate=0.0, send_default_pii=False)
+
 import json
 import logging
 import time

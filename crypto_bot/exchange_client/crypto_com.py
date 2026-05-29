@@ -7,12 +7,28 @@ import hashlib
 import json
 import uuid
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from datetime import datetime, timezone
 
 from .base import BaseExchange, OHLCV
 
 
 REST_URL = "https://api.crypto.com/exchange/v1"
+
+
+def _make_session() -> requests.Session:
+    session = requests.Session()
+    retry = Retry(
+        total=3,
+        backoff_factor=1,      # sleeps: 1s, 2s, 4s
+        status_forcelist=[500, 502, 503, 504],
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
 
 INTERVAL_MAP = {
     "1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m",
@@ -25,6 +41,7 @@ class CryptoComExchange(BaseExchange):
     def __init__(self, api_key: str, api_secret: str):
         self.api_key = api_key
         self.api_secret = api_secret
+        self._session = _make_session()
 
     def _sign(self, method: str, params: dict) -> dict:
         nonce = str(int(time.time() * 1000))
@@ -43,7 +60,7 @@ class CryptoComExchange(BaseExchange):
         return payload
 
     def _public_get(self, endpoint: str, params: dict = None) -> dict:
-        resp = requests.get(f"{REST_URL}/{endpoint}", params=params or {}, timeout=30)
+        resp = self._session.get(f"{REST_URL}/{endpoint}", params=params or {}, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         if data.get("code") != 0:
@@ -52,7 +69,7 @@ class CryptoComExchange(BaseExchange):
 
     def _private_post(self, method: str, params: dict) -> dict:
         payload = self._sign(method, params)
-        resp = requests.post(f"{REST_URL}/private/{method.split('/')[-1]}", json=payload, timeout=30)
+        resp = self._session.post(f"{REST_URL}/private/{method.split('/')[-1]}", json=payload, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         if data.get("code") != 0:
