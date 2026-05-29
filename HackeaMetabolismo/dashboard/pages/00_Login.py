@@ -14,9 +14,13 @@ from src.db.supabase_client import iniciar_sesion, registrar_usuario, recuperar_
 from src.db.queries import get_o_crear_usuario_por_email, get_usuario
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
+from src.utils.auth_guard import _nuevo_cm, _guardar_cookie, _borrar_cookie
 
 st.set_page_config(page_title="Login · Hackea", page_icon="🔐", layout="centered")
 inject_styles()
+
+# CookieManager debe instanciarse antes de cualquier widget
+_nuevo_cm()
 
 selector_idioma_sidebar()
 
@@ -30,8 +34,9 @@ if st.session_state.get("auth_user"):
             cerrar_sesion()
         except Exception:
             pass
-        st.session_state.pop("auth_user", None)
-        st.session_state.pop("auth_email", None)
+        _borrar_cookie()
+        for k in ("auth_user", "auth_email", "auth_nombre", "auth_uid"):
+            st.session_state.pop(k, None)
         st.rerun()
     st.stop()
 
@@ -55,7 +60,8 @@ with tab_login:
             with st.spinner("Verificando..."):
                 try:
                     resultado = iniciar_sesion(email, password)
-                    user = resultado["user"]
+                    user    = resultado["user"]
+                    session = resultado["session"]
                     if user:
                         uid = get_o_crear_usuario_por_email(user.email)
                         perfil = get_usuario(uid)
@@ -64,6 +70,8 @@ with tab_login:
                         st.session_state["auth_email"]  = user.email
                         st.session_state["auth_uid"]    = uid
                         st.session_state["auth_nombre"] = nombre
+                        refresh_token = getattr(session, "refresh_token", "") if session else ""
+                        _guardar_cookie(refresh_token)
                         st.success(f"✅ Bienvenido, **{nombre}**")
                         st.rerun()
                     else:

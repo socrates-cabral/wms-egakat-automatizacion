@@ -10,6 +10,7 @@ import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8") if hasattr(_sys.st
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+from src.utils.helpers import now_cl
 
 
 def media_movil(df: pd.DataFrame, col: str = "peso_kg", ventana: int = 7) -> pd.Series:
@@ -28,7 +29,7 @@ def tendencia_semanal(df: pd.DataFrame, col: str = "peso_kg") -> float:
 
 
 def proyectar_peso(peso_actual: float, tendencia_semana: float, semanas: int = 12) -> pd.DataFrame:
-    hoy    = datetime.today()
+    hoy    = now_cl()
     fechas = [hoy + timedelta(weeks=i) for i in range(semanas + 1)]
     pesos  = [round(peso_actual + tendencia_semana * i, 2) for i in range(semanas + 1)]
     return pd.DataFrame({"fecha": [f.strftime("%Y-%m-%d") for f in fechas], "peso_proyectado": pesos})

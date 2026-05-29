@@ -14,15 +14,16 @@ import pandas as pd
 from src.db.queries import insertar_ejercicio, get_ejercicio_dia, get_ejercicio_semana, get_usuario, get_peso_actual
 from src.db.schema import inicializar_db
 from src.ejercicio.rutinas import CATEGORIAS, calcular_kcal_ejercicio, evaluar_semana_ejercicio, rutinas_sin_equipo
-from src.utils.helpers import calcular_edad
+from src.utils.helpers import calcular_edad, now_cl
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge, get_uid_activo
+from src.utils.auth_guard import auth_badge, get_uid_activo, require_auth
 
 st.set_page_config(page_title="Ejercicio · Hackea", page_icon="💪", layout="wide")
 inject_styles()
 
 selector_idioma_sidebar()
+require_auth()
 auth_badge()
 
 inicializar_db()
@@ -54,18 +55,19 @@ st.divider()
 
 # ── Registrar ejercicio ───────────────────────────────────────
 st.markdown(t("ej.registrar"))
+# cat fuera del form para que el cambio actualice las opciones de tipo sin requerir submit
+cat = st.selectbox(t("ej.categoria"), list(CATEGORIAS.keys()),
+                   format_func=lambda x: t(f"cat.{x}"), key="ej_cat")
 with st.form("ejercicio"):
     c1,c2,c3 = st.columns(3)
     with c1:
-        cat      = st.selectbox(t("ej.categoria"), list(CATEGORIAS.keys()),
-                                format_func=lambda x: t(f"cat.{x}"))
         tipo     = st.selectbox(t("ej.tipo"), CATEGORIAS[cat])
     with c2:
         duracion = st.number_input(t("ej.duracion"), 5, 180, 45)
         intensid = st.selectbox(t("ej.intensidad"), ["baja","moderada","alta"],
                                 format_func=lambda x: t(f"int.{x}"))
     with c3:
-        fecha_ej = st.date_input(t("ej.fecha"), value=__import__("datetime").date.today())
+        fecha_ej = st.date_input(t("ej.fecha"), value=now_cl().date())
         notas_ej = st.text_input(t("ej.notas"), "")
 
     kcal_est = calcular_kcal_ejercicio(tipo, duracion, peso)

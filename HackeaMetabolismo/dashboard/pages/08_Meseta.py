@@ -15,12 +15,13 @@ from src.db.schema import inicializar_db
 from src.core.plateau import detectar_plateau, calcular_dias_para_meta
 from src.utils.i18n import t, lang, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge, get_uid_activo
+from src.utils.auth_guard import auth_badge, get_uid_activo, require_auth
 
 st.set_page_config(page_title="Meseta · Hackea", page_icon="⚠️", layout="wide")
 inject_styles()
 
 selector_idioma_sidebar()
+require_auth()
 auth_badge()
 
 inicializar_db()

@@ -19,7 +19,7 @@ from src.core.plateau import detectar_plateau, calcular_dias_para_meta
 from src.utils.helpers import hoy
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge, get_uid_activo
+from src.utils.auth_guard import auth_badge, get_uid_activo, require_auth
 
 BG="#0a1628"; BG_CARD="#0d1f3c"; TEAL="#0f9d7a"; GRID="#1e3a5f"
 
@@ -27,6 +27,7 @@ st.set_page_config(page_title="Progreso · Hackea", page_icon="📈", layout="wi
 inject_styles()
 
 selector_idioma_sidebar()
+require_auth()
 auth_badge()
 
 inicializar_db()
@@ -65,8 +66,12 @@ if df_peso.empty:
     st.stop()
 
 # ── KPIs ──────────────────────────────────────────────────────
-peso_ini   = df_peso["peso_kg"].dropna().iloc[0]
-peso_act   = df_peso["peso_kg"].dropna().iloc[-1]
+_serie_peso = df_peso["peso_kg"].dropna()
+if _serie_peso.empty:
+    st.info(t("prog.sin_datos"))
+    st.stop()
+peso_ini   = _serie_peso.iloc[0]
+peso_act   = _serie_peso.iloc[-1]
 cambio     = round(peso_act - peso_ini, 2)
 tend       = tendencia_semanal(df_peso)
 adherencia = calcular_adherencia(df_kcal, kcal_obj) if not df_kcal.empty else 0

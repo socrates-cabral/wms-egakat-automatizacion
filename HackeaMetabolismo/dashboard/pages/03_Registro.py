@@ -17,12 +17,13 @@ from src.alimentacion.vision_ia import analizar_foto, resultado_a_registro
 from src.utils.helpers import hoy
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge, get_uid_activo
+from src.utils.auth_guard import auth_badge, get_uid_activo, require_auth
 
 st.set_page_config(page_title="Registro · Hackea", page_icon="🍽️", layout="wide")
 inject_styles()
 
 selector_idioma_sidebar()
+require_auth()
 auth_badge()
 
 inicializar_db()
@@ -41,7 +42,7 @@ st.divider()
 MOMENTOS = ["desayuno","media_mañana","almuerzo","merienda","cena","extra"]
 momento  = st.selectbox(t("reg.momento"), MOMENTOS,
                         format_func=lambda x: t(f"momento.{x}"), index=2)
-fecha    = st.date_input(t("reg.fecha"), value=__import__("datetime").date.today())
+fecha    = st.date_input(t("reg.fecha"), value=hoy())
 
 tab_texto, tab_foto, tab_barcode, tab_manual = st.tabs([
     t("reg.tab_texto"), t("reg.tab_foto"), t("reg.tab_barcode"), t("reg.tab_manual")
@@ -101,13 +102,14 @@ with tab_foto:
         if st.button(t("reg.analizar"), use_container_width=True):
             with st.spinner(t("reg.analizando")):
                 foto.seek(0)
-                resultado = analizar_foto(foto.read(), f"image/{foto.type.split('/')[-1]}")
+                mime = foto.type if (foto.type and "/" in foto.type) else "image/jpeg"
+                resultado = analizar_foto(foto.read(), mime)
             st.session_state["vision_resultado"] = resultado
 
     resultado = st.session_state.get("vision_resultado")
     if resultado:
         st.divider()
-        kcal_media = (resultado["kcal_estimadas_min"] + resultado["kcal_estimadas_max"]) / 2
+        kcal_media = ((resultado.get("kcal_estimadas_min") or 0) + (resultado.get("kcal_estimadas_max") or 0)) / 2
         confianza  = resultado.get("confianza", "—")
         color_conf = {"alta":"#22c55e","media":"#f59e0b","baja":"#ef4444","demo":"#a78bfa"}.get(confianza,"#94a3b8")
 

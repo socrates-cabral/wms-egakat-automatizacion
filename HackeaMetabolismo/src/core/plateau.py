@@ -39,20 +39,27 @@ def detectar_plateau(df_peso: pd.DataFrame, df_kcal: pd.DataFrame | None = None)
 
     reciente  = df.tail(21)["peso_kg"]
     variacion = abs(reciente.iloc[-1] - reciente.iloc[0])
-    semanas   = 3
+
+    # Calcular semanas reales de datos disponibles
+    try:
+        import pandas as _pd
+        dias_rango = (_pd.to_datetime(df["fecha"].iloc[-1]) - _pd.to_datetime(df["fecha"].iloc[0])).days
+        semanas = max(1, round(dias_rango / 7))
+    except Exception:
+        semanas = len(df) // 7 or 1
 
     if variacion <= VARIACION_KG_UMBRAL:
-        # Meseta detectada — elegir protocolo
-        if semanas == 3:
+        # Meseta detectada — elegir protocolo según duración
+        if semanas <= 4:
             tipo = "refeed"
             rec  = (
-                "Meseta de 3 semanas. Protocolo REFEED: 1–2 días al TDEE de mantenimiento "
+                f"Meseta de {semanas} semana(s). Protocolo REFEED: 1–2 días al TDEE de mantenimiento "
                 "(sin déficit). Recarga glucógeno y normaliza leptina."
             )
         else:
             tipo = "diet_break"
             rec  = (
-                "Meseta prolongada. DIET BREAK: 1–2 semanas comiendo a mantenimiento. "
+                f"Meseta prolongada ({semanas} semanas). DIET BREAK: 1–2 semanas comiendo a mantenimiento. "
                 "Restaura hormonas y adherencia a largo plazo."
             )
         return ResultadoPlateau(True, semanas, round(variacion, 2), rec, tipo)

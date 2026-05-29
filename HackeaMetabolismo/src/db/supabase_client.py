@@ -32,8 +32,7 @@ def supabase_disponible() -> bool:
     """Retorna True si las credenciales Supabase están configuradas."""
     url = get_secret("SUPABASE_URL")
     key = get_secret("SUPABASE_KEY")
-    return bool(url and key and not url.endswith("supabase.co") == False
-                and "rqa...." not in url)
+    return bool(url and key and "supabase.co" in url)
 
 
 def registrar_usuario(email: str, password: str) -> dict:

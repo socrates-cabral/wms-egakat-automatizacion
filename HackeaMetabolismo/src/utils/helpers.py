@@ -15,6 +15,12 @@ import pandas as pd
 from datetime import datetime
 from contextlib import contextmanager
 from dotenv import load_dotenv
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo  # Python < 3.9
+
+_CHILE_TZ = ZoneInfo("America/Santiago")
 
 load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env")
 
@@ -95,22 +101,58 @@ class _SupabaseConn:
             raise NotImplementedError(f"SQL no soportado: {sql[:50]}")
 
     def _execute_select(self, sql: str, params=None) -> _SupabaseCursor:
-        """SELECT via REST API."""
+        """SELECT via REST API — WHERE/ORDER BY/LIMIT se empujan al query builder."""
         import re
-        # Parseador simple: SELECT * FROM tabla WHERE id=?
         match = re.search(r"FROM\s+(\w+)", sql, re.IGNORECASE)
         if not match:
             return _SupabaseCursor([])
 
         tabla = match.group(1)
-        result = self._sb.table(tabla).select("*").execute()
-        data = result.data if result else []
+        query = self._sb.table(tabla).select("*")
 
-        # Aplicar WHERE clause si existe
+        # WHERE → filtros nativos Supabase (evita traer tabla completa)
         if "WHERE" in sql.upper() and params:
-            data = self._filter_where(data, sql, params)
+            query = self._apply_where_api(query, sql, params)
 
-        return _SupabaseCursor(data)
+        # ORDER BY
+        order_m = re.search(r"ORDER\s+BY\s+(\w+)(?:\s+(ASC|DESC))?", sql, re.IGNORECASE)
+        if order_m:
+            desc = (order_m.group(2) or "ASC").upper() == "DESC"
+            query = query.order(order_m.group(1), desc=desc)
+
+        # LIMIT
+        limit_m = re.search(r"LIMIT\s+(\d+)", sql, re.IGNORECASE)
+        if limit_m:
+            query = query.limit(int(limit_m.group(1)))
+
+        result = query.execute()
+        return _SupabaseCursor(result.data if result else [])
+
+    def _apply_where_api(self, query, sql: str, params):
+        """Traduce condiciones WHERE a métodos del query builder Supabase."""
+        import re
+        where_m = re.search(r"WHERE\s+(.*?)(?:\s+ORDER|\s+GROUP|\s+LIMIT|;|$)",
+                            sql, re.IGNORECASE | re.DOTALL)
+        if not where_m or not params:
+            return query
+
+        parts = re.split(r"\s+AND\s+", where_m.group(1).strip(), flags=re.IGNORECASE)
+        conditions = []
+        for part in parts:
+            for op in (">=", "<=", "!=", ">", "<", "="):
+                if op in part:
+                    col = part.split(op)[0].strip()
+                    conditions.append((col, op))
+                    break
+
+        for (col, op), val in zip(conditions, params):
+            if   op == "=":  query = query.eq(col, val)
+            elif op == ">=": query = query.gte(col, val)
+            elif op == "<=": query = query.lte(col, val)
+            elif op == ">":  query = query.gt(col, val)
+            elif op == "<":  query = query.lt(col, val)
+            elif op == "!=": query = query.neq(col, val)
+        return query
 
     def _execute_insert(self, sql: str, params=None) -> _SupabaseCursor:
         """INSERT via REST API."""
@@ -132,30 +174,29 @@ class _SupabaseConn:
         return _SupabaseCursor(result.data if result else [])
 
     def _execute_update(self, sql: str, params=None) -> _SupabaseCursor:
-        """UPDATE via REST API."""
+        """UPDATE via REST API. Soporta múltiples condiciones AND en WHERE."""
         import re
-        # Parsear: UPDATE tabla SET col1=?, col2=? WHERE id=?
         match = re.search(r"UPDATE\s+(\w+)\s+SET\s+(.*?)\s+WHERE", sql, re.IGNORECASE | re.DOTALL)
         if not match:
             raise ValueError(f"UPDATE inválido: {sql}")
 
-        tabla = match.group(1)
-        set_clause = match.group(2)
+        tabla     = match.group(1)
+        set_cols  = [c.split("=")[0].strip() for c in match.group(2).split(",")]
 
-        # Extraer columnas del SET
-        cols = [c.split("=")[0].strip() for c in set_clause.split(",")]
+        where_match = re.search(r"WHERE\s+(.*?)(?:;|$)", sql, re.IGNORECASE | re.DOTALL)
+        where_parts = re.split(r"\s+AND\s+", where_match.group(1).strip(), flags=re.IGNORECASE) if where_match else []
+        where_cols  = [p.split("=")[0].strip() for p in where_parts]
 
-        # Extraer WHERE clause
-        where_match = re.search(r"WHERE\s+(.*?)(?:;|$)", sql, re.IGNORECASE)
-        where_col = where_match.group(1).split("=")[0].strip() if where_match else "id"
+        n_set   = len(set_cols)
+        n_where = len(where_cols)
+        if not params or len(params) != n_set + n_where:
+            raise ValueError(f"Parámetros inválidos: esperados {n_set + n_where}, recibidos {len(params) if params else 0}")
 
-        if not params or len(params) != len(cols) + 1:
-            raise ValueError(f"Parámetros inválidos")
-
-        datos = dict(zip(cols, params[:-1]))
-        where_val = params[-1]
-
-        result = self._sb.table(tabla).update(datos).eq(where_col, where_val).execute()
+        datos = dict(zip(set_cols, params[:n_set]))
+        query = self._sb.table(tabla).update(datos)
+        for col, val in zip(where_cols, params[n_set:]):
+            query = query.eq(col, val)
+        result = query.execute()
         return _SupabaseCursor(result.data if result else [])
 
     def _execute_delete(self, sql: str, params=None) -> _SupabaseCursor:
@@ -181,7 +222,7 @@ class _SupabaseConn:
         return _SupabaseCursor([])
 
     def _filter_where(self, data: list, sql: str, params: list) -> list:
-        """Filtra resultados por WHERE clause. Soporta AND y operadores >=, <=, =."""
+        """Fallback Python: filtra resultados con comparaciones tipadas (no string)."""
         import re
         where_match = re.search(r"WHERE\s+(.*?)(?:\s+ORDER|\s+GROUP|\s+LIMIT|;|$)",
                                 sql, re.IGNORECASE | re.DOTALL)
@@ -191,25 +232,36 @@ class _SupabaseConn:
         parts = re.split(r"\s+AND\s+", where_match.group(1).strip(), flags=re.IGNORECASE)
         conditions = []
         for part in parts:
-            part = part.strip()
-            for op in (">=", "<=", "!=", "=", ">", "<"):
+            for op in (">=", "<=", "!=", ">", "<", "="):
                 if op in part:
                     col = part.split(op)[0].strip()
                     conditions.append((col, op))
                     break
 
+        def _cast(row_val, ref):
+            """Convierte row_val al mismo tipo que ref para comparación correcta."""
+            if row_val is None:
+                return None
+            if isinstance(ref, (int, float)):
+                try:
+                    return type(ref)(row_val)
+                except (TypeError, ValueError):
+                    return None
+            return str(row_val)
+
         for (col, op), val in zip(conditions, params):
-            val_s = str(val)
             if op == "=":
-                data = [r for r in data if str(r.get(col, "")) == val_s]
+                data = [r for r in data if _cast(r.get(col), val) == val]
             elif op == ">=":
-                data = [r for r in data if str(r.get(col, "")) >= val_s]
+                data = [r for r in data if (v := _cast(r.get(col), val)) is not None and v >= val]
             elif op == "<=":
-                data = [r for r in data if str(r.get(col, "")) <= val_s]
+                data = [r for r in data if (v := _cast(r.get(col), val)) is not None and v <= val]
             elif op == ">":
-                data = [r for r in data if str(r.get(col, "")) > val_s]
+                data = [r for r in data if (v := _cast(r.get(col), val)) is not None and v > val]
             elif op == "<":
-                data = [r for r in data if str(r.get(col, "")) < val_s]
+                data = [r for r in data if (v := _cast(r.get(col), val)) is not None and v < val]
+            elif op == "!=":
+                data = [r for r in data if _cast(r.get(col), val) != val]
         return data
 
     def executescript(self, script: str):
@@ -266,7 +318,7 @@ def read_sql(sql: str, conn, params=None) -> pd.DataFrame:
 
 def setup_logging(nombre: str) -> logging.Logger:
     LOG_DIR.mkdir(exist_ok=True)
-    ts       = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    ts       = now_cl().strftime("%Y-%m-%d_%H%M%S")
     log_file = LOG_DIR / f"{nombre}_{ts}.log"
     logger   = logging.getLogger(nombre)
     if logger.handlers:
@@ -284,15 +336,23 @@ def setup_logging(nombre: str) -> logging.Logger:
 
 # ── Utils ─────────────────────────────────────────────────────
 
+def now_cl() -> datetime:
+    """Datetime actual en zona horaria Chile (America/Santiago)."""
+    return datetime.now(_CHILE_TZ)
+
+
 def hoy() -> str:
-    return datetime.now().strftime("%Y-%m-%d")
+    return now_cl().strftime("%Y-%m-%d")
 
 
 def ahora() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return now_cl().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def calcular_edad(fecha_nac: str) -> int:
-    nac = datetime.strptime(fecha_nac, "%Y-%m-%d")
-    hoy_ = datetime.today()
+    try:
+        nac = datetime.strptime(str(fecha_nac), "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return 35
+    hoy_ = now_cl()
     return hoy_.year - nac.year - ((hoy_.month, hoy_.day) < (nac.month, nac.day))

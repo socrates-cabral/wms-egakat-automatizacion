@@ -11,7 +11,7 @@ if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
 
 try:
     import streamlit as st
-    from datetime import datetime
+    from src.utils.helpers import now_cl
     from src.db.schema import inicializar_db, insertar_usuario_demo
     from src.db.queries import get_usuario, get_totales_dia, get_objetivo, get_peso_actual, get_o_crear_usuario_activo, get_o_crear_usuario_por_email
     from src.utils.helpers import hoy
@@ -103,4 +103,4 @@ with col_b:
     st.info(f"**{t('nav.meseta')}**")
 
 st.divider()
-st.caption(t("app.footer", fecha=datetime.now().strftime('%d/%m/%Y')))
+st.caption(t("app.footer", fecha=now_cl().strftime('%d/%m/%Y')))

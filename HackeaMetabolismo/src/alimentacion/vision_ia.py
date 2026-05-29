@@ -25,7 +25,11 @@ BACKOFF_BASE_S   = 2        # espera inicial entre reintentos (duplica cada vez)
 def _con_retry(fn, *args, **kwargs):
     """Ejecuta fn con retry exponencial. Retorna None si todos los intentos fallan."""
     for intento in range(MAX_REINTENTOS):
-        resultado = fn(*args, **kwargs)
+        try:
+            resultado = fn(*args, **kwargs)
+        except Exception as e:
+            logger.warning(f"Excepción en intento {intento + 1}: {e}")
+            resultado = None
         if resultado is not None:
             return resultado
         if intento < MAX_REINTENTOS - 1:
@@ -89,6 +93,8 @@ def _analizar_anthropic(imagen_bytes: bytes, mime_type: str) -> dict | None:
                 {"type": "text", "text": PROMPT_VISION},
             ]}],
         )
+        if not respuesta.content:
+            return None
         resultado = _extraer_json(respuesta.content[0].text)
         logger.info(f"[Anthropic] Vision OK: {resultado.get('alimentos')}")
         resultado["_proveedor"] = "Anthropic Claude"

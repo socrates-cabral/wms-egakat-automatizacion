@@ -10,7 +10,7 @@ if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
 
 import pandas as pd
 from datetime import datetime, timedelta
-from src.utils.helpers import get_db, read_sql, hoy
+from src.utils.helpers import get_db, read_sql, hoy, now_cl
 
 
 # ── Usuario ───────────────────────────────────────────────────
@@ -33,7 +33,7 @@ def upsert_usuario(datos: dict) -> int:
                   datos["altura_cm"], datos["objetivo"], datos["nivel_actividad"],
                   datos.get("id", 1)))
             conn.commit()
-            return datos["id"]
+            return datos.get("id", 1)
         else:
             cur = conn.execute("""
                 INSERT INTO usuarios (nombre, fecha_nac, sexo, altura_cm, objetivo, nivel_actividad)
@@ -103,7 +103,7 @@ def insertar_medicion(uid: int, datos: dict) -> None:
 
 
 def get_mediciones(uid: int, dias: int = 90) -> pd.DataFrame:
-    desde = (datetime.today() - timedelta(days=dias)).strftime("%Y-%m-%d")
+    desde = (now_cl() - timedelta(days=dias)).strftime("%Y-%m-%d")
     with get_db() as conn:
         return read_sql(
             "SELECT * FROM mediciones WHERE usuario_id=? AND fecha>=? ORDER BY fecha",
@@ -195,7 +195,7 @@ def get_ejercicio_dia(uid: int, fecha: str | None = None) -> pd.DataFrame:
 
 
 def get_ejercicio_semana(uid: int) -> pd.DataFrame:
-    desde = (datetime.today() - timedelta(days=7)).strftime("%Y-%m-%d")
+    desde = (now_cl() - timedelta(days=7)).strftime("%Y-%m-%d")
     with get_db() as conn:
         return read_sql(
             "SELECT * FROM registros_ejercicio WHERE usuario_id=? AND fecha>=? ORDER BY fecha",
@@ -206,20 +206,21 @@ def get_ejercicio_semana(uid: int) -> pd.DataFrame:
 # ── Sueño ────────────────────────────────────────────────────
 
 def insertar_sueno(uid: int, datos: dict) -> None:
+    fecha = datos.get("fecha", hoy())
     with get_db() as conn:
-        conn.execute("DELETE FROM registros_sueno WHERE usuario_id=? AND fecha=?",
-                     (uid, datos.get("fecha", hoy())))
+        conn.execute("BEGIN")
+        conn.execute("DELETE FROM registros_sueno WHERE usuario_id=? AND fecha=?", (uid, fecha))
         conn.execute("""
             INSERT INTO registros_sueno (usuario_id, fecha, horas, calidad, hora_acostarse, hora_despertar, notas)
             VALUES (?,?,?,?,?,?,?)
-        """, (uid, datos.get("fecha", hoy()), datos["horas"],
+        """, (uid, fecha, datos["horas"],
               datos.get("calidad", "buena"), datos.get("hora_acostarse"),
               datos.get("hora_despertar"), datos.get("notas", "")))
         conn.commit()
 
 
 def get_sueno_semanas(uid: int, semanas: int = 4) -> pd.DataFrame:
-    desde = (datetime.today() - timedelta(weeks=semanas)).strftime("%Y-%m-%d")
+    desde = (now_cl() - timedelta(weeks=semanas)).strftime("%Y-%m-%d")
     with get_db() as conn:
         return read_sql(
             "SELECT * FROM registros_sueno WHERE usuario_id=? AND fecha>=? ORDER BY fecha",
@@ -230,7 +231,7 @@ def get_sueno_semanas(uid: int, semanas: int = 4) -> pd.DataFrame:
 # ── Historial alimentos (para progreso) ──────────────────────
 
 def get_historial_kcal(uid: int, dias: int = 30) -> pd.DataFrame:
-    desde = (datetime.today() - timedelta(days=dias)).strftime("%Y-%m-%d")
+    desde = (now_cl() - timedelta(days=dias)).strftime("%Y-%m-%d")
     with get_db() as conn:
         df = read_sql(
             "SELECT * FROM registros_alimentos WHERE usuario_id=? AND fecha>=? ORDER BY fecha",

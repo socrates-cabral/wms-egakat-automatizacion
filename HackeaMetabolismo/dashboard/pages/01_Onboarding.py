@@ -11,19 +11,20 @@ if _sys.platform == "win32" and hasattr(_sys.stdout, "reconfigure"):
 
 import streamlit as st
 from datetime import datetime, date
-from src.db.queries import get_usuario, upsert_usuario, upsert_objetivo, insertar_medicion
+from src.db.queries import get_usuario, upsert_usuario, upsert_objetivo, insertar_medicion, get_peso_actual
 from src.db.schema import inicializar_db
 from src.core.calculos import calcular_plan
 from src.core.calculos_40plus import evaluar_40plus, screening_resistencia_insulinica
-from src.utils.helpers import calcular_edad, hoy
+from src.utils.helpers import calcular_edad, hoy, now_cl
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge, get_uid_activo
+from src.utils.auth_guard import auth_badge, get_uid_activo, require_auth
 
 st.set_page_config(page_title="Onboarding · Hackea", page_icon="🧬", layout="wide")
 inject_styles()
 
 selector_idioma_sidebar()
+require_auth()
 auth_badge()
 
 inicializar_db()
@@ -42,11 +43,11 @@ with st.form("perfil"):
         nombre      = st.text_input(t("onb.nombre"), usuario.get("nombre", ""))
         fecha_nac   = st.date_input(t("onb.fecha_nac"),
                         value=datetime.strptime(usuario.get("fecha_nac","1985-01-01"), "%Y-%m-%d").date(),
-                        min_value=date(1940,1,1), max_value=date.today())
+                        min_value=date(1940,1,1), max_value=now_cl().date())
         sexo        = st.selectbox(t("onb.sexo"), ["M","F"], index=0 if usuario.get("sexo","M")=="M" else 1)
     with c2:
         peso        = st.number_input(t("onb.peso"), 30.0, 250.0,
-                        float(usuario.get("peso_kg", 80) or 80), 0.5)
+                        float(get_peso_actual(uid) or usuario.get("peso_kg") or 80), 0.5)
         altura      = st.number_input(t("onb.altura"), 100.0, 220.0,
                         float(usuario.get("altura_cm", 175) or 175), 0.5)
         cintura     = st.number_input(t("onb.cintura"), 0.0, 200.0, 0.0, 0.5)

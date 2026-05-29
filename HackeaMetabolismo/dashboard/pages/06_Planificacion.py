@@ -16,12 +16,13 @@ from src.alimentacion.recetas_ia import generar_recetas, consolidar_lista_compra
 from src.utils.helpers import calcular_edad
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge, get_uid_activo
+from src.utils.auth_guard import auth_badge, get_uid_activo, require_auth
 
 st.set_page_config(page_title="Planificación · Hackea", page_icon="🍳", layout="wide")
 inject_styles()
 
 selector_idioma_sidebar()
+require_auth()
 auth_badge()
 
 inicializar_db()
@@ -30,7 +31,8 @@ objetivo = get_objetivo(uid)
 usuario  = get_usuario(uid) or {}
 edad     = calcular_edad(usuario.get("fecha_nac","1985-01-01")) if usuario.get("fecha_nac") else 35
 
-kcal_rec     = (objetivo["kcal_objetivo"] / 3) if objetivo else 500
+_n_rec_prev  = st.session_state.get("plan_n_recetas", 3)
+kcal_rec     = (objetivo["kcal_objetivo"] / _n_rec_prev) if objetivo else 500
 proteina_min = objetivo["proteina_g"] * 0.35   if objetivo else 35
 
 st.title(t("plan.title"))
@@ -41,7 +43,7 @@ st.divider()
 with st.form("recetas_form"):
     c1,c2 = st.columns(2)
     with c1:
-        n_recetas       = st.slider(t("plan.n_recetas"), 1, 6, 3)
+        n_recetas       = st.slider(t("plan.n_recetas"), 1, 6, 3, key="plan_n_recetas")
         kcal_receta     = st.number_input(t("plan.kcal_receta"), 200.0, 1000.0, round(kcal_rec, 0), 50.0)
         prot_min_receta = st.number_input(t("plan.prot_min"), 10.0, 100.0, round(proteina_min, 0), 5.0)
     with c2:

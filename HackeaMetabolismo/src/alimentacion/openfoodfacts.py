@@ -45,7 +45,7 @@ def _extraer_nutrientes(producto: dict) -> dict:
         "marca":           producto.get("brands", ""),
         "porcion_g":       porcion_ref or 100.0,           # numérico, default 100g
         "porcion_str":     serving_str,                    # texto original del envase
-        "kcal":            round(float(n.get("energy-kcal_100g") or n.get("energy_100g", 0) / 4.184 or 0), 1),
+        "kcal":            round(float(n.get("energy-kcal_100g") or (n.get("energy_100g") or 0) / 4.184), 1),
         "proteina_g":      round(float(n.get("proteins_100g", 0)), 1),
         "cho_g":           round(float(n.get("carbohydrates_100g", 0)), 1),
         "grasa_g":         round(float(n.get("fat_100g", 0)), 1),

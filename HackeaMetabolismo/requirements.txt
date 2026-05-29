@@ -25,3 +25,6 @@ httpx[http2]
 # Reportes / utils
 Pillow>=10.0.0
 python-dateutil>=2.8.0
+
+# Auth / cookies
+extra-streamlit-components>=0.1.60

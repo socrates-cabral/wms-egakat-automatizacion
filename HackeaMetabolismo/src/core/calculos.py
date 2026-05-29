@@ -114,6 +114,11 @@ def calcular_plan(
         deficit  = 0
 
     macros = calcular_macros(peso_kg, kcal_obj, edad)
+    if macros["cho_g"] < 50:
+        advertencias.append(
+            f"Carbohidratos calculados ({macros['cho_g']:.0f}g) están por debajo de 50g/día. "
+            "Considera reducir proteína o grasa para dar espacio a los carbohidratos mínimos."
+        )
     tef    = calcular_tef(macros["proteina_g"], macros["cho_g"], macros["grasa_g"])
     perdida_semanal = round((deficit * 7) / 7700, 2) if objetivo == "perder_grasa" else 0
 

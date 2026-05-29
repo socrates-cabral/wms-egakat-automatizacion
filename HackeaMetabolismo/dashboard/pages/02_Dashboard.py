@@ -12,13 +12,13 @@ if _sys.platform == "win32" and hasattr(_sys.stdout, "reconfigure"):
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from datetime import datetime
 from src.db.queries import (get_totales_dia, get_objetivo, get_alimentos_dia,
                              get_historial_kcal, eliminar_alimento)
+from src.utils.helpers import now_cl
 from src.db.schema import inicializar_db
 from src.utils.i18n import t, selector_idioma_sidebar
 from src.utils.styles import inject_styles
-from src.utils.auth_guard import auth_badge, get_uid_activo
+from src.utils.auth_guard import auth_badge, get_uid_activo, require_auth
 
 BG="#0a1628"; BG_CARD="#0d1f3c"; TEAL="#0f9d7a"; GRID="#1e3a5f"
 
@@ -26,6 +26,7 @@ st.set_page_config(page_title="Dashboard · Hackea", page_icon="📊", layout="w
 inject_styles()
 
 selector_idioma_sidebar()
+require_auth()
 auth_badge()
 
 inicializar_db()
@@ -49,7 +50,7 @@ grasa_c = totales["grasa_g"]    or 0
 rest    = max(0, kcal_obj - kcal_c)
 
 st.title(t("dash.title"))
-st.markdown(f"**{datetime.now().strftime('%A %d de %B, %Y')}**")
+st.markdown(f"**{now_cl().strftime('%A %d de %B, %Y')}**")
 st.divider()
 
 # ── Anillo de kcal ────────────────────────────────────────────
@@ -135,7 +136,7 @@ else:
               <span style="font-weight:700;color:#e2e8f0;font-size:0.95rem;">{row['alimento']}{ia_icon}</span>
               &nbsp;{momento_badge}
             </div>
-            <span style="font-weight:700;color:#0f9d7a;font-size:1rem;">{row['kcal']:.0f} kcal
+            <span style="font-weight:700;color:#0f9d7a;font-size:1rem;">{(row['kcal'] or 0):.0f} kcal
               <span style="color:#64748b;font-size:0.75rem;font-weight:400;">({pct_kcal:.0f}% del día)</span>
             </span>
           </div>
