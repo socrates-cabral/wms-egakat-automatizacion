@@ -45,8 +45,12 @@ class MemoryClient:
 
     def persist_session(self, filename: str, content: str) -> None:
         """Escribe o sobreescribe un archivo en el directorio de memoria."""
-        path = self.memory_dir / filename
+        path = (self.memory_dir / filename).resolve()
+        if not str(path).startswith(str(self.memory_dir.resolve())):
+            logger.error(f"Ruta fuera del memory_dir rechazada: {filename}")
+            return
         try:
+            self.memory_dir.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
             logger.info(f"Memory persistida: {filename}")
         except Exception as e:
