@@ -25,10 +25,13 @@ TOOLS = [
 
 
 class Agent:
-    def __init__(self):
+    def __init__(self, memory_context: str = ""):
         self._client = genai.Client(api_key=GOOGLE_API_KEY)
+        system = SYSTEM_PROMPT
+        if memory_context:
+            system = f"{SYSTEM_PROMPT}\n\n## Contexto de memoria\n{memory_context}"
         self._config = types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
+            system_instruction=system,
             tools=TOOLS,
             automatic_function_calling=types.AutomaticFunctionCallingConfig(
                 disable=False
