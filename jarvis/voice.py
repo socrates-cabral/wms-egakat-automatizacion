@@ -64,26 +64,39 @@ def speak(text: str):
             pass
 
 
+def _find_wasapi_input() -> tuple[int | None, int]:
+    """Busca el primer dispositivo de entrada WASAPI. Retorna (device_idx, sample_rate)."""
+    try:
+        import sounddevice as sd
+        hostapis = sd.query_hostapis()
+        wasapi_api = next((i for i, h in enumerate(hostapis) if "WASAPI" in h["name"]), None)
+        if wasapi_api is None:
+            return None, 44100
+        for i, d in enumerate(sd.query_devices()):
+            if d["hostapi"] == wasapi_api and d["max_input_channels"] > 0:
+                return i, int(d["default_samplerate"])
+    except Exception:
+        pass
+    return None, 44100
+
+
 def listen(duration: int = 5, timeout: int = 5) -> str:
-    """Escucha el micrófono y retorna texto. Usa sounddevice como backend."""
+    """Escucha el micrófono y retorna texto. Usa sounddevice con WASAPI."""
     try:
         import sounddevice as sd
         import numpy as np
         import scipy.io.wavfile as wav_io
 
-        # Usar tasa nativa del dispositivo — evita MME error 11 en Windows
-        try:
-            device_info = sd.query_devices(kind="input")
-            sample_rate = int(device_info["default_samplerate"])
-        except Exception:
-            sample_rate = 44100
+        device_idx, sample_rate = _find_wasapi_input()
+        logger.debug("STT device=%s samplerate=%s", device_idx, sample_rate)
 
         print("🎤 Escuchando...")
         audio = sd.rec(
             int(duration * sample_rate),
             samplerate=sample_rate,
             channels=1,
-            dtype="int16"
+            dtype="int16",
+            device=device_idx,
         )
         sd.wait()
 
