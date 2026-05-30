@@ -120,6 +120,8 @@ class JarvisOverlay(QWidget):
         self._bridge.kai_task_started.connect(self.show_kai)
         self._bridge.response_ready.connect(self.show_speaking)
         self._bridge.speaking_done.connect(self.hide_overlay)
+        self._bridge.kai_task_done.connect(self._on_kai_done)
+        self._bridge.memory_updated.connect(self._on_memory_updated)
 
     @pyqtSlot()
     def show_listening(self) -> None:
@@ -154,6 +156,16 @@ class JarvisOverlay(QWidget):
         self._status.setStyleSheet(f"color: {_COLORS['blue']}; letter-spacing: 2px;")
 
     @pyqtSlot(str)
+    def _on_kai_done(self, _result: str) -> None:
+        self.state = OverlayState.PROCESSING
+        self._status.setText("PROCESANDO...")
+        self._status.setStyleSheet(f"color: {_COLORS['blue']}; letter-spacing: 2px;")
+
+    @pyqtSlot(str)
+    def _on_memory_updated(self, _description: str) -> None:
+        pass  # notificación informativa, sin cambio de estado visual
+
+    @pyqtSlot(str)
     def show_kai(self, description: str) -> None:
         self.state = OverlayState.KAI_RUNNING
         self._status.setText(f"Kai: {description[:30]}")
@@ -172,6 +184,10 @@ class JarvisOverlay(QWidget):
 
     @pyqtSlot()
     def hide_overlay(self) -> None:
+        from PyQt6.QtCore import QAbstractAnimation
+        if (self._fade_out_anim is not None and
+                self._fade_out_anim.state() == QAbstractAnimation.State.Running):
+            return  # ya se está ocultando
         self._waveform.stop()
         self._fade_out_anim = QPropertyAnimation(self, b"windowOpacity", self)
         self._fade_out_anim.setDuration(300)
