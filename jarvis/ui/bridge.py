@@ -1,3 +1,5 @@
+import threading
+
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
@@ -14,10 +16,13 @@ class JarvisBridge(QObject):
 
 
 _bridge: "JarvisBridge | None" = None
+_bridge_lock = threading.Lock()
 
 
 def get_bridge() -> JarvisBridge:
     global _bridge
     if _bridge is None:
-        _bridge = JarvisBridge()
+        with _bridge_lock:
+            if _bridge is None:
+                _bridge = JarvisBridge()
     return _bridge

@@ -17,11 +17,11 @@ def test_bridge_emits_tool_started_with_name(qtbot):
     assert received == ["📊 Leyendo WMS..."]
 
 
-def test_get_bridge_returns_singleton():
+def test_get_bridge_returns_singleton(qapp):
     b1 = get_bridge()
     b2 = get_bridge()
     assert b1 is b2
 
 
-def test_get_bridge_is_jarvis_bridge():
+def test_get_bridge_is_jarvis_bridge(qapp):
     assert isinstance(get_bridge(), JarvisBridge)
