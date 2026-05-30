@@ -2,7 +2,8 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
 import logging
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from jarvis.config import GOOGLE_API_KEY, GEMINI_MODEL, SYSTEM_PROMPT
 from jarvis.tools import (
@@ -25,21 +26,28 @@ TOOLS = [
 
 class Agent:
     def __init__(self):
-        genai.configure(api_key=GOOGLE_API_KEY)
-        self._model = genai.GenerativeModel(
-            model_name=GEMINI_MODEL,
-            tools=TOOLS,
+        self._client = genai.Client(api_key=GOOGLE_API_KEY)
+        self._config = types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
+            tools=TOOLS,
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                disable=False
+            ),
         )
-        self._chat = self._model.start_chat(
-            enable_automatic_function_calling=True
-        )
+        self._history: list = []
 
     def process_message(self, text: str) -> str:
         """Envía mensaje a Gemini, ejecuta tools automáticamente, retorna respuesta."""
         try:
-            response = self._chat.send_message(text)
-            return response.text
+            self._history.append({"role": "user", "parts": [{"text": text}]})
+            response = self._client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=self._history,
+                config=self._config,
+            )
+            reply = response.text
+            self._history.append({"role": "model", "parts": [{"text": reply}]})
+            return reply
         except Exception as e:
             logger.error(f"Agent error: {e}")
             return f"Hubo un error procesando su solicitud, Señor Sócrates: {e}"
