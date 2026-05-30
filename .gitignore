@@ -81,6 +81,7 @@ _instaladores/
 ~$*
 tmp_*.json
 test_*.py
+!tests/**
 # Archivos chunk de procesamiento
 *_chunk_*.xlsx
 *_chunk_*.xls
