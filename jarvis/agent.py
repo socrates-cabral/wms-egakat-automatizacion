@@ -48,7 +48,7 @@ class Agent:
                 contents=self._history,
                 config=self._config,
             )
-            reply = response.text
+            reply = response.text or "No obtuve una respuesta legible, Senor Socrates."
             self._history.append({"role": "model", "parts": [{"text": reply}]})
             return reply
         except Exception as e:

@@ -15,7 +15,7 @@ _DEFAULT_PRIORITY_FILES = [
     "project_mirofish.md",
 ]
 
-_FRONTMATTER_RE = re.compile(r"^---.*?---\s*", re.DOTALL)
+_FRONTMATTER_RE = re.compile(r"\A---\n.*?\n---\s*", re.DOTALL)
 
 
 class MemoryClient:

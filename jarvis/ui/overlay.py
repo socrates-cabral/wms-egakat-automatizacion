@@ -131,6 +131,11 @@ class JarvisOverlay(QWidget):
         self._status.setStyleSheet(f"color: {_COLORS['cyan']}; letter-spacing: 2px;")
         self._waveform.mode = "input"
         self._waveform.start()
+        from PyQt6.QtCore import QAbstractAnimation
+        if (self._fade_out_anim is not None and
+                self._fade_out_anim.state() == QAbstractAnimation.State.Running):
+            self._fade_out_anim.stop()
+            self._fade_out_anim = None
         self.setWindowOpacity(0.0)
         self.show()
         self._fade_in()

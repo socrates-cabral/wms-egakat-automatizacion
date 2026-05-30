@@ -175,7 +175,7 @@ def invoke_claude(pregunta: str) -> str:
     _notify_bridge("kai_task_started", pregunta[:40])
     try:
         import anthropic
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, timeout=45.0)
         msg = client.messages.create(
             model=CLAUDE_MODEL,
             max_tokens=1024,
@@ -186,7 +186,7 @@ def invoke_claude(pregunta: str) -> str:
             ),
             messages=[{"role": "user", "content": pregunta}],
         )
-        resultado = msg.content[0].text
+        resultado = next((b.text for b in msg.content if b.type == "text"), "Sin respuesta de Claude.")
     except Exception as e:
         resultado = f"Error escalando a Claude: {e}"
     _notify_bridge("kai_task_done", resultado[:40])

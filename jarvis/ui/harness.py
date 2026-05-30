@@ -44,6 +44,10 @@ class JarvisHarness(QObject):
 
     def _cycle(self) -> None:
         try:
+            if self._agent is None:
+                voice.speak("Aun me estoy inicializando.")
+                self._bridge.speaking_done.emit()
+                return
             self._bridge.listening_started.emit()
             text = voice.listen()
             if not text:
@@ -59,8 +63,9 @@ class JarvisHarness(QObject):
             self._bridge.speaking_done.emit()
 
             if any(w in text.lower() for w in ("hasta luego", "apagate", "cierra")):
+                from PyQt6.QtCore import QTimer
                 from PyQt6.QtWidgets import QApplication
-                QApplication.quit()
+                QTimer.singleShot(0, QApplication.quit)
         except Exception as e:
             logger.error(f"Cycle error: {e}")
             voice.speak("Error inesperado.")
