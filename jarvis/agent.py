@@ -53,4 +53,6 @@ class Agent:
             return reply
         except Exception as e:
             logger.error(f"Agent error: {e}")
-            return f"Hubo un error procesando su solicitud, Señor Sócrates: {e}"
+            error_reply = f"Hubo un error procesando su solicitud, Senor Socrates: {e}"
+            self._history.append({"role": "model", "parts": [{"text": error_reply}]})
+            return error_reply
