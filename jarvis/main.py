@@ -6,6 +6,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 import logging
 import keyboard
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QTimer
 
 from jarvis.config import HOTKEY
 from jarvis import voice
@@ -37,24 +38,27 @@ def main() -> None:
     voice.play_startup()
     harness.start()
 
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-    from jarvis.tools import get_estado_sistema
-    CL_TZ = ZoneInfo("America/Santiago")
-    estado = get_estado_sistema()
-    hora = datetime.now(CL_TZ).strftime("%H:%M")
-    clima = estado.get("clima_santiago", "")
-    clima_str = f", {clima}" if clima and clima != "sin datos" else ""
-    saludo = (
-        f"Sistemas en linea. Son las {hora} en Santiago{clima_str}. "
-        f"A sus ordenes, Senor Socrates."
-    )
-    print(f"\nJARVIS: {saludo}\n")
-    voice.speak(saludo)
+    def _saludo_inicial():
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        from jarvis.tools import get_estado_sistema
+        CL_TZ = ZoneInfo("America/Santiago")
+        estado = get_estado_sistema()
+        hora = datetime.now(CL_TZ).strftime("%H:%M")
+        clima = estado.get("clima_santiago", "")
+        clima_str = f", {clima}" if clima and clima != "sin datos" else ""
+        saludo = (
+            f"Sistemas en linea. Son las {hora} en Santiago{clima_str}. "
+            f"A sus ordenes, Senor Socrates."
+        )
+        print(f"\nJARVIS: {saludo}\n")
+        voice.speak(saludo)
 
     keyboard.add_hotkey(HOTKEY, harness.trigger)
-    keyboard.add_hotkey("esc", app.quit)
+    keyboard.add_hotkey("esc", lambda: QTimer.singleShot(0, app.quit))
     print(f"En espera. Presiona {HOTKEY.upper()} para hablar.\n")
+
+    QTimer.singleShot(500, _saludo_inicial)
 
     sys.exit(app.exec())
 
