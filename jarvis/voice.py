@@ -71,7 +71,13 @@ def listen(duration: int = 5, timeout: int = 5) -> str:
         import numpy as np
         import scipy.io.wavfile as wav_io
 
-        sample_rate = 16000
+        # Usar tasa nativa del dispositivo — evita MME error 11 en Windows
+        try:
+            device_info = sd.query_devices(kind="input")
+            sample_rate = int(device_info["default_samplerate"])
+        except Exception:
+            sample_rate = 44100
+
         print("🎤 Escuchando...")
         audio = sd.rec(
             int(duration * sample_rate),
