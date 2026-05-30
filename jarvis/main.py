@@ -1,14 +1,18 @@
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.stdout.reconfigure(encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except AttributeError:
+    pass  # pythonw no tiene stdout
 
+import ctypes
+import ctypes.wintypes
 import logging
-import keyboard
+import threading
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
 
-from jarvis.config import HOTKEY
 from jarvis import voice
 from jarvis.ui.bridge import get_bridge
 from jarvis.ui.overlay import JarvisOverlay
@@ -20,6 +24,39 @@ logging.basicConfig(
 )
 logger = logging.getLogger("jarvis")
 
+# Win32 RegisterHotKey constants
+_MOD_WIN       = 0x0008
+_MOD_NOREPEAT  = 0x4000
+_VK_J          = 0x4A
+_VK_ESCAPE     = 0x1B
+_WM_HOTKEY     = 0x0312
+_HOTKEY_ID_J   = 1
+_HOTKEY_ID_ESC = 2
+
+
+def _start_hotkey_thread(on_trigger, on_quit) -> None:
+    """RegisterHotKey en thread daemon — funciona con tecla Win sin admin."""
+    def _loop():
+        u32 = ctypes.windll.user32
+        ok_j   = u32.RegisterHotKey(None, _HOTKEY_ID_J,   _MOD_WIN | _MOD_NOREPEAT, _VK_J)
+        ok_esc = u32.RegisterHotKey(None, _HOTKEY_ID_ESC, _MOD_NOREPEAT,             _VK_ESCAPE)
+        if not ok_j:
+            logger.error("No se pudo registrar Win+J — intentar ejecutar como admin")
+        if not ok_esc:
+            logger.warning("No se pudo registrar ESC global")
+        msg = ctypes.wintypes.MSG()
+        while u32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
+            if msg.message == _WM_HOTKEY:
+                if msg.wParam == _HOTKEY_ID_J:
+                    on_trigger()
+                elif msg.wParam == _HOTKEY_ID_ESC:
+                    on_quit()
+        u32.UnregisterHotKey(None, _HOTKEY_ID_J)
+        u32.UnregisterHotKey(None, _HOTKEY_ID_ESC)
+
+    t = threading.Thread(target=_loop, daemon=True, name="hotkey-listener")
+    t.start()
+
 
 def main() -> None:
     app = QApplication(sys.argv)
@@ -29,11 +66,7 @@ def main() -> None:
     overlay = JarvisOverlay(bridge)
     harness = JarvisHarness(bridge)
 
-    print("=" * 50)
-    print("  J.A.R.V.I.S. -- Iniciando...")
-    print(f"  Hotkey: {HOTKEY.upper()}")
-    print("  ESC para salir")
-    print("=" * 50)
+    logger.info("J.A.R.V.I.S. iniciando... (Win+J para hablar, ESC para salir)")
 
     voice.play_startup()
     harness.start()
@@ -51,12 +84,13 @@ def main() -> None:
             f"Sistemas en linea. Son las {hora} en Santiago{clima_str}. "
             f"A sus ordenes, Senor Socrates."
         )
-        print(f"\nJARVIS: {saludo}\n")
+        logger.info(f"JARVIS: {saludo}")
         voice.speak(saludo)
 
-    keyboard.add_hotkey(HOTKEY, harness.trigger)
-    keyboard.add_hotkey("esc", lambda: QTimer.singleShot(0, app.quit))
-    print(f"En espera. Presiona {HOTKEY.upper()} para hablar.\n")
+    _start_hotkey_thread(
+        on_trigger=harness.trigger,
+        on_quit=lambda: QTimer.singleShot(0, app.quit),
+    )
 
     QTimer.singleShot(500, _saludo_inicial)
 
