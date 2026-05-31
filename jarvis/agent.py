@@ -48,7 +48,19 @@ class Agent:
                 contents=self._history,
                 config=self._config,
             )
-            reply = response.text or "No obtuve una respuesta legible, Senor Socrates."
+            # response.text es None cuando AFC completa una tool call sin generar
+            # texto final (comportamiento de gemini-2.5-flash-lite).
+            # En ese caso, pedimos explícitamente el resumen verbal.
+            reply = response.text
+            if not reply:
+                followup = self._client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=self._history + [
+                        {"role": "user", "parts": [{"text": "Resume en voz alta el resultado de la consulta anterior."}]}
+                    ],
+                    config=self._config,
+                )
+                reply = followup.text or "Consulta completada, Señor Sócrates."
             self._history.append({"role": "model", "parts": [{"text": reply}]})
             return reply
         except Exception as e:

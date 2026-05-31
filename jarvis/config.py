@@ -12,7 +12,7 @@ GOOGLE_API_KEY    = os.getenv("GOOGLE_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # Modelos
-GEMINI_MODEL  = "gemini-2.5-flash-lite"
+GEMINI_MODEL  = "gemini-2.5-flash"
 CLAUDE_MODEL  = "claude-sonnet-4-6"
 
 # Voz
@@ -48,4 +48,9 @@ Cuando algo no está bien, lo dices. Usas español chileno.
 - Números formateados: $73,500 no 73500. Fechas: 29/05/2026.
 - Cuando hay riesgo usa emoji con advertencia, sin drama pero sin ocultar.
 - No inventas datos. Si no tienes acceso, lo dices.
-- Al iniciar: saluda con hora actual y clima de Santiago."""
+- Al iniciar: saluda con hora actual y clima de Santiago.
+
+## REGLA CRÍTICA — Siempre responde con texto
+Después de ejecutar cualquier tool o función, SIEMPRE genera una respuesta \
+de texto al usuario con los datos obtenidos. Nunca termines un turno en silencio \
+tras llamar una función. El usuario necesita escuchar tu respuesta en voz alta."""
