@@ -20,16 +20,19 @@ logger = logging.getLogger("jarvis.voice")
 
 # ─── TTS cancel support ────────────────────────────────────────────────────
 _tts_cancel = threading.Event()
-_tts_proc: subprocess.Popen | None = None   # proceso PS de playback activo
+_tts_lock   = threading.Lock()                 # protege _tts_proc (Bug 1)
+_tts_proc: subprocess.Popen | None = None      # proceso PS de playback activo
+_last_tmp:  str | None             = None       # MP3 temp del ciclo anterior (Bug 8)
 
 
 def cancel_tts() -> None:
-    """Interrumpe el TTS en curso (si lo hay)."""
-    global _tts_proc
+    """Interrumpe el TTS en curso. Seguro desde cualquier thread."""
     _tts_cancel.set()
-    if _tts_proc is not None:
+    with _tts_lock:
+        proc = _tts_proc
+    if proc is not None:
         try:
-            _tts_proc.kill()
+            proc.kill()
         except Exception:
             pass
 
@@ -49,7 +52,7 @@ _STT_SAMPLERATE = 16000  # requerido por Google STT
 
 # VAD (Voice Activity Detection) — chunk-based silence detection
 _CHUNK_S         = 0.5   # duración de cada chunk de grabación (segundos)
-_SILENCE_THRESH  = 500   # pico mínimo para considerar "voz" (post-boost, 0-32767)
+_SILENCE_THRESH  = 3000  # pico mínimo para "voz" (post-boost ×25 → ~120 raw; Bug 5)
 _MAX_SILENCE_S   = 1.5   # silencio post-habla antes de cortar
 _PRESPEECH_S     = 5.0   # timeout si no hay voz al inicio
 _MAX_TOTAL_S     = 10.0  # límite absoluto de grabación
@@ -61,7 +64,9 @@ async def _tts_async(text: str, output: str):
 
 
 def _play_audio(path: str):
-    """Reproduce un MP3. Intenta playsound3, fallback a PowerShell. Cancelable via cancel_tts()."""
+    """Reproduce un MP3. Intenta playsound3 (cancel best-effort), fallback PS (cancel real).
+    Bug 2 nota: playsound3 daemon thread puede seguir ~1-2s tras cancel — comportamiento aceptable.
+    """
     global _tts_proc
     if _tts_cancel.is_set():
         return
@@ -71,12 +76,12 @@ def _play_audio(path: str):
         t.start()
         while t.is_alive():
             if _tts_cancel.is_set():
-                return
+                return  # daemon termina solo; audio puede prolongarse ~1s
             t.join(timeout=0.1)
         return
     except Exception:
         pass
-    # Fallback PowerShell — proceso mateable
+    # Fallback PowerShell — proceso mateable vía _tts_proc (Bug 1: lock en acceso)
     try:
         abs_path = str(Path(path).resolve()).replace("\\", "/")
         ps_script = (
@@ -87,13 +92,16 @@ def _play_audio(path: str):
             "while ($p.NaturalDuration.HasTimeSpan -eq $false) { Start-Sleep -Milliseconds 200 }; "
             "Start-Sleep -Seconds ([int]$p.NaturalDuration.TimeSpan.TotalSeconds + 1)"
         )
-        _tts_proc = subprocess.Popen(["powershell", "-Command", ps_script],
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        _tts_proc.wait()
-        _tts_proc = None
+        proc = subprocess.Popen(["powershell", "-Command", ps_script],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with _tts_lock:
+            _tts_proc = proc
+        proc.wait()
     except Exception as e:
         logger.error(f"Audio playback error: {e}")
-        _tts_proc = None
+    finally:
+        with _tts_lock:
+            _tts_proc = None
 
 
 def _clean_for_tts(text: str) -> str:
@@ -115,10 +123,19 @@ def _clean_for_tts(text: str) -> str:
 
 def speak(text: str):
     """Convierte texto a voz (edge-tts) y lo reproduce. Cancelable via cancel_tts()."""
+    global _last_tmp
+    # Bug 8: intentar borrar el MP3 del ciclo anterior (pudo quedar abierto por daemon playsound3)
+    if _last_tmp:
+        try:
+            os.unlink(_last_tmp)
+        except Exception:
+            pass
+        _last_tmp = None
     _tts_cancel.clear()
     text = _clean_for_tts(text)
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         tmp = f.name
+    _last_tmp = tmp
     try:
         asyncio.run(_tts_async(text, tmp))
         _play_audio(tmp)
@@ -128,8 +145,11 @@ def speak(text: str):
     finally:
         try:
             os.unlink(tmp)
+            _last_tmp = None
+        except PermissionError:
+            pass  # daemon playsound3 aún tiene el archivo — se limpia en el próximo speak()
         except Exception:
-            pass
+            _last_tmp = None
 
 
 def _find_mic_device() -> int | None:
@@ -202,35 +222,32 @@ def _record_sounddevice_vad(device: int) -> bytes | None:
         return None
 
 
-def _record_winmm_fixed(duration: float = 5.0) -> bytes | None:
-    """Graba con WinMM (fallback). Calcula downsample desde la tasa real grabada."""
+def _record_winmm_fixed(duration: float = 5.0) -> tuple[bytes | None, int]:
+    """Graba con WinMM (fallback). Retorna (pcm, actual_output_rate). Bug 9: rate real al STT."""
     try:
         import numpy as np
         from jarvis import winmm_capture
         pcm, actual_rate = winmm_capture.record_with_rate(
             duration, samplerate=_MIC_SAMPLERATE, channels=2, bits=16)
         if pcm is None or actual_rate == 0:
-            return None
-        samples  = np.frombuffer(pcm, dtype='<i2').reshape(-1, 2)
-        boosted  = np.clip(samples.astype('int32') * _MIC_BOOST, -32768, 32767).astype('int16')
-        # Downsample dinámico según tasa real del dispositivo
+            return None, 0
+        samples    = np.frombuffer(pcm, dtype='<i2').reshape(-1, 2)
+        boosted    = np.clip(samples.astype('int32') * _MIC_BOOST, -32768, 32767).astype('int16')
         downsample = max(1, actual_rate // _STT_SAMPLERATE)
-        mono_16k = boosted[::downsample, 0]
+        mono_out   = boosted[::downsample, 0]
+        out_rate   = actual_rate // downsample   # tasa real de salida (puede ser 22050 si 44100Hz)
         peak = int(abs(boosted).max())
-        logger.info("winmm (%dHz, ds=%d): %d bytes, peak=%d (%.0f%%)",
-                    actual_rate, downsample, len(mono_16k) * 2, peak, peak / 32767 * 100)
-        return mono_16k.tobytes()
+        logger.info("winmm (%dHz→%dHz, ds=%d): %d bytes, peak=%d (%.0f%%)",
+                    actual_rate, out_rate, downsample, len(mono_out) * 2, peak, peak / 32767 * 100)
+        return mono_out.tobytes(), out_rate
     except Exception as e:
         logger.warning("winmm falló: %s", e)
-        return None
+        return None, 0
 
 
-def _google_stt_raw(pcm_16k: bytes, language: str = "es-CL") -> str:
+def _google_stt_raw(pcm: bytes, rate: int = _STT_SAMPLERATE, language: str = "es-CL") -> str:
     """Llama a Google Speech API directamente con PCM raw.
-
-    Evita speech_recognition.get_flac_data() que usa subprocess.Popen
-    — el cual falla en Python 3.14/Windows con WinError 50 (DuplicateHandle).
-    Enviamos audio/l16 (PCM 16-bit LE) directo; Google lo acepta sin conversión.
+    rate: tasa real del audio (puede diferir de _STT_SAMPLERATE si winmm cayó a 44100Hz).
     """
     url = "https://www.google.com/speech-api/v2/recognize"
     params = {
@@ -238,10 +255,13 @@ def _google_stt_raw(pcm_16k: bytes, language: str = "es-CL") -> str:
         "lang":   language,
         "key":    "AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw",  # clave pública de Chromium
     }
-    headers = {"Content-Type": f"audio/l16; rate={_STT_SAMPLERATE}"}
+    headers = {"Content-Type": f"audio/l16; rate={rate}"}
     try:
         resp = _requests.post(url, params=params, headers=headers,
-                              data=pcm_16k, timeout=10)
+                              data=pcm, timeout=10)
+        if resp.status_code != 200:
+            logger.warning("Google STT HTTP %d", resp.status_code)
+            return ""
         for line in resp.text.strip().split("\n"):
             if not line:
                 continue
@@ -261,13 +281,14 @@ def listen() -> str:
     try:
         device  = _find_mic_device()
         pcm_16k = _record_sounddevice_vad(device) if device is not None else None
-        if pcm_16k is None:
-            logger.info("sounddevice VAD falló — usando winmm_capture (fijo 5s)")
-            pcm_16k = _record_winmm_fixed(5.0)
-        if pcm_16k is None:
+        if pcm_16k is not None:
+            return _google_stt_raw(pcm_16k, rate=_STT_SAMPLERATE)
+        logger.info("sounddevice VAD falló — usando winmm_capture (fijo 5s)")
+        pcm_winmm, winmm_rate = _record_winmm_fixed(5.0)
+        if pcm_winmm is None:
             logger.error("No se pudo capturar audio")
             return ""
-        return _google_stt_raw(pcm_16k)
+        return _google_stt_raw(pcm_winmm, rate=winmm_rate)
     except Exception as e:
         import traceback as _tb
         logger.error("listen() error: %s\n%s", e, _tb.format_exc())
@@ -278,6 +299,7 @@ def play_startup():
     """Reproduce el sonido de arranque si el archivo existe."""
     if STARTUP_SOUND.exists():
         try:
+            _tts_cancel.clear()  # Bug 13: asegurar que cancel no bloquee el startup sound
             _play_audio(str(STARTUP_SOUND))
         except Exception as e:
             logger.debug(f"Startup sound error: {e}")

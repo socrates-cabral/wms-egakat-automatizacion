@@ -176,6 +176,16 @@ class JarvisOverlay(QWidget):
         self._status.setText(f"Kai: {description[:30]}")
         self._status.setStyleSheet(f"color: {_COLORS['violet']}; letter-spacing: 1px;")
 
+    def _calc_pill_height(self, text: str) -> int:
+        """Altura del pill según longitud de texto. Cap en PILL_H_MAX."""
+        CHARS_PER_LINE = 48
+        LINE_H         = 18
+        STATUS_H       = 52
+        PADDING        = 24
+        PILL_H_MAX     = 300
+        lines = max(1, len(text) // CHARS_PER_LINE + text.count("\n") + 1)
+        return min(STATUS_H + PADDING + lines * LINE_H, PILL_H_MAX)
+
     @pyqtSlot(str)
     def show_speaking(self, response: str) -> None:
         self.state = OverlayState.SPEAKING
@@ -184,7 +194,7 @@ class JarvisOverlay(QWidget):
         self._status.setText("J.A.R.V.I.S.")
         self._status.setStyleSheet(f"color: {_COLORS['cyan']}; letter-spacing: 2px;")
         self._response.show()
-        self._expand()
+        self._reposition(self._calc_pill_height(response))
         self._response.start_typing(response)
 
     @pyqtSlot()

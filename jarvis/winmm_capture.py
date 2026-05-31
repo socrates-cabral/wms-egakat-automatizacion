@@ -120,30 +120,30 @@ def _record_one(duration: float, samplerate: int,
     hdr.dwBufferLength = ctypes.c_uint32(buf_size)
     hdr.dwFlags        = ctypes.c_uint32(0)
 
-    _winmm.waveInPrepareHeader(hwi, ctypes.byref(hdr), ctypes.sizeof(_WAVEHDR))
-    _winmm.waveInAddBuffer(hwi, ctypes.byref(hdr), ctypes.sizeof(_WAVEHDR))
-    _winmm.waveInStart(hwi)
+    # Bug 3: try/finally garantiza cierre del handle incluso si algo lanza excepción.
+    try:
+        _winmm.waveInPrepareHeader(hwi, ctypes.byref(hdr), ctypes.sizeof(_WAVEHDR))
+        _winmm.waveInAddBuffer(hwi, ctypes.byref(hdr), ctypes.sizeof(_WAVEHDR))
+        _winmm.waveInStart(hwi)
 
-    # Esperar a que WinMM llene el buffer (WHDR_DONE) sin usar eventos.
-    # CALLBACK_EVENT dispara también en WIM_OPEN (inmediato) — por eso 0 bytes antes.
-    deadline = time.monotonic() + duration + 2.0   # 2s de gracia
-    while time.monotonic() < deadline:
-        if hdr.dwFlags & WHDR_DONE:
-            break
-        time.sleep(0.05)
+        deadline = time.monotonic() + duration + 2.0
+        while time.monotonic() < deadline:
+            if hdr.dwFlags & WHDR_DONE:
+                break
+            time.sleep(0.05)
 
-    _winmm.waveInStop(hwi)
-    _winmm.waveInReset(hwi)
-    _winmm.waveInUnprepareHeader(hwi, ctypes.byref(hdr), ctypes.sizeof(_WAVEHDR))
-    _winmm.waveInClose(hwi)
-
-    recorded = int(hdr.dwBytesRecorded)
-    if not (hdr.dwFlags & WHDR_DONE) or recorded == 0:
-        logger.warning("waveInOpen %dHz: buffer vacio tras timeout — retornando None", samplerate)
-        return None
-    logger.info("waveInOpen %dHz OK — %d bytes grabados (%.2fs)",
-                samplerate, recorded, recorded / (samplerate * channels * bits // 8))
-    return bytes(buf[:recorded])
+        recorded = int(hdr.dwBytesRecorded)
+        if not (hdr.dwFlags & WHDR_DONE) or recorded == 0:
+            logger.warning("waveInOpen %dHz: buffer vacio tras timeout — retornando None", samplerate)
+            return None
+        logger.info("waveInOpen %dHz OK — %d bytes grabados (%.2fs)",
+                    samplerate, recorded, recorded / (samplerate * channels * bits // 8))
+        return bytes(buf[:recorded])
+    finally:
+        _winmm.waveInStop(hwi)
+        _winmm.waveInReset(hwi)
+        _winmm.waveInUnprepareHeader(hwi, ctypes.byref(hdr), ctypes.sizeof(_WAVEHDR))
+        _winmm.waveInClose(hwi)
 
 
 def write_wav(pcm: bytes, path: str,

@@ -9,6 +9,7 @@ import os
 import subprocess
 import threading
 import logging
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -17,7 +18,8 @@ import requests
 
 from jarvis.config import (
     CRYPTO_BTC, CRYPTO_ETH, APUESTAS_OUT,
-    NOTAS_PATH, ANTHROPIC_API_KEY, CLAUDE_MODEL_FAST, CLAUDE_MODEL_DEEP
+    NOTAS_PATH, ANTHROPIC_API_KEY, CLAUDE_MODEL_FAST, CLAUDE_MODEL_DEEP,
+    WMS_KPI_PATH,
 )
 
 logger = logging.getLogger("jarvis.tools")
@@ -83,12 +85,11 @@ def get_estado_sistema() -> dict:
 def get_wms_kpi() -> dict:
     """Retorna el último resumen de KPIs operativos de Egakat."""
     _notify_bridge("tool_started", "Leyendo WMS KPI...")
-    kpi_path = CRYPTO_BTC.parent.parent / "WMS_Automatizacion" / "kpi_ops_resumen.json"
-    if not kpi_path.exists():
+    if not WMS_KPI_PATH.exists():
         _notify_bridge("tool_done", "WMS KPI")
         return {"estado": "Sin datos KPI disponibles. El archivo no existe aún."}
     try:
-        resultado = json.loads(kpi_path.read_text(encoding="utf-8"))
+        resultado = json.loads(WMS_KPI_PATH.read_text(encoding="utf-8"))
         _notify_bridge("tool_done", "WMS KPI")
         return resultado
     except Exception as e:
@@ -201,10 +202,13 @@ def _schedule_timer(timer_id: str, delay_s: float, mensaje: str) -> None:
 
 def set_timer(minutos: int, mensaje: str = "Tiempo cumplido") -> str:
     """Activa un temporizador persistente con notificación Windows al vencer."""
+    if minutos <= 0:  # Bug 4: rechazar valor inválido antes de crear timer
+        return "El temporizador debe ser de al menos un minuto, Señor Sócrates."
     _notify_bridge("tool_started", f"Timer {minutos}min...")
-    timer_id = f"timer_{datetime.now(CL_TZ).strftime('%Y%m%d_%H%M%S')}"
-    delay_s  = minutos * 60
-    target   = datetime.now(timezone.utc).timestamp() + delay_s
+    # Bug 4: UUID garantiza unicidad aunque se creen varios timers en el mismo segundo
+    timer_id   = f"timer_{uuid.uuid4().hex[:8]}"
+    delay_s    = minutos * 60
+    target     = datetime.now(timezone.utc).timestamp() + delay_s
     target_iso = datetime.fromtimestamp(target, tz=timezone.utc).isoformat()
     _save_timer(timer_id, target_iso, mensaje)
     _schedule_timer(timer_id, delay_s, mensaje)

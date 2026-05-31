@@ -43,9 +43,10 @@ class JarvisHarness(QObject):
         logger.info("Harness inicializado. Contexto de memoria cargado.")
 
     def trigger(self) -> None:
-        """Lanza un ciclo STT -> agente -> TTS en un thread separado."""
+        """Lanza un ciclo STT -> agente -> TTS. Si está hablando, cancela el TTS (Bug 6)."""
         with self._lock:
             if self._active:
+                voice.cancel_tts()  # Win+J durante SPEAKING interrumpe el audio
                 return
             self._active = True
         t = threading.Thread(target=self._cycle, daemon=True)
