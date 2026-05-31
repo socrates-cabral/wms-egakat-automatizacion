@@ -625,15 +625,15 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Yield Sentinel — Backtester")
-    parser.add_argument("--symbol", default="GOLD", help="Activo: GOLD, CL, BTC, ETH")
+    parser.add_argument("--symbol", default="BTC", help="Activo: BTC, ETH, SOL, AVAX, ARB")
     parser.add_argument("--days",   type=int, default=90, help="Días de historia")
-    parser.add_argument("--all",    action="store_true", help="Backtest de todos los activos")
+    parser.add_argument("--all",    action="store_true", help="Backtest de todos los activos en config")
     args = parser.parse_args()
 
     engine = BacktestEngine(initial_capital=1000.0)
 
     if args.all:
-        symbols = ["GOLD", "CL", "BTC", "ETH"]
+        symbols = list(ASSETS.keys())
         print(f"\n🔬 Backtesting todos los activos ({args.days} días)...\n")
         for sym in symbols:
             summary = engine.run_full_backtest(sym, args.days)
