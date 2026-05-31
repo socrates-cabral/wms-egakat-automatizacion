@@ -9,7 +9,7 @@ import os
 import subprocess
 import threading
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -17,7 +17,7 @@ import requests
 
 from jarvis.config import (
     CRYPTO_BTC, CRYPTO_ETH, APUESTAS_OUT,
-    NOTAS_PATH, ANTHROPIC_API_KEY, CLAUDE_MODEL
+    NOTAS_PATH, ANTHROPIC_API_KEY, CLAUDE_MODEL_FAST, CLAUDE_MODEL_DEEP
 )
 
 logger = logging.getLogger("jarvis.tools")
@@ -119,46 +119,127 @@ def get_apuestas() -> dict:
         return {"estado": f"Error leyendo reporte: {e}"}
 
 
+_ALLOWED_APPS = {
+    "chrome":      "chrome",
+    "spotify":     "spotify",
+    "vscode":      "code",
+    "vs code":     "code",
+    "explorer":    "explorer",
+    "notepad":     "notepad",
+    "calculator":  "calc",
+    "terminal":    "wt",
+    "powershell":  "powershell",
+    "whatsapp":    "WhatsApp",
+}
+
+
 def abrir_aplicacion(nombre: str) -> str:
-    """Abre una aplicación en Windows por nombre."""
+    """Abre una aplicación en Windows por nombre (sólo apps de la lista permitida)."""
     _notify_bridge("tool_started", f"Abriendo {nombre}...")
-    apps = {
-        "chrome":      "chrome",
-        "spotify":     "spotify",
-        "vscode":      "code",
-        "vs code":     "code",
-        "explorer":    "explorer",
-        "notepad":     "notepad",
-        "calculator":  "calc",
-        "terminal":    "wt",
-        "powershell":  "powershell",
-        "whatsapp":    "WhatsApp",
-    }
-    cmd = apps.get(nombre.lower().strip(), nombre)
-    try:
-        subprocess.Popen(cmd, shell=True)
+    key = nombre.lower().strip()
+    if key not in _ALLOWED_APPS:
         _notify_bridge("tool_done", "App")
-        return f"Intentando abrir {nombre}, Señor Sócrates."
+        return (f"No reconozco '{nombre}'. Apps disponibles: "
+                f"{', '.join(_ALLOWED_APPS)}.")
+    cmd = _ALLOWED_APPS[key]
+    try:
+        subprocess.Popen([cmd], shell=False)
+        _notify_bridge("tool_done", "App")
+        return f"Abriendo {nombre}, Señor Sócrates."
     except Exception as e:
         _notify_bridge("tool_done", "App")
         return f"Error al abrir {nombre}: {e}"
 
 
-def set_timer(minutos: int, mensaje: str = "Tiempo cumplido") -> str:
-    """Activa un temporizador con notificación Windows al vencer."""
-    _notify_bridge("tool_started", f"Timer {minutos}min...")
-    def _alert():
-        subprocess.run(
-            ["powershell", "-Command",
-             f'Add-Type -AssemblyName System.Windows.Forms; '
-             f'[System.Windows.Forms.MessageBox]::Show("{mensaje}", "JARVIS")'],
-            capture_output=True
-        )
-    t = threading.Timer(minutos * 60, _alert)
+_TIMERS_PATH = Path(__file__).parent / "timers.json"
+_timers_lock = threading.Lock()
+
+
+def _show_notification(mensaje: str) -> None:
+    env = os.environ.copy()
+    env["_JARVIS_TIMER_MSG"] = mensaje
+    subprocess.run(
+        ["powershell", "-Command",
+         "Add-Type -AssemblyName System.Windows.Forms; "
+         "[System.Windows.Forms.MessageBox]::Show($env:_JARVIS_TIMER_MSG, 'JARVIS')"],
+        capture_output=True, env=env
+    )
+
+
+def _save_timer(timer_id: str, target_iso: str, mensaje: str) -> None:
+    with _timers_lock:
+        data: dict = {}
+        if _TIMERS_PATH.exists():
+            try:
+                data = json.loads(_TIMERS_PATH.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        data[timer_id] = {"target": target_iso, "mensaje": mensaje}
+        _TIMERS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _remove_timer(timer_id: str) -> None:
+    with _timers_lock:
+        if not _TIMERS_PATH.exists():
+            return
+        try:
+            data = json.loads(_TIMERS_PATH.read_text(encoding="utf-8"))
+            data.pop(timer_id, None)
+            _TIMERS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+
+def _schedule_timer(timer_id: str, delay_s: float, mensaje: str) -> None:
+    def _fire():
+        _show_notification(mensaje)
+        _remove_timer(timer_id)
+    t = threading.Timer(delay_s, _fire)
     t.daemon = True
     t.start()
+
+
+def set_timer(minutos: int, mensaje: str = "Tiempo cumplido") -> str:
+    """Activa un temporizador persistente con notificación Windows al vencer."""
+    _notify_bridge("tool_started", f"Timer {minutos}min...")
+    timer_id = f"timer_{datetime.now(CL_TZ).strftime('%Y%m%d_%H%M%S')}"
+    delay_s  = minutos * 60
+    target   = datetime.now(timezone.utc).timestamp() + delay_s
+    target_iso = datetime.fromtimestamp(target, tz=timezone.utc).isoformat()
+    _save_timer(timer_id, target_iso, mensaje)
+    _schedule_timer(timer_id, delay_s, mensaje)
     _notify_bridge("tool_done", "Timer")
     return f"Temporizador de {minutos} minuto{'s' if minutos != 1 else ''} activado."
+
+
+def restore_timers() -> list[str]:
+    """Llama al arrancar. Restaura timers pendientes; notifica los que vencieron offline."""
+    if not _TIMERS_PATH.exists():
+        return []
+    messages: list[str] = []
+    try:
+        data = json.loads(_TIMERS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    now_ts = datetime.now(timezone.utc).timestamp()
+    expired = []
+    for tid, entry in data.items():
+        try:
+            target_ts = datetime.fromisoformat(entry["target"]).timestamp()
+            msg = entry.get("mensaje", "Tiempo cumplido")
+            remaining = target_ts - now_ts
+            if remaining <= 0:
+                expired.append(tid)
+                messages.append(f"Timer '{msg}' venció mientras JARVIS estaba cerrado.")
+            else:
+                _schedule_timer(tid, remaining, msg)
+                mins = int(remaining // 60)
+                messages.append(f"Timer '{msg}' restaurado — vence en {mins} minuto{'s' if mins != 1 else ''}.")
+        except Exception:
+            expired.append(tid)
+    for tid in expired:
+        _remove_timer(tid)
+    return messages
 
 
 def tomar_nota(texto: str) -> str:
@@ -173,14 +254,17 @@ def tomar_nota(texto: str) -> str:
     return f"Nota guardada: \"{texto}\""
 
 
-def invoke_claude(pregunta: str) -> str:
-    """Escala a Claude Sonnet para analisis complejos sobre los proyectos de Senor Socrates."""
+def invoke_claude(pregunta: str, nivel: str = "rapido") -> str:
+    """Escala a Claude para analisis sobre los proyectos de Senor Socrates.
+    nivel='rapido' usa Sonnet (consultas normales); nivel='profundo' usa Opus (arquitectura, código complejo).
+    """
+    model = CLAUDE_MODEL_DEEP if nivel == "profundo" else CLAUDE_MODEL_FAST
     _notify_bridge("kai_task_started", pregunta[:40])
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, timeout=45.0)
         msg = client.messages.create(
-            model=CLAUDE_MODEL,
+            model=model,
             max_tokens=1024,
             system=(
                 "Eres un asistente tecnico experto en el stack de Socrates Cabral "

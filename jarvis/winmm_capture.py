@@ -61,16 +61,19 @@ _MMSYSERR_NAMES = {
 
 def record(duration: float, samplerate: int = 16000,
            channels: int = 1, bits: int = 16) -> bytes | None:
-    """Graba `duration` segundos y retorna los PCM bytes, o None si falla.
+    """Graba `duration` segundos y retorna los PCM bytes, o None si falla."""
+    pcm, _ = record_with_rate(duration, samplerate, channels, bits)
+    return pcm
 
-    Prueba primero con samplerate dado. Si WAVERR_BADFORMAT (32), reintenta
-    con 48000 Hz (rate nativo del Intel Smart Sound).
-    """
+
+def record_with_rate(duration: float, samplerate: int = 16000,
+                     channels: int = 1, bits: int = 16) -> tuple[bytes | None, int]:
+    """Como record() pero retorna (pcm, actual_samplerate) — 0 si falló."""
     for rate in _rates_to_try(samplerate):
         result = _record_one(duration, rate, channels, bits)
         if result is not None:
-            return result
-    return None
+            return result, rate
+    return None, 0
 
 
 def _rates_to_try(preferred: int) -> list[int]:

@@ -210,6 +210,7 @@ class JarvisOverlay(QWidget):
 
     def mousePressEvent(self, _event) -> None:
         if self.state == OverlayState.SPEAKING:
+            self._bridge.tts_cancel_requested.emit()
             self._response.skip()
             self.hide_overlay()
 

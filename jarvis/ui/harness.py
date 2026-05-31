@@ -6,6 +6,7 @@ except (AttributeError, ValueError):
 
 import logging
 import threading
+import unicodedata
 from PyQt6.QtCore import QObject
 
 from jarvis import voice
@@ -34,6 +35,11 @@ class JarvisHarness(QObject):
         """Inicializa el agente con contexto de memoria. Llamar una vez al arrancar."""
         context = self._memory.load_context()
         self._agent = Agent(memory_context=context)
+        self._bridge.tts_cancel_requested.connect(voice.cancel_tts)
+        from jarvis.tools import restore_timers
+        pending = restore_timers()
+        for msg in pending:
+            logger.info("Timer restaurado: %s", msg)
         logger.info("Harness inicializado. Contexto de memoria cargado.")
 
     def trigger(self) -> None:
@@ -65,10 +71,12 @@ class JarvisHarness(QObject):
             voice.speak(response)
             self._bridge.speaking_done.emit()
 
-            if any(w in text.lower() for w in ("hasta luego", "apagate", "cierra")):
+            normalized = unicodedata.normalize("NFD", text.lower())
+            normalized = "".join(c for c in normalized if unicodedata.category(c) != "Mn")
+            if any(w in normalized for w in ("hasta luego", "apagate", "cierra", "apaga")):
                 from PyQt6.QtCore import QTimer
                 from PyQt6.QtWidgets import QApplication
-                QTimer.singleShot(0, QApplication.quit)
+                QTimer.singleShot(500, QApplication.quit)
         except Exception as e:
             logger.error(f"Cycle error: {e}")
             voice.speak("Error inesperado.")

@@ -6,6 +6,7 @@ import os
 import socket
 import subprocess
 import tempfile
+import threading
 import logging
 from pathlib import Path
 
@@ -16,6 +17,21 @@ import edge_tts
 from jarvis.config import TTS_VOICE, TTS_RATE, STARTUP_SOUND
 
 logger = logging.getLogger("jarvis.voice")
+
+# ─── TTS cancel support ────────────────────────────────────────────────────
+_tts_cancel = threading.Event()
+_tts_proc: subprocess.Popen | None = None   # proceso PS de playback activo
+
+
+def cancel_tts() -> None:
+    """Interrumpe el TTS en curso (si lo hay)."""
+    global _tts_proc
+    _tts_cancel.set()
+    if _tts_proc is not None:
+        try:
+            _tts_proc.kill()
+        except Exception:
+            pass
 
 # ─── Fix WinError 50: forzar IPv4 para Google STT ──────────────────────────
 # El error OSError [WinError 50] ocurre cuando urllib intenta IPv6 en esta red.
@@ -30,7 +46,13 @@ socket.getaddrinfo = _ipv4_only
 _MIC_BOOST      = 25     # ganancia digital: Intel Smart Sound tiene ganancia baja
 _MIC_SAMPLERATE = 48000  # nativo del Intel Smart Sound Technology
 _STT_SAMPLERATE = 16000  # requerido por Google STT
-_DOWNSAMPLE     = _MIC_SAMPLERATE // _STT_SAMPLERATE  # = 3
+
+# VAD (Voice Activity Detection) — chunk-based silence detection
+_CHUNK_S         = 0.5   # duración de cada chunk de grabación (segundos)
+_SILENCE_THRESH  = 500   # pico mínimo para considerar "voz" (post-boost, 0-32767)
+_MAX_SILENCE_S   = 1.5   # silencio post-habla antes de cortar
+_PRESPEECH_S     = 5.0   # timeout si no hay voz al inicio
+_MAX_TOTAL_S     = 10.0  # límite absoluto de grabación
 
 
 async def _tts_async(text: str, output: str):
@@ -39,13 +61,22 @@ async def _tts_async(text: str, output: str):
 
 
 def _play_audio(path: str):
-    """Reproduce un MP3. Intenta playsound3, fallback a PowerShell."""
+    """Reproduce un MP3. Intenta playsound3, fallback a PowerShell. Cancelable via cancel_tts()."""
+    global _tts_proc
+    if _tts_cancel.is_set():
+        return
     try:
         from playsound3 import playsound
-        playsound(path)
+        t = threading.Thread(target=playsound, args=(path,), daemon=True)
+        t.start()
+        while t.is_alive():
+            if _tts_cancel.is_set():
+                return
+            t.join(timeout=0.1)
         return
     except Exception:
         pass
+    # Fallback PowerShell — proceso mateable
     try:
         abs_path = str(Path(path).resolve()).replace("\\", "/")
         ps_script = (
@@ -56,10 +87,13 @@ def _play_audio(path: str):
             "while ($p.NaturalDuration.HasTimeSpan -eq $false) { Start-Sleep -Milliseconds 200 }; "
             "Start-Sleep -Seconds ([int]$p.NaturalDuration.TimeSpan.TotalSeconds + 1)"
         )
-        subprocess.run(["powershell", "-Command", ps_script],
-                       capture_output=True, timeout=30)
+        _tts_proc = subprocess.Popen(["powershell", "-Command", ps_script],
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        _tts_proc.wait()
+        _tts_proc = None
     except Exception as e:
         logger.error(f"Audio playback error: {e}")
+        _tts_proc = None
 
 
 def _clean_for_tts(text: str) -> str:
@@ -80,7 +114,8 @@ def _clean_for_tts(text: str) -> str:
 
 
 def speak(text: str):
-    """Convierte texto a voz (edge-tts) y lo reproduce."""
+    """Convierte texto a voz (edge-tts) y lo reproduce. Cancelable via cancel_tts()."""
+    _tts_cancel.clear()
     text = _clean_for_tts(text)
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         tmp = f.name
@@ -113,49 +148,77 @@ def _find_mic_device() -> int | None:
         return None
 
 
-def _record_sounddevice(duration: int, device: int) -> bytes | None:
-    """Graba con sounddevice (funciona sin Qt activo)."""
+def _record_sounddevice_vad(device: int) -> bytes | None:
+    """Graba con sounddevice usando VAD chunk-based. Para cuando hay silencio."""
     try:
         import sounddevice as sd
         import numpy as np
-        data = sd.rec(
-            int(duration * _MIC_SAMPLERATE),
-            samplerate=_MIC_SAMPLERATE,
-            channels=2,
-            dtype='int16',
-            device=device,
-            blocking=True,
-        )
-        # Boost + downsample + mono (canal L)
-        boosted  = np.clip(data.astype('int32') * _MIC_BOOST, -32768, 32767).astype('int16')
-        mono_16k = boosted[::_DOWNSAMPLE, 0]
-        peak = int(abs(boosted).max())
-        logger.info("sounddevice: %d bytes, peak=%d (%.0f%%)",
-                    len(mono_16k)*2, peak, peak/32767*100)
+
+        chunk_frames       = int(_CHUNK_S * _MIC_SAMPLERATE)
+        max_silence_chunks = int(_MAX_SILENCE_S  / _CHUNK_S)
+        max_prespeech      = int(_PRESPEECH_S    / _CHUNK_S)
+        max_total          = int(_MAX_TOTAL_S    / _CHUNK_S)
+        downsample         = _MIC_SAMPLERATE // _STT_SAMPLERATE
+
+        speech_chunks: list = []
+        speech_started   = False
+        silence_chunks   = 0
+        prespeech_chunks = 0
+
+        for _ in range(max_total):
+            chunk = sd.rec(chunk_frames, samplerate=_MIC_SAMPLERATE,
+                           channels=2, dtype='int16', device=device, blocking=True)
+            boosted = np.clip(chunk.astype('int32') * _MIC_BOOST,
+                              -32768, 32767).astype('int16')
+            peak = int(abs(boosted).max())
+
+            if peak > _SILENCE_THRESH:
+                speech_started = True
+                silence_chunks = 0
+                speech_chunks.append(boosted)
+            elif speech_started:
+                silence_chunks += 1
+                speech_chunks.append(boosted)
+                if silence_chunks >= max_silence_chunks:
+                    break
+            else:
+                prespeech_chunks += 1
+                if prespeech_chunks >= max_prespeech:
+                    logger.debug("VAD: sin voz en %.1fs — timeout", _PRESPEECH_S)
+                    return None
+
+        if not speech_chunks or not speech_started:
+            return None
+
+        all_data = np.concatenate(speech_chunks)
+        mono_16k = all_data[::downsample, 0]
+        peak_all = int(abs(all_data).max())
+        duration = len(all_data) / _MIC_SAMPLERATE
+        logger.info("VAD sounddevice: %d bytes, peak=%d (%.0f%%), %.2fs capturado",
+                    len(mono_16k) * 2, peak_all, peak_all / 32767 * 100, duration)
         return mono_16k.tobytes()
     except Exception as e:
-        logger.warning("sounddevice falló: %s", e)
+        logger.warning("sounddevice VAD falló: %s", e)
         return None
 
 
-def _record_winmm(duration: int) -> bytes | None:
-    """Graba con WinMM (fallback cuando Qt bloquea sounddevice)."""
+def _record_winmm_fixed(duration: float = 5.0) -> bytes | None:
+    """Graba con WinMM (fallback). Calcula downsample desde la tasa real grabada."""
     try:
-        import struct
         import numpy as np
         from jarvis import winmm_capture
-        pcm = winmm_capture.record(duration, samplerate=_MIC_SAMPLERATE,
-                                   channels=2, bits=16)
-        if pcm is None:
+        pcm, actual_rate = winmm_capture.record_with_rate(
+            duration, samplerate=_MIC_SAMPLERATE, channels=2, bits=16)
+        if pcm is None or actual_rate == 0:
             return None
-        # Boost + downsample + mono
-        n = len(pcm) // 2
-        samples = np.frombuffer(pcm, dtype='<i2').reshape(-1, 2)
+        samples  = np.frombuffer(pcm, dtype='<i2').reshape(-1, 2)
         boosted  = np.clip(samples.astype('int32') * _MIC_BOOST, -32768, 32767).astype('int16')
-        mono_16k = boosted[::_DOWNSAMPLE, 0]
+        # Downsample dinámico según tasa real del dispositivo
+        downsample = max(1, actual_rate // _STT_SAMPLERATE)
+        mono_16k = boosted[::downsample, 0]
         peak = int(abs(boosted).max())
-        logger.info("winmm: %d bytes, peak=%d (%.0f%%)",
-                    len(mono_16k)*2, peak, peak/32767*100)
+        logger.info("winmm (%dHz, ds=%d): %d bytes, peak=%d (%.0f%%)",
+                    actual_rate, downsample, len(mono_16k) * 2, peak, peak / 32767 * 100)
         return mono_16k.tobytes()
     except Exception as e:
         logger.warning("winmm falló: %s", e)
@@ -193,22 +256,18 @@ def _google_stt_raw(pcm_16k: bytes, language: str = "es-CL") -> str:
         return ""
 
 
-def listen(duration: int = 5, timeout: int = 5) -> str:
-    """Escucha el micrófono y retorna texto transcrito."""
+def listen() -> str:
+    """Escucha el micrófono con VAD y retorna texto transcrito."""
     try:
-        # 1. Grabar: sounddevice primero, winmm si Qt bloquea sounddevice
         device  = _find_mic_device()
-        pcm_16k = _record_sounddevice(duration, device) if device is not None else None
+        pcm_16k = _record_sounddevice_vad(device) if device is not None else None
         if pcm_16k is None:
-            logger.info("sounddevice falló — usando winmm_capture")
-            pcm_16k = _record_winmm(duration)
+            logger.info("sounddevice VAD falló — usando winmm_capture (fijo 5s)")
+            pcm_16k = _record_winmm_fixed(5.0)
         if pcm_16k is None:
             logger.error("No se pudo capturar audio")
             return ""
-
-        # 2. STT sin subprocess (evita WinError 50 de FLAC en Python 3.14)
         return _google_stt_raw(pcm_16k)
-
     except Exception as e:
         import traceback as _tb
         logger.error("listen() error: %s\n%s", e, _tb.format_exc())
