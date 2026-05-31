@@ -138,8 +138,8 @@ class WakeWordDetector:
                 predictions = oww.predict(audio)
                 for ww, score in predictions.items():
                     if WAKE_WORD_DEBUG and score > 0.05:
-                        logger.debug("wakeword score '%s': %.3f (threshold=%.2f)",
-                                     ww, score, sensitivity)
+                        logger.info("wakeword score '%s': %.3f (threshold=%.2f)",
+                                    ww, score, sensitivity)
                     if score >= sensitivity:
                         now = time.monotonic()
                         if now - last_trigger < cooldown:
