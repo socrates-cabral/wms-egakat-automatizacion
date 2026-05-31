@@ -138,16 +138,31 @@ def main() -> None:
 
     logger.info("J.A.R.V.I.S. iniciando... (Win+J para hablar, ESC para salir)")
 
-    # Bug fix: play_startup y saludo en threads — no bloquean el event loop Qt
-    threading.Thread(target=voice.play_startup, daemon=True).start()
     harness.start()
 
-    def _saludo_worker():
+    def _startup_sequence():
+        """Secuencia de arranque sin solapamiento:
+        1. Prefetch clima en paralelo mientras suena el startup.mp3.
+        2. Cuando el sonido termina, ya tenemos clima → hablar sin superposición.
+        """
         from datetime import datetime
         from zoneinfo import ZoneInfo
         from jarvis.tools import get_estado_sistema
         CL_TZ = ZoneInfo("America/Santiago")
-        estado = get_estado_sistema()
+
+        estado_holder: list = [{}]
+
+        def _fetch_clima():
+            estado_holder[0] = get_estado_sistema()
+
+        fetch_t = threading.Thread(target=_fetch_clima, daemon=True)
+        fetch_t.start()
+
+        voice.play_startup()          # bloquea hasta que startup.mp3 termina
+
+        fetch_t.join(timeout=4.0)     # espera clima (generalmente ya terminó)
+
+        estado = estado_holder[0]
         hora = datetime.now(CL_TZ).strftime("%H:%M")
         clima = estado.get("clima_santiago", "")
         clima_str = f", {clima}" if clima and clima != "sin datos" else ""
@@ -155,11 +170,10 @@ def main() -> None:
             f"Sistemas en linea. Son las {hora} en Santiago{clima_str}. "
             f"A sus ordenes, Senor Socrates."
         )
-        logger.info(f"JARVIS: {saludo}")
+        logger.info("JARVIS: %s", saludo)
         voice.speak(saludo)
 
-    def _saludo_inicial():
-        threading.Thread(target=_saludo_worker, daemon=True).start()
+    threading.Thread(target=_startup_sequence, daemon=True).start()
 
     hotkey_ok = _start_hotkey_thread(
         on_trigger=harness.trigger,
@@ -169,8 +183,6 @@ def main() -> None:
         tray.showMessage("JARVIS", "Win+J no disponible — otro programa lo usa.\nCambia el hotkey en config.py", QSystemTrayIcon.MessageIcon.Warning, 5000)
 
     tray.showMessage("JARVIS online", "Win+J para hablar | ESC para salir", QSystemTrayIcon.MessageIcon.Information, 3000)
-
-    QTimer.singleShot(500, _saludo_inicial)
 
     rc = app.exec()
     logger.warning("app.exec() retornó con código %s — la app va a cerrar", rc)
