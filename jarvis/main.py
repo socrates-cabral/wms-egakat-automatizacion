@@ -24,6 +24,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
+# Debug granular solo para wakeword — calibrar threshold sin flood de otros módulos
+logging.getLogger("jarvis.wakeword").setLevel(logging.DEBUG)
 logger = logging.getLogger("jarvis")
 
 

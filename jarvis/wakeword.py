@@ -108,6 +108,8 @@ class WakeWordDetector:
         device       = _find_mic_device()
         ready_set    = False
 
+        from jarvis.config import WAKE_WORD_DEBUG
+
         while not self._stop_event.is_set():
             # Bug 2 + 11: ceder el mic mientras el ciclo STT/TTS está activo
             if not self._resume.is_set():
@@ -129,6 +131,9 @@ class WakeWordDetector:
 
                 predictions = oww.predict(audio)
                 for ww, score in predictions.items():
+                    if WAKE_WORD_DEBUG and score > 0.05:
+                        logger.debug("wakeword score '%s': %.3f (threshold=%.2f)",
+                                     ww, score, sensitivity)
                     if score >= sensitivity:
                         now = time.monotonic()
                         if now - last_trigger < cooldown:

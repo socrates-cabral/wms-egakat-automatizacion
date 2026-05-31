@@ -31,9 +31,10 @@ STARTUP_SOUND = BASE_DIR / "jarvis" / "sounds" / "startup.mp3"
 WMS_KPI_PATH  = BASE_DIR / "WMS_Automatizacion" / "kpi_ops_resumen.json"
 
 # Wake word (OpenWakeWord — sin cuenta, sin API key)
-WAKE_WORD_MODEL      = os.getenv("WAKE_WORD_MODEL", "hey_jarvis")  # nombre o path .onnx
-WAKE_WORD_SENSITIVITY = 0.5   # 0.0 = menos sensible, 1.0 = más sensible
-WAKE_WORD_COOLDOWN   = 2.0    # segundos entre detecciones (evita doble trigger)
+WAKE_WORD_MODEL       = os.getenv("WAKE_WORD_MODEL", "hey_jarvis")
+WAKE_WORD_SENSITIVITY = 0.3   # bajado de 0.5 → modelo inglés, acento español reduce scores
+WAKE_WORD_COOLDOWN    = 2.0
+WAKE_WORD_DEBUG       = True  # True = loguea scores > 0.05 para calibración
 
 # STT local (faster-whisper)
 STT_MODEL    = "small"
