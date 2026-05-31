@@ -73,34 +73,38 @@ class WakeWordDetector:
     def _loop(self, oww, sensitivity: float, cooldown: float) -> None:
         import sounddevice as sd
         import numpy as np
+        from jarvis.voice import _find_mic_device, _MIC_SAMPLERATE, _MIC_BOOST
 
-        CHUNK = 1280  # 80ms a 16kHz — tamaño óptimo para OpenWakeWord
+        # Grabar a la tasa nativa del dispositivo (48kHz) y downsamplear a 16kHz.
+        # Mismo patrón que el VAD — sd.rec() compatible con WASAPI en esta máquina.
+        OWW_RATE  = 16000   # OpenWakeWord requiere 16kHz
+        CHUNK_S   = 0.08    # 80ms por chunk (1280 samples a 16kHz)
+        DOWNSAMP  = _MIC_SAMPLERATE // OWW_RATE            # 48000//16000 = 3
+        CHUNK_N   = int(CHUNK_S * _MIC_SAMPLERATE)         # 3840 samples a 48kHz
         last_trigger = 0.0
+        device = _find_mic_device()
 
-        try:
-            with sd.InputStream(
-                samplerate=16000,
-                channels=1,
-                dtype="int16",
-                blocksize=CHUNK,
-            ) as stream:
-                while not self._stop_event.is_set():
-                    frame, _ = stream.read(CHUNK)
-                    audio = frame[:, 0]   # mono int16, shape (1280,)
+        while not self._stop_event.is_set():
+            try:
+                frame = sd.rec(CHUNK_N, samplerate=_MIC_SAMPLERATE, channels=2,
+                               dtype="int16", device=device, blocking=True)
+                # Boost + downsample + mono (igual que VAD)
+                boosted = np.clip(frame.astype("int32") * _MIC_BOOST,
+                                  -32768, 32767).astype("int16")
+                audio = boosted[::DOWNSAMP, 0]   # 1280 samples mono a 16kHz
 
-                    predictions = oww.predict(audio)
+                predictions = oww.predict(audio)
+                for ww, score in predictions.items():
+                    if score >= sensitivity:
+                        now = time.monotonic()
+                        if now - last_trigger < cooldown:
+                            continue
+                        last_trigger = now
+                        logger.info("Wake word '%s' detectado (score=%.2f)", ww, score)
+                        self._callback()
+                        break
+            except Exception as e:
+                logger.error("Wake word loop error: %s", e)
+                self._stop_event.wait(timeout=1.0)
 
-                    for ww, score in predictions.items():
-                        if score >= sensitivity:
-                            now = time.monotonic()
-                            if now - last_trigger < cooldown:
-                                continue   # dentro del cooldown, ignorar
-                            last_trigger = now
-                            logger.info("Wake word '%s' detectado (score=%.2f)", ww, score)
-                            self._callback()
-                            break
-
-        except Exception as e:
-            logger.error("Wake word loop error: %s", e)
-        finally:
-            self._running = False
+        self._running = False
