@@ -62,8 +62,26 @@ def _play_audio(path: str):
         logger.error(f"Audio playback error: {e}")
 
 
+def _clean_for_tts(text: str) -> str:
+    """Elimina markdown y símbolos que edge-tts leería literal."""
+    import re
+    t = text
+    t = re.sub(r'\*{1,3}([^*]+)\*{1,3}', r'\1', t)   # **bold**, *italic*, ***
+    t = re.sub(r'#{1,6}\s*', '', t)                    # ## headers
+    t = re.sub(r'`{1,3}([^`]*)`{1,3}', r'\1', t)      # `code`, ```block```
+    t = re.sub(r'^\s*[-•*]\s+', '', t, flags=re.M)     # - • * bullets
+    t = re.sub(r'^\s*\d+\.\s+', '', t, flags=re.M)     # 1. numbered lists
+    t = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', t)     # [link](url)
+    t = re.sub(r'_{1,2}([^_]+)_{1,2}', r'\1', t)      # _italic_, __bold__
+    t = re.sub(r'\n{2,}', '. ', t)                     # párrafos → pausa
+    t = re.sub(r'\n', ', ', t)                         # saltos de línea → coma
+    t = re.sub(r'\s{2,}', ' ', t)                      # espacios múltiples
+    return t.strip()
+
+
 def speak(text: str):
     """Convierte texto a voz (edge-tts) y lo reproduce."""
+    text = _clean_for_tts(text)
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         tmp = f.name
     try:
