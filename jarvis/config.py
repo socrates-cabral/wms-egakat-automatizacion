@@ -12,8 +12,9 @@ GOOGLE_API_KEY    = os.getenv("GOOGLE_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # Modelos
-GEMINI_MODEL  = "gemini-2.5-flash"
-CLAUDE_MODEL  = "claude-sonnet-4-6"
+GEMINI_MODEL      = "gemini-2.5-flash"
+CLAUDE_MODEL_FAST = "claude-sonnet-4-6"   # análisis estándar
+CLAUDE_MODEL_DEEP = "claude-opus-4-8"     # análisis complejos
 
 # Voz
 TTS_VOICE     = "es-ES-AlvaroNeural"
@@ -27,6 +28,7 @@ CRYPTO_ETH    = BASE_DIR / "crypto_bot" / "estado_grid_ETH_USDT.json"
 APUESTAS_OUT  = BASE_DIR / "agente_apuestas" / "output"
 NOTAS_PATH    = BASE_DIR / "jarvis" / "notas.txt"
 STARTUP_SOUND = BASE_DIR / "jarvis" / "sounds" / "startup.mp3"
+WMS_KPI_PATH  = BASE_DIR / "WMS_Automatizacion" / "kpi_ops_resumen.json"
 
 SYSTEM_PROMPT = """Eres J.A.R.V.I.S. — Just A Rather Very Intelligent System — \
 el asistente personal de Señor Sócrates Cabral, Head of Control Management en Egakat SPA, Chile.
@@ -59,4 +61,6 @@ tras llamar una función.
 Tus respuestas son leídas en voz alta por edge-tts. NUNCA uses markdown: \
 sin asteriscos (**), sin guiones como bullets (-), sin almohadillas (##), \
 sin backticks (`). Habla con oraciones naturales separadas por comas y puntos. \
-Para listas, usa "primero... segundo... tercero..." o "por un lado... por otro..."."""
+Para listas, usa "primero... segundo... tercero..." o "por un lado... por otro...".
+
+Para invoke_claude: nivel='rapido' para consultas simples; nivel='profundo' solo para análisis de arquitectura, código complejo o decisiones estratégicas importantes."""
