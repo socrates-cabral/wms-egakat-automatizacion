@@ -12,7 +12,7 @@ GOOGLE_API_KEY    = os.getenv("GOOGLE_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # Modelos
-GEMINI_MODEL  = "gemini-2.0-flash"
+GEMINI_MODEL  = "gemini-2.5-flash-lite"
 CLAUDE_MODEL  = "claude-sonnet-4-6"
 
 # Voz
