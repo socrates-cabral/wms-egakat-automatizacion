@@ -124,6 +124,7 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     app.aboutToQuit.connect(lambda: logger.warning("app.aboutToQuit emitido"))
+    app.aboutToQuit.connect(harness.stop_wakeword)
 
     bridge = get_bridge()
     overlay = JarvisOverlay(bridge)

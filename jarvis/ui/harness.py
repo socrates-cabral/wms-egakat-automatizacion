@@ -32,15 +32,29 @@ class JarvisHarness(QObject):
         self._lock = threading.Lock()
 
     def start(self) -> None:
-        """Inicializa el agente con contexto de memoria. Llamar una vez al arrancar."""
+        """Inicializa agente, restaura timers, arranca wake word. Llamar una vez al arrancar."""
         context = self._memory.load_context()
         self._agent = Agent(memory_context=context)
         self._bridge.tts_cancel_requested.connect(voice.cancel_tts)
+
         from jarvis.tools import restore_timers
-        pending = restore_timers()
-        for msg in pending:
+        for msg in restore_timers():
             logger.info("Timer restaurado: %s", msg)
+
+        from jarvis.wakeword import WakeWordDetector
+        from jarvis.config import WAKE_WORD_MODEL, WAKE_WORD_SENSITIVITY, WAKE_WORD_COOLDOWN
+        self._wakeword = WakeWordDetector(callback=self.trigger)
+        ok = self._wakeword.start(WAKE_WORD_MODEL, WAKE_WORD_SENSITIVITY, WAKE_WORD_COOLDOWN)
+        if not ok:
+            logger.warning("Wake word desactivado — solo Win+J disponible.")
+
         logger.info("Harness inicializado. Contexto de memoria cargado.")
+
+    def stop_wakeword(self) -> None:
+        """Detiene el wake word detector. Llamar en app.aboutToQuit."""
+        if hasattr(self, "_wakeword"):
+            self._wakeword.stop()
+            logger.info("Wake word detector detenido.")
 
     def trigger(self) -> None:
         """Lanza un ciclo STT -> agente -> TTS. Si está hablando, cancela el TTS (Bug 6)."""

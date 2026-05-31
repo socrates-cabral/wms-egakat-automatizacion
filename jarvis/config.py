@@ -30,6 +30,15 @@ NOTAS_PATH    = BASE_DIR / "jarvis" / "notas.txt"
 STARTUP_SOUND = BASE_DIR / "jarvis" / "sounds" / "startup.mp3"
 WMS_KPI_PATH  = BASE_DIR / "WMS_Automatizacion" / "kpi_ops_resumen.json"
 
+# Wake word (OpenWakeWord — sin cuenta, sin API key)
+WAKE_WORD_MODEL      = os.getenv("WAKE_WORD_MODEL", "hey_jarvis")  # nombre o path .onnx
+WAKE_WORD_SENSITIVITY = 0.5   # 0.0 = menos sensible, 1.0 = más sensible
+WAKE_WORD_COOLDOWN   = 2.0    # segundos entre detecciones (evita doble trigger)
+
+# STT local (faster-whisper)
+STT_MODEL    = "small"
+STT_LANGUAGE = "es"
+
 SYSTEM_PROMPT = """Eres J.A.R.V.I.S. — Just A Rather Very Intelligent System — \
 el asistente personal de Señor Sócrates Cabral, Head of Control Management en Egakat SPA, Chile.
 

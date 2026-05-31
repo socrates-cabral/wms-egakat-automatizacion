@@ -277,18 +277,27 @@ def _google_stt_raw(pcm: bytes, rate: int = _STT_SAMPLERATE, language: str = "es
 
 
 def listen() -> str:
-    """Escucha el micrófono con VAD y retorna texto transcrito."""
+    """Escucha con VAD y transcribe. Usa faster-whisper primero, fallback a Google STT."""
     try:
-        device  = _find_mic_device()
-        pcm_16k = _record_sounddevice_vad(device) if device is not None else None
-        if pcm_16k is not None:
-            return _google_stt_raw(pcm_16k, rate=_STT_SAMPLERATE)
-        logger.info("sounddevice VAD falló — usando winmm_capture (fijo 5s)")
-        pcm_winmm, winmm_rate = _record_winmm_fixed(5.0)
-        if pcm_winmm is None:
+        device      = _find_mic_device()
+        pcm_bytes   = _record_sounddevice_vad(device) if device is not None else None
+        actual_rate = _STT_SAMPLERATE  # sounddevice VAD siempre produce 16kHz
+
+        if pcm_bytes is None:
+            logger.info("sounddevice VAD falló — usando winmm_capture (fijo 5s)")
+            pcm_bytes, actual_rate = _record_winmm_fixed(5.0)
+
+        if pcm_bytes is None:
             logger.error("No se pudo capturar audio")
             return ""
-        return _google_stt_raw(pcm_winmm, rate=winmm_rate)
+
+        try:
+            from jarvis import stt
+            return stt.transcribe(pcm_bytes, samplerate=actual_rate)
+        except Exception as e:
+            logger.warning("faster-whisper falló (%s) — usando Google STT", e)
+            return _google_stt_raw(pcm_bytes, rate=actual_rate)
+
     except Exception as e:
         import traceback as _tb
         logger.error("listen() error: %s\n%s", e, _tb.format_exc())
