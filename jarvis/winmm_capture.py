@@ -135,10 +135,12 @@ def _record_one(duration: float, samplerate: int,
     _winmm.waveInClose(hwi)
 
     recorded = int(hdr.dwBytesRecorded)
+    if not (hdr.dwFlags & WHDR_DONE) or recorded == 0:
+        logger.warning("waveInOpen %dHz: buffer vacio tras timeout — retornando None", samplerate)
+        return None
     logger.info("waveInOpen %dHz OK — %d bytes grabados (%.2fs)",
-                samplerate, recorded,
-                recorded / (samplerate * channels * bits // 8) if recorded else 0)
-    return bytes(buf[:recorded]) if recorded > 0 else bytes(buf)
+                samplerate, recorded, recorded / (samplerate * channels * bits // 8))
+    return bytes(buf[:recorded])
 
 
 def write_wav(pcm: bytes, path: str,
