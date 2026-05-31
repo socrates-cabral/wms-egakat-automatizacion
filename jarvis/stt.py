@@ -14,22 +14,26 @@ except (AttributeError, ValueError):
     pass
 
 import logging
+import threading
 import numpy as np
 
 from jarvis.config import STT_MODEL, STT_LANGUAGE
 
 logger = logging.getLogger("jarvis.stt")
 
-_model = None
+_model      = None
+_model_lock = threading.Lock()
 
 
 def _get_model():
     global _model
-    if _model is None:
-        from faster_whisper import WhisperModel
-        logger.info("Cargando faster-whisper '%s' (primera vez ~2s)...", STT_MODEL)
-        _model = WhisperModel(STT_MODEL, device="cpu", compute_type="int8")
-        logger.info("faster-whisper listo.")
+    if _model is None:                          # Bug 5: double-checked locking
+        with _model_lock:
+            if _model is None:
+                from faster_whisper import WhisperModel
+                logger.info("Cargando faster-whisper '%s'...", STT_MODEL)
+                _model = WhisperModel(STT_MODEL, device="cpu", compute_type="int8")
+                logger.info("faster-whisper listo.")
     return _model
 
 
