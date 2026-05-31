@@ -40,10 +40,17 @@ class JarvisHarness(QObject):
             logger.info("Timer restaurado: %s", msg)
 
         from jarvis.wakeword import WakeWordDetector
-        from jarvis.config import WAKE_WORD_MODEL, WAKE_WORD_SENSITIVITY, WAKE_WORD_COOLDOWN
-        # Bug 7: callback usa trigger_wakeword (silencioso si no hay habla)
+        from jarvis.config import (WAKE_WORD_ENGINE, WAKE_WORD_PHRASES,
+                                   WAKE_WORD_COOLDOWN, WAKE_WORD_MODEL,
+                                   WAKE_WORD_SENSITIVITY)
         self._wakeword = WakeWordDetector(callback=self.trigger_wakeword)
-        ok = self._wakeword.start(WAKE_WORD_MODEL, WAKE_WORD_SENSITIVITY, WAKE_WORD_COOLDOWN)
+        ok = self._wakeword.start(
+            engine=WAKE_WORD_ENGINE,
+            phrases=WAKE_WORD_PHRASES,
+            cooldown=WAKE_WORD_COOLDOWN,
+            oww_model=WAKE_WORD_MODEL,
+            sensitivity=WAKE_WORD_SENSITIVITY,
+        )
         if not ok:
             logger.warning("Wake word desactivado — solo Win+J disponible.")
 

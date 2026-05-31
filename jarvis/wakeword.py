@@ -1,14 +1,13 @@
-"""Wake word detector usando OpenWakeWord (sin cuenta, sin API key, 100% local).
+"""Wake word detector — dos engines disponibles:
 
-Modelo por defecto: 'hey_jarvis' (bundled en openwakeword + onnxruntime).
-Requiere: pip install openwakeword onnxruntime
+  whisper (default): faster-whisper tiny transcribe chunks de 2s, detecta "jarvis"
+                     en el texto. Funciona con cualquier pronunciación/acento.
+  oww:               OpenWakeWord hey_jarvis_v0.1.onnx. Requiere pronunciación
+                     inglesa exacta — no recomendado con acento español.
 
-Uso:
-    detector = WakeWordDetector(callback=harness.trigger_wakeword)
-    detector.start()
-    detector.pause()   # antes de listen() — libera el mic
-    detector.resume()  # después del ciclo STT+TTS
-    detector.stop()    # al salir
+Config (.env o config.py):
+    WAKE_WORD_ENGINE = "whisper"   # o "oww"
+    WAKE_WORD_PHRASES = jarvis,harvey,jarviz
 """
 import sys
 try:
@@ -25,19 +24,18 @@ logger = logging.getLogger("jarvis.wakeword")
 
 
 class WakeWordDetector:
-    """Detecta wake word en thread daemon via OpenWakeWord.
+    """Detecta wake word en thread daemon.
 
-    pause()/resume() coordinan el acceso al micrófono con el ciclo STT:
-    el wake word cede el mic durante listen()/speak() para evitar conflicto.
+    pause()/resume() coordinan el acceso al mic con el ciclo STT.
     """
 
     def __init__(self, callback: Callable[[], None]):
         self._callback   = callback
         self._stop_event = threading.Event()
-        self._resume     = threading.Event()   # clear=pausado, set=activo
+        self._resume     = threading.Event()
         self._resume.set()
-        self._ready      = threading.Event()   # set tras primer sd.rec() exitoso
-        self._mic_busy   = threading.Event()   # set DURANTE sd.rec() — libera al terminar
+        self._ready      = threading.Event()
+        self._mic_busy   = threading.Event()
         self._thread: threading.Thread | None = None
         self._running    = False
 
@@ -45,82 +43,155 @@ class WakeWordDetector:
         return self._running
 
     def pause(self) -> None:
-        """Pausa la captura y espera a que el sd.rec() en curso libere el mic."""
+        """Pausa y espera a que el rec() en curso libere el mic (max 250ms)."""
         self._resume.clear()
-        # Esperar máx 200ms a que termine el rec() actual (chunk = 80ms + margen)
-        deadline = time.monotonic() + 0.2
+        deadline = time.monotonic() + 0.25
         while self._mic_busy.is_set() and time.monotonic() < deadline:
             time.sleep(0.005)
 
     def resume(self) -> None:
-        """Reanuda la captura tras liberar el micrófono."""
+        """Devuelve el mic al detector."""
         self._resume.set()
 
-    def start(self, model_name: str = "hey_jarvis",
-              sensitivity: float = 0.5, cooldown: float = 2.0) -> bool:
-        """Inicia el detector. Retorna True solo cuando el micrófono abre con éxito."""
-        try:
-            from openwakeword.model import Model
-            oww = Model(wakeword_models=[model_name], inference_framework="onnx")
-            logger.info("OpenWakeWord modelo '%s' cargado.", model_name)
-        except Exception as e:
-            logger.warning("OpenWakeWord init falló: %s — wake word desactivado", e)
-            return False
+    def stop(self) -> None:
+        self._stop_event.set()
+        self._resume.set()
+        if self._thread is not None:
+            self._thread.join(timeout=3.0)
+        self._running = False
 
+    def start(self, engine: str = "whisper",
+              phrases: list[str] | None = None,
+              sensitivity: float = 0.3,
+              cooldown: float = 2.0,
+              oww_model: str = "hey_jarvis",
+              whisper_chunk_s: float = 2.0,
+              whisper_model_size: str = "tiny") -> bool:
+        """Inicia el detector. Retorna True solo cuando el mic confirma apertura."""
         self._stop_event.clear()
         self._ready.clear()
         self._resume.set()
         self._running = True
-        self._thread = threading.Thread(
-            target=self._loop,
-            args=(oww, sensitivity, cooldown),
-            daemon=True,
-            name="wakeword-oww",
-        )
+
+        if engine == "oww":
+            target = self._loop_oww
+            args   = (oww_model, sensitivity, cooldown)
+        else:
+            target = self._loop_whisper
+            args   = (phrases or ["jarvis", "harvey", "jarviz"], cooldown,
+                      whisper_chunk_s, whisper_model_size)
+
+        self._thread = threading.Thread(target=target, args=args,
+                                        daemon=True, name="wakeword")
         self._thread.start()
 
-        # Bug 9: esperar confirmación de que el mic abrió OK antes de declarar éxito
-        if not self._ready.wait(timeout=2.0):
-            logger.warning("Wake word: micrófono no disponible en 2s — solo Win+J")
+        if not self._ready.wait(timeout=4.0):
+            logger.warning("Wake word: mic no abrió en 4s — solo Win+J disponible.")
             self._stop_event.set()
-            self._resume.set()   # desbloquear si está esperando
+            self._resume.set()
             self._running = False
             return False
 
-        logger.info("Wake word 'Hey Jarvis' activo (sensitivity=%.1f, cooldown=%.1fs)",
-                    sensitivity, cooldown)
+        logger.info("Wake word activo [%s] (cooldown=%.1fs)", engine, cooldown)
         return True
 
-    def stop(self) -> None:
-        """Detiene el detector limpiamente."""
-        self._stop_event.set()
-        self._resume.set()   # desbloquear si está pausado
-        if self._thread is not None:
-            self._thread.join(timeout=2.0)
-        self._running = False
+    # ── Engine: Whisper ────────────────────────────────────────────────────
 
-    def _loop(self, oww, sensitivity: float, cooldown: float) -> None:
+    def _loop_whisper(self, phrases: list[str], cooldown: float,
+                      chunk_s: float, model_size: str) -> None:
         import sounddevice as sd
         import numpy as np
         from jarvis.voice import _find_mic_device, _MIC_SAMPLERATE
 
-        # Grabar a 48kHz nativo, downsamplear a 16kHz para OpenWakeWord
-        OWW_RATE     = 16000
-        CHUNK_S      = 0.08                          # 80ms por chunk
-        DOWNSAMP     = _MIC_SAMPLERATE // OWW_RATE   # 3
-        CHUNK_N      = int(CHUNK_S * _MIC_SAMPLERATE) # 3840 samples a 48kHz
-        last_trigger = 0.0
-        device       = _find_mic_device()
-        ready_set    = False
+        device    = _find_mic_device()
+        OWW_RATE  = 16000
+        DOWNSAMP  = _MIC_SAMPLERATE // OWW_RATE
+        CHUNK_N   = int(chunk_s * _MIC_SAMPLERATE)
+        last_trig = 0.0
 
-        from jarvis.config import WAKE_WORD_DEBUG
+        # Test rápido del mic para señalizar _ready antes de cargar el modelo
+        try:
+            self._mic_busy.set()
+            sd.rec(1280, samplerate=_MIC_SAMPLERATE, channels=2,
+                   dtype="int16", device=device, blocking=True)
+            self._mic_busy.clear()
+            self._ready.set()
+        except Exception as e:
+            self._mic_busy.clear()
+            logger.error("Mic test falló: %s", e)
+            self._running = False
+            return
+
+        # Cargar modelo tiny (39MB, ~1s en caché)
+        try:
+            from faster_whisper import WhisperModel
+            logger.info("Cargando whisper '%s' para wake word...", model_size)
+            model = WhisperModel(model_size, device="cpu", compute_type="int8")
+            logger.info("Whisper wake word listo. Frases: %s", phrases)
+        except Exception as e:
+            logger.error("Whisper no pudo cargar: %s — wake word desactivado", e)
+            self._running = False
+            return
 
         while not self._stop_event.is_set():
-            # Bug 2 + 11: ceder el mic mientras el ciclo STT/TTS está activo
             if not self._resume.is_set():
                 self._resume.wait(timeout=0.1)
                 continue
+            try:
+                self._mic_busy.set()
+                frame = sd.rec(CHUNK_N, samplerate=_MIC_SAMPLERATE, channels=2,
+                               dtype="int16", device=device, blocking=True)
+                self._mic_busy.clear()
 
+                audio = (np.ascontiguousarray(frame[::DOWNSAMP, 0])
+                         .astype("float32") / 32768.0)
+
+                # vad_filter=True: salta chunks de silencio sin gastar CPU en inference
+                segments, _ = model.transcribe(audio, beam_size=1, vad_filter=True)
+                text = " ".join(s.text for s in segments).lower().strip()
+
+                if text:
+                    logger.info("whisper chunk: '%s'", text)
+                    if any(p in text for p in phrases):
+                        now = time.monotonic()
+                        if now - last_trig >= cooldown:
+                            last_trig = now
+                            logger.info("Wake word detectado: '%s'", text)
+                            self._callback()
+
+            except Exception as e:
+                self._mic_busy.clear()
+                logger.error("Wake word loop error: %s", e)
+                self._stop_event.wait(timeout=1.0)
+
+        self._mic_busy.clear()
+        self._running = False
+
+    # ── Engine: OpenWakeWord ───────────────────────────────────────────────
+
+    def _loop_oww(self, model_name: str, sensitivity: float, cooldown: float) -> None:
+        import sounddevice as sd
+        import numpy as np
+        from jarvis.voice import _find_mic_device, _MIC_SAMPLERATE
+
+        try:
+            from openwakeword.model import Model
+            oww = Model(wakeword_models=[model_name], inference_framework="onnx")
+        except Exception as e:
+            logger.warning("OpenWakeWord init falló: %s", e)
+            self._running = False
+            return
+
+        device    = _find_mic_device()
+        DOWNSAMP  = _MIC_SAMPLERATE // 16000
+        CHUNK_N   = int(0.08 * _MIC_SAMPLERATE)   # 80ms
+        last_trig = 0.0
+        ready_set = False
+
+        while not self._stop_event.is_set():
+            if not self._resume.is_set():
+                self._resume.wait(timeout=0.1)
+                continue
             try:
                 self._mic_busy.set()
                 frame = sd.rec(CHUNK_N, samplerate=_MIC_SAMPLERATE, channels=2,
@@ -128,29 +199,24 @@ class WakeWordDetector:
                 self._mic_busy.clear()
 
                 if not ready_set:
-                    self._ready.set()   # Bug 9: primer rec exitoso → start() puede retornar
+                    self._ready.set()
                     ready_set = True
 
-                # SIN boost — OpenWakeWord espera niveles naturales de audio.
-                # El boost×25 clipea la señal (peak=100%) y destruye el patrón acústico.
-                audio = np.ascontiguousarray(frame[::DOWNSAMP, 0])   # Bug 1: contiguous
-
+                audio       = np.ascontiguousarray(frame[::DOWNSAMP, 0])
                 predictions = oww.predict(audio)
                 for ww, score in predictions.items():
-                    if WAKE_WORD_DEBUG and score > 0.05:
-                        logger.info("wakeword score '%s': %.3f (threshold=%.2f)",
+                    if score > 0.05:
+                        logger.info("oww score '%s': %.3f (threshold=%.2f)",
                                     ww, score, sensitivity)
                     if score >= sensitivity:
                         now = time.monotonic()
-                        if now - last_trigger < cooldown:
-                            continue
-                        last_trigger = now
-                        logger.info("Wake word '%s' detectado (score=%.2f)", ww, score)
-                        self._callback()
-                        break
-
+                        if now - last_trig >= cooldown:
+                            last_trig = now
+                            logger.info("Wake word detectado '%s' (%.2f)", ww, score)
+                            self._callback()
+                            break
             except Exception as e:
-                self._mic_busy.clear()   # garantizar que pause() no quede bloqueado
+                self._mic_busy.clear()
                 logger.error("Wake word loop error: %s", e)
                 self._stop_event.wait(timeout=1.0)
 
