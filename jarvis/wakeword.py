@@ -37,6 +37,7 @@ class WakeWordDetector:
         self._resume     = threading.Event()   # clear=pausado, set=activo
         self._resume.set()
         self._ready      = threading.Event()   # set tras primer sd.rec() exitoso
+        self._mic_busy   = threading.Event()   # set DURANTE sd.rec() — libera al terminar
         self._thread: threading.Thread | None = None
         self._running    = False
 
@@ -44,8 +45,12 @@ class WakeWordDetector:
         return self._running
 
     def pause(self) -> None:
-        """Pausa la captura — cede el micrófono al ciclo STT/TTS."""
+        """Pausa la captura y espera a que el sd.rec() en curso libere el mic."""
         self._resume.clear()
+        # Esperar máx 200ms a que termine el rec() actual (chunk = 80ms + margen)
+        deadline = time.monotonic() + 0.2
+        while self._mic_busy.is_set() and time.monotonic() < deadline:
+            time.sleep(0.005)
 
     def resume(self) -> None:
         """Reanuda la captura tras liberar el micrófono."""
@@ -117,8 +122,10 @@ class WakeWordDetector:
                 continue
 
             try:
+                self._mic_busy.set()
                 frame = sd.rec(CHUNK_N, samplerate=_MIC_SAMPLERATE, channels=2,
                                dtype="int16", device=device, blocking=True)
+                self._mic_busy.clear()
 
                 if not ready_set:
                     self._ready.set()   # Bug 9: primer rec exitoso → start() puede retornar
@@ -143,7 +150,9 @@ class WakeWordDetector:
                         break
 
             except Exception as e:
+                self._mic_busy.clear()   # garantizar que pause() no quede bloqueado
                 logger.error("Wake word loop error: %s", e)
                 self._stop_event.wait(timeout=1.0)
 
+        self._mic_busy.clear()
         self._running = False
