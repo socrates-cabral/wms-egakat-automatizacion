@@ -3,6 +3,8 @@
 
 ## Proyectos
 
+- [[proyectos/yield-sentinel]] — YieldSentinel Fase 1 activa (2026-05-31): paper trading automático Hyperliquid cripto perpetuos. BTC Breakout candidata líder (+29.7% ROI). Task Scheduler 15min + n8n webhooks + Telegram.
+
 - [[proyecto-wms-egakat]] — Automatización descargas WMS Egakat SPA. 9 módulos activos (Módulo 9 = Validación Post-Ejecución). Graph API migrado 2026-03-24.
 - [[proyectos/wms-automatizacion]] — Suite completa WMS: módulos 1-3-7-8-9, azure_graph.py compartido, Playwright headless, SCABRAL detection, tiempos hasta 360s.
 - [[proyectos/nps-encuesta]] — Módulo 5: CSAT (386641) + NPS (418429) desde LimeSurvey RCAPI → Excel PowerBI → SharePoint Graph API. 3 tareas programadas.

@@ -1,0 +1,23 @@
+
+INSTRUCCIONES — Programador de Tareas de Windows
+=================================================
+
+Para que Yield Sentinel corra automáticamente cada 15 minutos:
+
+1. Abre "Programador de tareas" (busca en el menú inicio)
+2. Clic en "Crear tarea básica" (panel derecho)
+3. Nombre: "Yield Sentinel — Ciclo 15min"
+4. Desencadenador: "Diariamente"
+   → Avanzado: repetir cada 15 minutos durante 1 día
+5. Acción: "Iniciar un programa"
+   → Programa: C:\ClaudeWork\YieldSentinel\run_yield_sentinel.bat
+6. Guardar
+
+Para el reporte diario (opcional):
+1. Nueva tarea básica
+2. Nombre: "Yield Sentinel — Reporte Diario"
+3. Desencadenador: Diariamente a las 08:00
+4. Acción: C:\ClaudeWork\YieldSentinel\daily_report.bat
+
+Directorio del proyecto: C:\ClaudeWork\YieldSentinel
+Python: C:\Users\Socrates Cabral\AppData\Local\Python\pythoncore-3.14-64\python.exe

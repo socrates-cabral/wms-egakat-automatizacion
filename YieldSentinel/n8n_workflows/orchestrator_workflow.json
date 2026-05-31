@@ -1,0 +1,161 @@
+{
+  "name": "Yield Sentinel — Monitor",
+  "meta": {
+    "description": "n8n como panel de monitoreo. El scheduling real lo hace Windows Task Scheduler. n8n recibe webhooks de Python y puede disparar reportes manuales via HTTP."
+  },
+  "nodes": [
+    {
+      "id": "webhook-ciclo",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "yield-sentinel/ciclo",
+        "responseMode": "onReceived",
+        "responseData": "noData"
+      },
+      "name": "Webhook Ciclo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 200],
+      "webhookId": "yield-sentinel-ciclo",
+      "notes": "Python llama a este endpoint al finalizar cada ciclo. POST con JSON: {prices, news, signals, errors}"
+    },
+    {
+      "id": "check-errores",
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.errors.length }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Hay errores?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 200],
+      "notes": "Si Python reportó errores en el ciclo, avisa por Telegram."
+    },
+    {
+      "id": "telegram-error-ciclo",
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=YIELD SENTINEL ERROR\n\nCiclo con errores: {{ $json.body.errors.join(', ') }}\nHora: {{ $now.format('HH:mm') }}",
+        "additionalFields": {}
+      },
+      "name": "Alerta Error Ciclo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [700, 120],
+      "notes": "Alerta cuando Python reporta errores en el ciclo."
+    },
+    {
+      "id": "webhook-alerta",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "yield-sentinel/alerta",
+        "responseMode": "onReceived",
+        "responseData": "noData"
+      },
+      "name": "Webhook Alerta",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 420],
+      "webhookId": "yield-sentinel-alerta",
+      "notes": "Python llama aqui cuando hay un trade abierto, cerrado o señal importante."
+    },
+    {
+      "id": "telegram-alerta",
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.body.message }}",
+        "additionalFields": {}
+      },
+      "name": "Reenviar Alerta",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [460, 420],
+      "notes": "Reenvía el mensaje que Python construyó."
+    },
+    {
+      "id": "cron-health",
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 8 * * *" }] }
+      },
+      "name": "Health Check 8AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [220, 640],
+      "notes": "Cada mañana verifica que los webhooks de Yield Sentinel siguen activos."
+    },
+    {
+      "id": "http-health",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hyperliquid-testnet.xyz/info",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "type", "value": "allMids" }]
+        },
+        "options": { "timeout": 8000 }
+      },
+      "name": "Ping Hyperliquid",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 640],
+      "notes": "Verifica que Hyperliquid responde. Si falla significa que la API está caída."
+    },
+    {
+      "id": "telegram-health-ok",
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=YIELD SENTINEL OK\n\nSistema operativo a las 08:00.\nTask Scheduler activo — ciclos cada 15 min.",
+        "additionalFields": {}
+      },
+      "name": "Health OK",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [700, 640],
+      "notes": "Confirmacion matutina de que todo funciona."
+    }
+  ],
+  "connections": {
+    "Webhook Ciclo": {
+      "main": [[{ "node": "Hay errores?", "type": "main", "index": 0 }]]
+    },
+    "Hay errores?": {
+      "main": [
+        [{ "node": "Alerta Error Ciclo", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Webhook Alerta": {
+      "main": [[{ "node": "Reenviar Alerta", "type": "main", "index": 0 }]]
+    },
+    "Health Check 8AM": {
+      "main": [[{ "node": "Ping Webhook", "type": "main", "index": 0 }]]
+    },
+    "Ping Webhook": {
+      "main": [[{ "node": "Health OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "_arquitectura": {
+    "scheduler": "Windows Task Scheduler — corre run_yield_sentinel.bat cada 15 minutos",
+    "n8n_rol": "Panel de monitoreo: recibe webhooks de Python, reenvía alertas",
+    "flujos": {
+      "1_ciclo": "Task Scheduler dispara Python -> Python POST a /yield-sentinel/ciclo -> n8n alerta si hay errores",
+      "2_alertas": "Python POST a /yield-sentinel/alerta para cada señal/trade -> n8n reenvía al Telegram",
+      "3_health": "n8n 8AM -> verifica que webhooks responden -> Telegram confirmacion"
+    },
+    "ventaja": "Sin nodos Execute Command. Task Scheduler es mas confiable en Windows para comandos del sistema."
+  }
+}
