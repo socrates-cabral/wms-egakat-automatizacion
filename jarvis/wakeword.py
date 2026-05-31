@@ -43,9 +43,9 @@ class WakeWordDetector:
         return self._running
 
     def pause(self) -> None:
-        """Pausa y espera a que el rec() en curso libere el mic (max 250ms)."""
+        """Pausa y espera a que el rec() en curso libere el mic (max 1.5s)."""
         self._resume.clear()
-        deadline = time.monotonic() + 0.25
+        deadline = time.monotonic() + 1.5   # cubre chunks de hasta 1s + margen
         while self._mic_busy.is_set() and time.monotonic() < deadline:
             time.sleep(0.005)
 
@@ -65,7 +65,7 @@ class WakeWordDetector:
               sensitivity: float = 0.3,
               cooldown: float = 2.0,
               oww_model: str = "hey_jarvis",
-              whisper_chunk_s: float = 2.0,
+              whisper_chunk_s: float = 1.0,
               whisper_model_size: str = "tiny") -> bool:
         """Inicia el detector. Retorna True solo cuando el mic confirma apertura."""
         self._stop_event.clear()
