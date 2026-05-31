@@ -1,5 +1,8 @@
 import sys
-sys.stdout.reconfigure(encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except (AttributeError, ValueError):
+    pass
 
 import logging
 from google import genai
@@ -37,28 +40,33 @@ class Agent:
                 disable=False
             ),
         )
+        # Config sin tools para el followup (evita re-ejecutar acciones con side effects)
+        self._config_no_tools = types.GenerateContentConfig(
+            system_instruction=system,
+        )
         self._history: list = []
+        self._MAX_TURNS = 20  # ventana deslizante para evitar context overflow
 
     def process_message(self, text: str) -> str:
         """Envía mensaje a Gemini, ejecuta tools automáticamente, retorna respuesta."""
         try:
             self._history.append({"role": "user", "parts": [{"text": text}]})
+            # Ventana deslizante: evita context overflow con uso prolongado
+            if len(self._history) > self._MAX_TURNS:
+                self._history = self._history[-self._MAX_TURNS:]
             response = self._client.models.generate_content(
                 model=GEMINI_MODEL,
                 contents=self._history,
                 config=self._config,
             )
-            # response.text es None cuando AFC completa una tool call sin generar
-            # texto final (comportamiento de gemini-2.5-flash-lite).
-            # En ese caso, pedimos explícitamente el resumen verbal.
+            # response.text puede ser None cuando AFC completa una tool call
+            # sin generar texto final. Pedimos resumen SIN tools (evita acciones duplicadas).
             reply = response.text
             if not reply:
                 followup = self._client.models.generate_content(
                     model=GEMINI_MODEL,
-                    contents=self._history + [
-                        {"role": "user", "parts": [{"text": "Resume en voz alta el resultado de la consulta anterior."}]}
-                    ],
-                    config=self._config,
+                    contents=self._history,
+                    config=self._config_no_tools,
                 )
                 reply = followup.text or "Consulta completada, Señor Sócrates."
             self._history.append({"role": "model", "parts": [{"text": reply}]})

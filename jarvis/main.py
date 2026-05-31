@@ -10,6 +10,7 @@ import ctypes
 import ctypes.wintypes
 import logging
 import threading
+import traceback
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PyQt6.QtGui import QIcon, QPixmap, QColor
 from PyQt6.QtCore import QTimer
@@ -24,6 +25,29 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("jarvis")
+
+
+def _install_crash_diagnostics() -> None:
+    """[DIAG temporal] Captura cualquier salida/excepción no manejada.
+
+    PyQt6 aborta la app ante excepciones no atrapadas en slots; estos hooks
+    las dejan registradas en vez de morir en silencio.
+    """
+    def _excepthook(exc_type, exc, tb):
+        logger.error("UNHANDLED EXCEPTION:\n%s",
+                     "".join(traceback.format_exception(exc_type, exc, tb)))
+    sys.excepthook = _excepthook
+
+    def _thread_excepthook(args):
+        logger.error("UNHANDLED THREAD EXCEPTION in %s:\n%s",
+                     args.thread.name if args.thread else "?",
+                     "".join(traceback.format_exception(
+                         args.exc_type, args.exc_value, args.exc_traceback)))
+    threading.excepthook = _thread_excepthook
+
+    def _unraisablehook(args):
+        logger.error("UNRAISABLE: %s | obj=%r", args.exc_value, args.object)
+    sys.unraisablehook = _unraisablehook
 
 # Win32 RegisterHotKey constants
 _MOD_WIN       = 0x0008
@@ -52,9 +76,19 @@ def _start_hotkey_thread(on_trigger, on_quit) -> bool:
             logger.warning("No se pudo registrar ESC global")
         result[0] = ok_j
         ready.set()
+        logger.info("Hotkeys registrados: Win+J=%s ESC=%s", ok_j, ok_esc)
         msg = ctypes.wintypes.MSG()
-        while u32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
+        while True:
+            ret = u32.GetMessageW(ctypes.byref(msg), None, 0, 0)
+            if ret == 0:      # WM_QUIT
+                logger.warning("Hotkey loop: GetMessageW devolvió WM_QUIT")
+                break
+            if ret == -1:     # error
+                logger.error("Hotkey loop: GetMessageW error %d",
+                             ctypes.windll.kernel32.GetLastError())
+                break
             if msg.message == _WM_HOTKEY:
+                logger.info("WM_HOTKEY recibido wParam=%s", msg.wParam)
                 if msg.wParam == _HOTKEY_ID_J:
                     on_trigger()
                 elif msg.wParam == _HOTKEY_ID_ESC:
@@ -86,24 +120,29 @@ def _make_tray_icon(app: QApplication, on_quit) -> QSystemTrayIcon:
 
 
 def main() -> None:
+    _install_crash_diagnostics()
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
+    app.aboutToQuit.connect(lambda: logger.warning("app.aboutToQuit emitido"))
 
     bridge = get_bridge()
     overlay = JarvisOverlay(bridge)
     harness = JarvisHarness(bridge)
 
     def _quit():
+        # [DIAG temporal] registrar QUIÉN pide salir
+        logger.warning("_quit() llamado desde:\n%s", "".join(traceback.format_stack()))
         QTimer.singleShot(0, app.quit)
 
     tray = _make_tray_icon(app, _quit)  # noqa: F841 — keeps tray alive
 
     logger.info("J.A.R.V.I.S. iniciando... (Win+J para hablar, ESC para salir)")
 
-    voice.play_startup()
+    # Bug fix: play_startup y saludo en threads — no bloquean el event loop Qt
+    threading.Thread(target=voice.play_startup, daemon=True).start()
     harness.start()
 
-    def _saludo_inicial():
+    def _saludo_worker():
         from datetime import datetime
         from zoneinfo import ZoneInfo
         from jarvis.tools import get_estado_sistema
@@ -119,6 +158,9 @@ def main() -> None:
         logger.info(f"JARVIS: {saludo}")
         voice.speak(saludo)
 
+    def _saludo_inicial():
+        threading.Thread(target=_saludo_worker, daemon=True).start()
+
     hotkey_ok = _start_hotkey_thread(
         on_trigger=harness.trigger,
         on_quit=_quit,
@@ -130,8 +172,18 @@ def main() -> None:
 
     QTimer.singleShot(500, _saludo_inicial)
 
-    sys.exit(app.exec())
+    rc = app.exec()
+    logger.warning("app.exec() retornó con código %s — la app va a cerrar", rc)
+    sys.exit(rc)
 
 
 if __name__ == "__main__":
+    # Lanzado como ARCHIVO (`py jarvis\main.py`). En esta máquina eso impide
+    # abrir el micrófono WASAPI (-9996). Hay que arrancar con start.bat, que
+    # usa `py -c "from jarvis.main import main; main()"`.
+    print("=" * 64)
+    print("  ⚠  JARVIS lanzado como archivo: el MICRÓFONO NO funcionará.")
+    print("     Cerrá esto y arrancá con:  jarvis\\start.bat")
+    print("     (o:  py -c \"from jarvis.main import main; main()\" )")
+    print("=" * 64)
     main()
