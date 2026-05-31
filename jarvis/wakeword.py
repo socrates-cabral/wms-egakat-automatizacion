@@ -97,7 +97,7 @@ class WakeWordDetector:
     def _loop(self, oww, sensitivity: float, cooldown: float) -> None:
         import sounddevice as sd
         import numpy as np
-        from jarvis.voice import _find_mic_device, _MIC_SAMPLERATE, _MIC_BOOST
+        from jarvis.voice import _find_mic_device, _MIC_SAMPLERATE
 
         # Grabar a 48kHz nativo, downsamplear a 16kHz para OpenWakeWord
         OWW_RATE     = 16000
@@ -124,10 +124,9 @@ class WakeWordDetector:
                     self._ready.set()   # Bug 9: primer rec exitoso → start() puede retornar
                     ready_set = True
 
-                boosted = np.clip(frame.astype("int32") * _MIC_BOOST,
-                                  -32768, 32767).astype("int16")
-                # Bug 1: ascontiguousarray — slice [::3] no es contiguo
-                audio = np.ascontiguousarray(boosted[::DOWNSAMP, 0])
+                # SIN boost — OpenWakeWord espera niveles naturales de audio.
+                # El boost×25 clipea la señal (peak=100%) y destruye el patrón acústico.
+                audio = np.ascontiguousarray(frame[::DOWNSAMP, 0])   # Bug 1: contiguous
 
                 predictions = oww.predict(audio)
                 for ww, score in predictions.items():
