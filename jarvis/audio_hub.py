@@ -79,9 +79,10 @@ class AudioHub:
         on_listening: Callable[[], None],
         on_command:   Callable[[bytes, str], None],
         wake_phrases: tuple[str, ...] = (
-            # español (whisper mapea "Jarvis" a estos fonemas) + inglés directo
-            "jarvis", "yarvis", "jarbis", "yarbis", "harvis",
-            "jarvi", "yarvi", "ya vis", "ya vi", "jarvys",
+            # whisper-es mapea "Jarvis" (acento chileno) a estos fonemas.
+            # Capturado del log real: "arví", "arviz", "oye arviz".
+            "jarvis", "yarvis", "jarbis", "yarbis", "harvis", "jarvys",
+            "arvis", "arviz", "arvi", "arbiz", "arbis",
         ),
         cooldown: float = 2.0,
         wake_model_size: str = "base",

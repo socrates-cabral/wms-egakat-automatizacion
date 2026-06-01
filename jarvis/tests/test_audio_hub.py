@@ -63,17 +63,17 @@ def test_wake_phrases_match_real_outputs():
         norm = _normalize(text)
         return any(p in norm for p in phrases)
 
-    # Positivos: variantes que whisper produce para "Jarvis" en español
+    # Positivos: variantes reales que whisper-es produjo para "Jarvis" (del log)
     assert matches("Jarvis")
-    assert matches("¡Jarvis!")
+    assert matches("¡Oye Arviz!")
+    assert matches("Oh le arví")
     assert matches("Yarvis")
-    assert matches("Jarbis")
-    # Negativos: ruido/conversación que NO debe disparar
+    # Negativos: ruido/conversación real del log que NO debe disparar
     assert not matches("hola")
-    assert not matches("el mundo")
+    assert not matches("dame el tiempo")
     assert not matches("gracias")
-    assert not matches("no te cuitras")
     assert not matches("dónde estás")
+    assert not matches("bien desayuno")
 
 
 def test_start_returns_false_when_mic_fails():
