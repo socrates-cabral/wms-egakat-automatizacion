@@ -57,26 +57,23 @@ def test_normalize_strips_accents_and_punctuation():
     assert _normalize("¿Qué?").strip() == "que"
 
 
-def test_wake_phrases_match_real_outputs():
-    """Las frases por defecto del hub detectan 'Jarvis' sin falsos positivos comunes."""
+def test_phonetic_wake_matching():
+    """_matches_wake: match fonético detecta variantes reales de 'Jarvis' sin
+    falsos positivos en conversación normal."""
     hub = AudioHub(on_listening=lambda: None, on_command=lambda p, s: None)
-    phrases = hub._wake_phrases   # ya normalizadas en __init__
 
-    def matches(text):
-        norm = _normalize(text)
-        return any(p in norm for p in phrases)
-
-    # Positivos: variantes reales que whisper-es produjo para "Jarvis" (del log)
-    assert matches("Jarvis")
-    assert matches("¡Oye Arviz!")
-    assert matches("Oh le arví")
-    assert matches("Yarvis")
-    # Negativos: ruido/conversación real del log que NO debe disparar
-    assert not matches("hola")
-    assert not matches("dame el tiempo")
-    assert not matches("gracias")
-    assert not matches("dónde estás")
-    assert not matches("bien desayuno")
+    # Positivos: lo que whisper-es transcribió al decir "Jarvis" (del log real)
+    assert hub._matches_wake("Jarvis")
+    assert hub._matches_wake("¡Oye Arviz!")
+    assert hub._matches_wake("Hola Jairis")
+    assert hub._matches_wake("Yarvis")
+    # Negativos: palabras comunes del log que NO deben disparar
+    assert not hub._matches_wake("hola")
+    assert not hub._matches_wake("dame el tiempo")
+    assert not hub._matches_wake("gracias")
+    assert not hub._matches_wake("dónde estás")
+    assert not hub._matches_wake("el indicador del día de hoy")
+    assert not hub._matches_wake("bien desayuno")
 
 
 def test_start_returns_false_when_mic_fails():

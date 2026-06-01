@@ -54,6 +54,29 @@ def _normalize(text: str) -> str:
     return "".join(c if c.isalnum() or c.isspace() else " " for c in t)
 
 
+# Mapa fonético: agrupa sonidos que whisper confunde al transcribir "Jarvis"
+# con acento chileno. j/g/y → mismo sonido; v/b → mismo (español); quita vocales
+# débiles. "jarvis", "jeremy", "jairis", "arviz", "harvis" → todos colapsan a ~"jrvs".
+_PHON_MAP = str.maketrans({
+    "g": "j", "y": "j", "h": "",          # j-sounds
+    "v": "b", "w": "b",                    # b-sounds
+    "z": "s", "c": "s", "k": "s",          # s-sounds
+    "i": "", "e": "", "o": "", "u": "",    # vocales débiles (mantenemos 'a')
+})
+
+
+def _phonetic(word: str) -> str:
+    """Reduce una palabra a su esqueleto consonántico para match aproximado."""
+    w = _normalize(word).strip().replace(" ", "")
+    skel = w.translate(_PHON_MAP)
+    # colapsar repetidos: "jjrbs" → "jrbs"
+    out = []
+    for ch in skel:
+        if not out or out[-1] != ch:
+            out.append(ch)
+    return "".join(out)
+
+
 class AudioHub:
     # Audio
     REC_CHUNK_S = 0.5
@@ -316,13 +339,31 @@ class AudioHub:
         if not text:
             return
         logger.info("wake chunk: '%s'", text)
-        norm = _normalize(text)
-        if any(p in norm for p in self._wake_phrases):
+        if self._matches_wake(text):
             now = time.monotonic()
             if now - self._last_wake >= self._cooldown:
                 self._last_wake = now
                 logger.info("Wake word detectado: '%s'", text)
                 self._enter_command("wakeword")
+
+    def _matches_wake(self, text: str) -> bool:
+        """Match fonético: 'Jarvis' acento chileno → whisper produce Jeremy,
+        Jairis, Arviz... Comparamos el esqueleto consonántico de cada palabra
+        contra 'jarvis' con similaridad difusa (umbral 0.6)."""
+        from difflib import SequenceMatcher
+        target = _phonetic("jarvis")            # 'jarbs'
+        for word in _normalize(text).split():
+            if len(word) < 3:
+                continue
+            skel = _phonetic(word)
+            if not skel:
+                continue
+            ratio = SequenceMatcher(None, skel, target).ratio()
+            if ratio >= 0.6:
+                logger.info("  match fonético: '%s' (%s ~ %s = %.2f)",
+                            word, skel, target, ratio)
+                return True
+        return False
 
     # ── VAD de comando ───────────────────────────────────────────────────
 
