@@ -85,12 +85,12 @@ class AudioHub:
     BOOST       = 25
     DOWNSAMP    = MIC_RATE // OUT_RATE   # 3
 
-    # VAD (en chunks de REC_CHUNK_S)
-    SILENCE_THRESH = 5000   # post-boost ×25 — subido de 3000: ruido ambiente
-                            # mantenía el VAD abierto y enterraba el "Jarvis" (Bug 4)
+    # VAD (sobre audio CRUDO sin boost — pico de voz típico ~120-800, silencio <60)
+    SILENCE_THRESH = 150    # pico crudo mínimo para considerar "voz"
     MAX_SILENCE    = 3      # 1.5s de silencio post-habla → fin de frase
     PRESPEECH      = 10     # 5s sin voz tras trigger → abortar
-    MAX_TOTAL      = 12     # 6s tope absoluto (era 10s — reduce bloque en ruido)
+    MAX_TOTAL      = 12     # 6s tope absoluto
+    NORM_TARGET    = 0.8    # normalización de pico al transcribir (80% sin clip)
 
     QUEUE_MAX      = 40     # 20s de audio — cota dura de memoria
 
@@ -107,6 +107,7 @@ class AudioHub:
         ),
         cooldown: float = 2.0,
         wake_model_size: str = "base",
+        wake_enabled: bool = False,
     ):
         self._on_listening    = on_listening
         self._on_command      = on_command
@@ -114,6 +115,7 @@ class AudioHub:
         self._wake_phrases    = [_normalize(p).strip() for p in wake_phrases]
         self._cooldown        = cooldown
         self._wake_model_size = wake_model_size
+        self._wake_enabled    = wake_enabled
 
         self._mode      = _WAKE
         self._source    = "wakeword"
@@ -234,9 +236,10 @@ class AudioHub:
             if self._is_muted() or self._stop.is_set():
                 continue
 
-            boosted = np.clip(frame.astype("int32") * self.BOOST,
-                              -32768, 32767).astype("int16")
-            mono16k = np.ascontiguousarray(boosted[::self.DOWNSAMP, 0])
+            # Audio CRUDO (sin boost): el boost ×25 clipeaba al 100% y destruía
+            # la señal para Whisper. El VAD mide energía real; la normalización
+            # de pico se aplica al transcribir (sobre la frase completa).
+            mono16k = np.ascontiguousarray(frame[::self.DOWNSAMP, 0])
             self._put(mono16k)
 
     def _put(self, item) -> None:
@@ -310,11 +313,13 @@ class AudioHub:
                 self.unmute()              # balancea el mute del dispatch
 
     def _load_wake_model(self):
+        if not self._wake_enabled:
+            return None   # wake desactivado por config → solo Win+J, no carga modelo
         try:
             from faster_whisper import WhisperModel
             logger.info("Cargando whisper '%s' para wake word...", self._wake_model_size)
             m = WhisperModel(self._wake_model_size, device="cpu", compute_type="int8")
-            logger.info("Wake word listo. Frases: %s", self._wake_phrases)
+            logger.info("Wake word listo (match fonético).")
             return m
         except Exception as e:
             logger.error("Wake word desactivado (whisper no cargó: %s). Solo Win+J.", e)
@@ -408,8 +413,18 @@ class AudioHub:
         if not done:
             return None
         if self._vad_started and self._vad_chunks:
-            return np.concatenate(self._vad_chunks).tobytes()
+            return self._normalize_pcm(np.concatenate(self._vad_chunks))
         return b""
+
+    def _normalize_pcm(self, samples: np.ndarray) -> bytes:
+        """Normaliza el pico de la frase a NORM_TARGET sin clipear. Reemplaza el
+        boost ×25 fijo que saturaba la señal y la hacía ininteligible para STT."""
+        s = samples.astype("int32")
+        peak = int(np.abs(s).max())
+        if peak > 0:
+            gain = (32767 * self.NORM_TARGET) / peak
+            s = np.clip(s * gain, -32768, 32767)
+        return s.astype("int16").tobytes()
 
     # ── Utilidades ───────────────────────────────────────────────────────
 

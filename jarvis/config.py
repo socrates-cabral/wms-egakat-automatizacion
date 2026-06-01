@@ -30,9 +30,11 @@ NOTAS_PATH    = BASE_DIR / "jarvis" / "notas.txt"
 STARTUP_SOUND = BASE_DIR / "jarvis" / "sounds" / "startup.mp3"
 WMS_KPI_PATH  = BASE_DIR / "WMS_Automatizacion" / "kpi_ops_resumen.json"
 
-# Wake word (AudioHub — whisper base/español sobre mic compartido, sin cuenta ni API key)
-# Frases calibradas con transcripciones REALES del log (acento chileno):
-# whisper-es transcribe "Jarvis" como "arví/arviz/oye arviz" — se come la J.
+# Wake word (AudioHub — match fonético sobre whisper base, sin cuenta ni API key)
+# DESACTIVADO 2026-06-01: la detección por voz aún da falsos positivos/negativos.
+# Win+J es el trigger principal. El código del wake queda listo para reactivar
+# con WAKE_WORD_ENABLED=true cuando la calidad de STT mejore.
+WAKE_WORD_ENABLED  = os.getenv("WAKE_WORD_ENABLED", "false").lower() == "true"
 WAKE_WORD_PHRASES  = ["jarvis", "yarvis", "jarbis", "yarbis", "harvis", "jarvys",
                       "arvis", "arviz", "arvi", "arbiz", "arbis"]
 WAKE_WORD_COOLDOWN = 2.0

@@ -46,15 +46,21 @@ class JarvisHarness(QObject):
             logger.info("Timer restaurado: %s", msg)
 
         from jarvis.audio_hub import AudioHub
-        from jarvis.config import WAKE_WORD_PHRASES, WAKE_WORD_COOLDOWN
+        from jarvis.config import (WAKE_WORD_PHRASES, WAKE_WORD_COOLDOWN,
+                                   WAKE_WORD_ENABLED)
         self._hub = AudioHub(
             on_listening=self._on_listening,
             on_command=self._on_command,
             wake_phrases=tuple(WAKE_WORD_PHRASES),
             cooldown=WAKE_WORD_COOLDOWN,
+            wake_enabled=WAKE_WORD_ENABLED,
         )
         if not self._hub.start():
             logger.warning("AudioHub no arrancó — micrófono no disponible.")
+        if WAKE_WORD_ENABLED:
+            logger.info("Wake word ACTIVO — di 'Jarvis' o usa Win+J.")
+        else:
+            logger.info("Wake word desactivado — usa Win+J para hablar.")
 
         logger.info("Harness inicializado. Contexto de memoria cargado.")
 

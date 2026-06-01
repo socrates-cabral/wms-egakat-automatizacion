@@ -13,11 +13,10 @@ import pytest
 from jarvis.audio_hub import AudioHub, _normalize
 
 
-# Frames a 48kHz/2ch que produce sd.rec (antes de boost+downsample).
-# Amplitud derivada del umbral real: 1.5× el threshold tras el boost, para que
-# el test siga siendo válido aunque SILENCE_THRESH cambie.
+# Frames a 48kHz/2ch que produce sd.rec. El VAD mide audio CRUDO (sin boost),
+# así que la amplitud de "voz" es 2× SILENCE_THRESH para superar el umbral.
 _N = int(AudioHub.REC_CHUNK_S * AudioHub.MIC_RATE)   # 24000
-_SPEECH_AMP = int(AudioHub.SILENCE_THRESH / AudioHub.BOOST * 1.5)
+_SPEECH_AMP = AudioHub.SILENCE_THRESH * 2
 _SPEECH  = np.full((_N, 2), _SPEECH_AMP, dtype="int16")
 _SILENCE = np.zeros((_N, 2), dtype="int16")           # 0 → silencio
 
