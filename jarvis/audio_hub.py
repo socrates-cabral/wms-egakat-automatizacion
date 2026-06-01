@@ -37,7 +37,6 @@ import queue
 import threading
 import time
 import unicodedata
-from collections import deque
 from typing import Callable
 
 import numpy as np
@@ -64,13 +63,12 @@ class AudioHub:
     DOWNSAMP    = MIC_RATE // OUT_RATE   # 3
 
     # VAD (en chunks de REC_CHUNK_S)
-    SILENCE_THRESH = 3000
+    SILENCE_THRESH = 5000   # post-boost ×25 — subido de 3000: ruido ambiente
+                            # mantenía el VAD abierto y enterraba el "Jarvis" (Bug 4)
     MAX_SILENCE    = 3      # 1.5s de silencio post-habla → fin de frase
     PRESPEECH      = 10     # 5s sin voz tras trigger → abortar
-    MAX_TOTAL      = 20     # 10s tope absoluto
+    MAX_TOTAL      = 12     # 6s tope absoluto (era 10s — reduce bloque en ruido)
 
-    # Wake
-    WAKE_WINDOW    = 3      # ventana rodante de 1.5s
     QUEUE_MAX      = 40     # 20s de audio — cota dura de memoria
 
     def __init__(
@@ -235,8 +233,10 @@ class AudioHub:
     # ── Processor: wake detection / VAD ──────────────────────────────────
 
     def _processor_loop(self) -> None:
-        wake_model = self._load_wake_model()
-        rolling: deque = deque(maxlen=self.WAKE_WINDOW)
+        # VAD unificado: en AMBOS modos el VAD captura frases completas. El
+        # camino de comando (Win+J) ya funcionaba perfecto; ahora el wake usa
+        # EL MISMO VAD en vez de la ventana rodante (que cortaba "Jarvis" mal).
+        self._wake_model = self._load_wake_model()
 
         while not self._stop.is_set():
             try:
@@ -244,39 +244,33 @@ class AudioHub:
             except queue.Empty:
                 continue
 
-            # Bug 1: todo el estado VAD se lee/muta bajo _mode_lock.
+            # Bug 1: inicializar las 3 antes del lock — evita UnboundLocalError
+            # latente si la condición de dispatch se reordena en el futuro.
+            pcm = source = wake_pcm = None
             with self._mode_lock:
-                if self._mode == _COMMAND:
-                    pcm = self._feed_vad(chunk)        # bytes si terminó, None si sigue
+                mode = self._mode
+                if mode == _COMMAND:
+                    pcm = self._feed_vad(chunk)
                     if pcm is not None:
                         source = self._source
                         self._mode = _WAKE
                         self._reset_vad()
-                    else:
-                        source = None
-                else:
-                    pcm, source = None, None
+                elif self._wake_model is not None:
+                    # WAKE: mismo VAD, pero la frase completa va a _detect_wake.
+                    wake_pcm = self._feed_vad(chunk)
+                    if wake_pcm is not None:
+                        self._reset_vad()
 
-            # Fuera del lock: dispatch del comando terminado (mute + worker).
-            if pcm is not None:
-                self.mute()                # frontier: silenciar antes del TTS
-                self._drain_queue()        # descartar cola de comando
-                rolling.clear()
+            # COMMAND terminado → dispatch a worker (mute + STT + Gemini + TTS).
+            if mode == _COMMAND and pcm is not None:
+                self.mute()
+                self._drain_queue()
                 self._cmd_queue.put((pcm, source))
                 continue
 
-            # Modo WAKE: solo transcribir si hay VOZ en la ventana reciente.
-            # Crítico: whisper ALUCINA sobre silencio ("thanks for watching",
-            # "I hope you enjoyed this video"). Gating por energía lo evita.
-            if wake_model is not None and self._mode == _WAKE:
-                rolling.append(chunk)
-                try:                       # vaciar backlog → quedarse con lo reciente
-                    while True:
-                        rolling.append(self._queue.get_nowait())
-                except queue.Empty:
-                    pass
-                if len(rolling) >= 2 and self._has_voice(rolling):
-                    self._detect_wake(wake_model, rolling)
+            # WAKE: frase capturada → ¿contiene "Jarvis"?
+            if mode == _WAKE and self._wake_model is not None and wake_pcm:
+                self._detect_wake(self._wake_model, wake_pcm)
 
     def _command_loop(self) -> None:
         """Corre on_command (STT+Gemini+TTS) fuera del processor (Bug 5)."""
@@ -303,22 +297,14 @@ class AudioHub:
             logger.error("Wake word desactivado (whisper no cargó: %s). Solo Win+J.", e)
             return None
 
-    def _has_voice(self, rolling: deque) -> bool:
-        """True si la ventana contiene energía de voz. Evita alucinaciones de
-        whisper sobre silencio/ruido (inventa frases de YouTube)."""
-        if not rolling:
-            return False
-        peak = max(int(np.abs(c).max()) for c in rolling)
-        return peak > self.SILENCE_THRESH
-
-    def _detect_wake(self, model, rolling: deque) -> None:
-        if not rolling:                    # Bug 9: guard concatenate vacío
+    def _detect_wake(self, model, pcm: bytes) -> None:
+        """Transcribe una frase completa (capturada por VAD). Si contiene el wake
+        word, dispara el comando. Mismo modelo/calidad que el comando — por eso
+        ahora SÍ reconoce 'Jarvis' (antes la ventana rodante lo cortaba)."""
+        if not pcm:
             return
-        audio = np.concatenate(list(rolling)).astype("float32") / 32768.0
+        audio = np.frombuffer(pcm, dtype="<i2").astype("float32") / 32768.0
         try:
-            # language="es": el usuario habla español. no_speech_threshold alto +
-            # vad_filter descartan chunks dudosos (ya filtramos por energía en
-            # _has_voice, pero esto corta alucinaciones residuales).
             segments, _ = model.transcribe(
                 audio, language="es", beam_size=1, vad_filter=True,
                 no_speech_threshold=0.5, condition_on_previous_text=False,
@@ -335,7 +321,6 @@ class AudioHub:
             now = time.monotonic()
             if now - self._last_wake >= self._cooldown:
                 self._last_wake = now
-                rolling.clear()
                 logger.info("Wake word detectado: '%s'", text)
                 self._enter_command("wakeword")
 

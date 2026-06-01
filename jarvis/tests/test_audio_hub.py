@@ -13,9 +13,12 @@ import pytest
 from jarvis.audio_hub import AudioHub, _normalize
 
 
-# Frames a 48kHz/2ch que produce sd.rec (antes de boost+downsample)
+# Frames a 48kHz/2ch que produce sd.rec (antes de boost+downsample).
+# Amplitud derivada del umbral real: 1.5× el threshold tras el boost, para que
+# el test siga siendo válido aunque SILENCE_THRESH cambie.
 _N = int(AudioHub.REC_CHUNK_S * AudioHub.MIC_RATE)   # 24000
-_SPEECH  = np.full((_N, 2), 200, dtype="int16")       # 200*25 = 5000 > 3000 → voz
+_SPEECH_AMP = int(AudioHub.SILENCE_THRESH / AudioHub.BOOST * 1.5)
+_SPEECH  = np.full((_N, 2), _SPEECH_AMP, dtype="int16")
 _SILENCE = np.zeros((_N, 2), dtype="int16")           # 0 → silencio
 
 
