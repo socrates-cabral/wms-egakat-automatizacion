@@ -30,8 +30,9 @@ NOTAS_PATH    = BASE_DIR / "jarvis" / "notas.txt"
 STARTUP_SOUND = BASE_DIR / "jarvis" / "sounds" / "startup.mp3"
 WMS_KPI_PATH  = BASE_DIR / "WMS_Automatizacion" / "kpi_ops_resumen.json"
 
-# Wake word (AudioHub — whisper tiny sobre mic compartido, sin cuenta ni API key)
-WAKE_WORD_PHRASES  = ["jarvis", "harvey", "jarviz", "harvis", "yarvis", "jervis"]
+# Wake word (AudioHub — whisper base/inglés sobre mic compartido, sin cuenta ni API key)
+# Frases fuzzy: whisper transcribe "Jarvis" de formas variadas según el acento.
+WAKE_WORD_PHRASES  = ["jarvis", "harvey", "jarvi", "harvi", "yarvi", "jervi", "garvi"]
 WAKE_WORD_COOLDOWN = 2.0
 
 # STT local (faster-whisper)

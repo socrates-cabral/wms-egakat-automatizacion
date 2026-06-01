@@ -36,6 +36,7 @@ import logging
 import queue
 import threading
 import time
+import unicodedata
 from collections import deque
 from typing import Callable
 
@@ -45,6 +46,13 @@ logger = logging.getLogger("jarvis.audio_hub")
 
 _WAKE    = "wake"
 _COMMAND = "command"
+
+
+def _normalize(text: str) -> str:
+    """Minúsculas sin tildes ni puntuación — para fuzzy match del wake word."""
+    t = unicodedata.normalize("NFD", text.lower())
+    t = "".join(c for c in t if unicodedata.category(c) != "Mn")
+    return "".join(c if c.isalnum() or c.isspace() else " " for c in t)
 
 
 class AudioHub:
@@ -71,14 +79,15 @@ class AudioHub:
         on_listening: Callable[[], None],
         on_command:   Callable[[bytes, str], None],
         wake_phrases: tuple[str, ...] = (
-            "jarvis", "harvey", "jarviz", "harvis", "yarvis", "jervis",
+            "jarvis", "harvey", "jarvi", "harvi", "yarvi", "jervi", "garvi",
         ),
         cooldown: float = 2.0,
-        wake_model_size: str = "tiny",
+        wake_model_size: str = "base",
     ):
         self._on_listening    = on_listening
         self._on_command      = on_command
-        self._wake_phrases    = [p.lower() for p in wake_phrases]
+        # Frases normalizadas (sin tildes/puntuación) para fuzzy match.
+        self._wake_phrases    = [_normalize(p).strip() for p in wake_phrases]
         self._cooldown        = cooldown
         self._wake_model_size = wake_model_size
 
@@ -294,16 +303,19 @@ class AudioHub:
             return
         audio = np.concatenate(list(rolling)).astype("float32") / 32768.0
         try:
-            segments, _ = model.transcribe(audio, language="es",
+            # Inglés: "Jarvis" es nombre inglés. Forzar 'es' lo mapea a fonemas
+            # españoles ("ya vi", "ya véis"). 'en' lo transcribe más cerca del nombre.
+            segments, _ = model.transcribe(audio, language="en",
                                            beam_size=1, vad_filter=True)
-            text = " ".join(s.text for s in segments).lower().strip()
+            text = " ".join(s.text for s in segments).strip()
         except Exception as e:
             logger.error("Wake transcribe error: %s", e)
             return
         if not text:
             return
         logger.info("wake chunk: '%s'", text)
-        if any(p in text for p in self._wake_phrases):
+        norm = _normalize(text)
+        if any(p in norm for p in self._wake_phrases):
             now = time.monotonic()
             if now - self._last_wake >= self._cooldown:
                 self._last_wake = now

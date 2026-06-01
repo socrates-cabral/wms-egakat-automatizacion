@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from jarvis.audio_hub import AudioHub
+from jarvis.audio_hub import AudioHub, _normalize
 
 
 # Frames a 48kHz/2ch que produce sd.rec (antes de boost+downsample)
@@ -44,6 +44,34 @@ def _hub_ctx(feeder, wake_model=None):
     stack.enter_context(patch("sounddevice.rec", side_effect=feeder))
     stack.enter_context(patch.object(AudioHub, "_load_wake_model", return_value=wake_model))
     return stack
+
+
+def test_normalize_strips_accents_and_punctuation():
+    """_normalize: minúsculas, sin tildes ni puntuación (fuzzy wake match)."""
+    assert _normalize("¡Jarvis!").strip() == "jarvis"
+    assert _normalize("Jarvis.").strip() == "jarvis"
+    assert _normalize("JARVIS").strip() == "jarvis"
+    assert _normalize("¿Qué?").strip() == "que"
+
+
+def test_wake_phrases_match_real_outputs():
+    """Las frases detectan 'Jarvis' pero no falsos positivos comunes."""
+    phrases = ["jarvis", "harvey", "jarvi", "harvi", "yarvi", "jervi", "garvi"]
+    phrases = [_normalize(p).strip() for p in phrases]
+
+    def matches(text):
+        norm = _normalize(text)
+        return any(p in norm for p in phrases)
+
+    # Positivos (transcripciones plausibles de "Jarvis" en inglés)
+    assert matches("Jarvis")
+    assert matches("Hey Jarvis")
+    assert matches("Harvey")
+    # Negativos (lo que whisper produjo con ruido/español)
+    assert not matches("hola")
+    assert not matches("el mundo")
+    assert not matches("gracias")
+    assert not matches("no te cuitras")
 
 
 def test_start_returns_false_when_mic_fails():
