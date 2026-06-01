@@ -17,7 +17,7 @@ import logging
 import threading
 import numpy as np
 
-from jarvis.config import STT_MODEL, STT_LANGUAGE
+from jarvis.config import STT_MODEL, STT_LANGUAGE, STT_INITIAL_PROMPT
 
 logger = logging.getLogger("jarvis.stt")
 
@@ -59,8 +59,9 @@ def transcribe(pcm_int16: bytes, samplerate: int = 16000) -> str:
         segments, _ = model.transcribe(
             audio,
             language=STT_LANGUAGE,
-            beam_size=1,
+            beam_size=5,
             vad_filter=True,
+            initial_prompt=STT_INITIAL_PROMPT,
         )
         text = " ".join(s.text.strip() for s in segments).strip()
         if text:

@@ -16,10 +16,12 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+import re
+
 from jarvis.config import (
     CRYPTO_BTC, CRYPTO_ETH, APUESTAS_OUT,
     NOTAS_PATH, ANTHROPIC_API_KEY, CLAUDE_MODEL_FAST, CLAUDE_MODEL_DEEP,
-    WMS_KPI_PATH,
+    WMS_LOGS_DIR, WMS_KPI_GLOB,
 )
 
 logger = logging.getLogger("jarvis.tools")
@@ -82,16 +84,107 @@ def get_estado_sistema() -> dict:
     return {"hora": hora_str, "clima_santiago": clima, "btc": btc, "eth": eth}
 
 
-def get_wms_kpi() -> dict:
-    """Retorna el último resumen de KPIs operativos de Egakat."""
-    _notify_bridge("tool_started", "Leyendo WMS KPI...")
-    if not WMS_KPI_PATH.exists():
-        _notify_bridge("tool_done", "WMS KPI")
-        return {"estado": "Sin datos KPI disponibles. El archivo no existe aún."}
+def _fecha_kpi_desde_nombre(path: Path) -> tuple[int, int, int]:
+    """Extrae (anio, mes, dia) desde resumen_kpi_ops_YYYYMMDD.json. (0,0,0) si no matchea."""
+    m = re.search(r"resumen_kpi_ops_(\d{4})(\d{2})(\d{2})\.json$", path.name, re.IGNORECASE)
+    if not m:
+        return (0, 0, 0)
     try:
-        resultado = json.loads(WMS_KPI_PATH.read_text(encoding="utf-8"))
+        return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except Exception:
+        return (0, 0, 0)
+
+
+def _ruta_kpi_reciente() -> Path | None:
+    """El resumen KPI más reciente en logs/, por fecha en el nombre y mtime como desempate."""
+    candidatos = [p for p in WMS_LOGS_DIR.glob(WMS_KPI_GLOB) if p.is_file()]
+    if not candidatos:
+        return None
+    return max(candidatos, key=lambda p: (_fecha_kpi_desde_nombre(p), p.stat().st_mtime))
+
+
+def _resumir_kpi(payload: dict) -> dict:
+    """Extrae un resumen compacto y hablable desde el JSON KPI completo (~1MB).
+
+    Evita devolver el payload entero a Gemini: solo headline de OTIF, inventario,
+    ocupación, staging, más alertas y recomendaciones.
+    """
+    resumen: dict = {"fecha_generacion": payload.get("fecha_generacion", "sin fecha")}
+
+    # OTIF / Productividad frescos (fuentes del día). Si vienen no disponibles, avisar.
+    nnss_hoy = payload.get("nnss", {}) or {}
+    prod_hoy = payload.get("productividad", {}) or {}
+    if not nnss_hoy.get("disponible", False):
+        resumen["otif_productividad_hoy"] = (
+            "No hay OTIF ni Productividad frescos hoy: las fuentes del día no estaban "
+            "disponibles. Se usa el histórico para esos KPIs."
+        )
+
+    # OTIF último mes desde el histórico (sin volcar los cientos de filas mensuales).
+    hist = payload.get("historico", {}) or {}
+    otif_mensual = (hist.get("nnss", {}) or {}).get("otif_mensual", []) or []
+    evaluables = [
+        r for r in otif_mensual
+        if isinstance(r, dict) and r.get("disponible")
+        and (r.get("pedidos_evaluados") or 0) > 0
+        and isinstance(r.get("pct_otif"), (int, float))
+    ]
+    if evaluables:
+        ult = max(evaluables, key=lambda r: (r.get("anio", 0), r.get("mes", 0)))
+        mes_objetivo = (ult.get("anio"), ult.get("mes"))
+        del_mes = [r for r in evaluables if (r.get("anio"), r.get("mes")) == mes_objetivo]
+        bajo_95 = sorted(
+            [r for r in del_mes if (r.get("pct_otif") or 100) < 95],
+            key=lambda r: r.get("pct_otif") or 100,
+        )
+        resumen["otif_ultimo_mes"] = {
+            "mes": ult.get("mes_nombre", "?"),
+            "clientes_evaluados": len(del_mes),
+            "clientes_bajo_95": [
+                {"cliente": r.get("cliente"), "otif_pct": round(r.get("pct_otif"), 1)}
+                for r in bajo_95
+            ] or "ninguno: todos en o sobre 95%",
+        }
+
+    # Inventario headline
+    inv = payload.get("inventario", {}) or {}
+    if inv.get("disponible"):
+        stock = inv.get("stock", {}) or {}
+        ocup = inv.get("ocupacion", {}) or {}
+        stg = inv.get("staging", {}) or {}
+        resumen["inventario"] = {
+            "fecha_referencia": inv.get("fecha_referencia"),
+            "stock_total_unidades": stock.get("total_unidades"),
+            "stock_total_pallets": stock.get("total_plts"),
+            "stock_total_skus": stock.get("total_skus"),
+            "ocupacion_operativa_pct": ocup.get("ocupacion_pct"),
+            "ubicaciones_ocupadas": ocup.get("ocupadas"),
+            "ubicaciones_libres": ocup.get("libres"),
+            "staging_pallets": stg.get("total_plts"),
+        }
+
+    alertas = payload.get("alertas", []) or []
+    recos = payload.get("recomendaciones", []) or []
+    if alertas:
+        resumen["alertas"] = alertas[:5]
+    if recos:
+        resumen["recomendaciones"] = recos[:5]
+    return resumen
+
+
+def get_wms_kpi() -> dict:
+    """Retorna un resumen compacto del último KPI operativo de Egakat (logs/resumen_kpi_ops_*.json)."""
+    _notify_bridge("tool_started", "Leyendo WMS KPI...")
+    ruta = _ruta_kpi_reciente()
+    if ruta is None:
         _notify_bridge("tool_done", "WMS KPI")
-        return resultado
+        return {"estado": "Sin datos KPI disponibles. No se encontró ningún resumen en logs."}
+    try:
+        payload = json.loads(ruta.read_text(encoding="utf-8"))
+        resumen = _resumir_kpi(payload)
+        resumen["fuente"] = ruta.name
+        _notify_bridge("tool_done", "WMS KPI")
+        return resumen
     except Exception as e:
         _notify_bridge("tool_done", "WMS KPI")
         return {"estado": f"Error leyendo KPI: {e}"}

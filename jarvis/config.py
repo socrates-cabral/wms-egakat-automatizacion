@@ -28,7 +28,9 @@ CRYPTO_ETH    = BASE_DIR / "crypto_bot" / "estado_grid_ETH_USDT.json"
 APUESTAS_OUT  = BASE_DIR / "agente_apuestas" / "output"
 NOTAS_PATH    = BASE_DIR / "jarvis" / "notas.txt"
 STARTUP_SOUND = BASE_DIR / "jarvis" / "sounds" / "startup.mp3"
-WMS_KPI_PATH  = BASE_DIR / "WMS_Automatizacion" / "kpi_ops_resumen.json"
+# KPI Egakat: el generador escribe en logs/resumen_kpi_ops_YYYYMMDD.json
+WMS_LOGS_DIR  = BASE_DIR / "logs"
+WMS_KPI_GLOB  = "resumen_kpi_ops_*.json"
 
 # Wake word (AudioHub — match fonético sobre whisper base, sin cuenta ni API key)
 # DESACTIVADO 2026-06-01: la detección por voz aún da falsos positivos/negativos.
@@ -40,8 +42,18 @@ WAKE_WORD_PHRASES  = ["jarvis", "yarvis", "jarbis", "yarbis", "harvis", "jarvys"
 WAKE_WORD_COOLDOWN = 2.0
 
 # STT local (faster-whisper)
-STT_MODEL    = "small"
+# 'medium' mejora notablemente el reconocimiento de términos de dominio
+# ("KPIs", "Egakat", "FillRate", "OTIF") frente a 'small'. ~3-4s por
+# transcripción en CPU int8, aceptable para push-to-talk Win+J.
+STT_MODEL    = "medium"
 STT_LANGUAGE = "es"
+# Sesga a Whisper hacia el vocabulario del usuario (nombres propios y jerga
+# que el modelo no conoce). Complementa al modelo 'medium'.
+STT_INITIAL_PROMPT = (
+    "Conversación con JARVIS sobre Egakat, KPIs logísticos, OTIF, FillRate, "
+    "Productividad, inventario, staging, crypto bot, Kraken, BTC, ETH, "
+    "agente de apuestas, Serie A."
+)
 
 SYSTEM_PROMPT = """Eres J.A.R.V.I.S. — Just A Rather Very Intelligent System — \
 el asistente personal de Señor Sócrates Cabral, Head of Control Management en Egakat SPA, Chile.
