@@ -30,13 +30,9 @@ NOTAS_PATH    = BASE_DIR / "jarvis" / "notas.txt"
 STARTUP_SOUND = BASE_DIR / "jarvis" / "sounds" / "startup.mp3"
 WMS_KPI_PATH  = BASE_DIR / "WMS_Automatizacion" / "kpi_ops_resumen.json"
 
-# Wake word (OpenWakeWord — sin cuenta, sin API key)
-WAKE_WORD_ENGINE      = os.getenv("WAKE_WORD_ENGINE", "whisper")   # "whisper" | "oww"
-WAKE_WORD_PHRASES     = ["jarvis", "harvey", "jarviz", "harvis"]   # whisper: frases a detectar
-WAKE_WORD_COOLDOWN    = 2.0
-# OWW config (solo si WAKE_WORD_ENGINE=oww)
-WAKE_WORD_MODEL       = os.getenv("WAKE_WORD_MODEL", "hey_jarvis")
-WAKE_WORD_SENSITIVITY = 0.3
+# Wake word (AudioHub — whisper tiny sobre mic compartido, sin cuenta ni API key)
+WAKE_WORD_PHRASES  = ["jarvis", "harvey", "jarviz", "harvis", "yarvis", "jervis"]
+WAKE_WORD_COOLDOWN = 2.0
 
 # STT local (faster-whisper)
 STT_MODEL    = "small"

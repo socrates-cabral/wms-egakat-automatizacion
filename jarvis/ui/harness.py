@@ -17,20 +17,26 @@ from jarvis.ui.memory import MemoryClient
 
 logger = logging.getLogger("jarvis.ui.harness")
 
+_SHUTDOWN_WORDS = ("hasta luego", "apagate", "apaga", "cierra", "adios")
+
 
 class JarvisHarness(QObject):
-    """Orquestador del ciclo STT -> Gemini -> tools -> TTS."""
+    """Orquesta el ciclo Wake/Win+J → STT → Gemini → TTS sobre un mic compartido.
+
+    El AudioHub es el único dueño del micrófono. Este harness solo aporta el
+    'cerebro': STT del comando, Gemini y TTS. No abre streams de audio.
+    """
 
     def __init__(self, bridge: JarvisBridge):
         super().__init__()
         self._bridge = bridge
         self._memory = MemoryClient()
         self._agent: Agent | None = None
-        self._active = False
-        self._lock   = threading.Lock()
+        self._hub = None
+        self._processing = False
 
     def start(self) -> None:
-        """Inicializa agente, restaura timers, arranca wake word."""
+        """Inicializa agente, restaura timers y arranca el mic compartido."""
         context = self._memory.load_context()
         self._agent = Agent(memory_context=context)
         self._bridge.tts_cancel_requested.connect(voice.cancel_tts)
@@ -39,66 +45,69 @@ class JarvisHarness(QObject):
         for msg in restore_timers():
             logger.info("Timer restaurado: %s", msg)
 
-        from jarvis.wakeword import WakeWordDetector
-        from jarvis.config import (WAKE_WORD_ENGINE, WAKE_WORD_PHRASES,
-                                   WAKE_WORD_COOLDOWN, WAKE_WORD_MODEL,
-                                   WAKE_WORD_SENSITIVITY)
-        self._wakeword = WakeWordDetector(callback=self.trigger_wakeword)
-        ok = self._wakeword.start(
-            engine=WAKE_WORD_ENGINE,
-            phrases=WAKE_WORD_PHRASES,
+        from jarvis.audio_hub import AudioHub
+        from jarvis.config import WAKE_WORD_PHRASES, WAKE_WORD_COOLDOWN
+        self._hub = AudioHub(
+            on_listening=self._on_listening,
+            on_command=self._on_command,
+            wake_phrases=tuple(WAKE_WORD_PHRASES),
             cooldown=WAKE_WORD_COOLDOWN,
-            oww_model=WAKE_WORD_MODEL,
-            sensitivity=WAKE_WORD_SENSITIVITY,
         )
-        if not ok:
-            logger.warning("Wake word desactivado — solo Win+J disponible.")
+        if not self._hub.start():
+            logger.warning("AudioHub no arrancó — micrófono no disponible.")
 
         logger.info("Harness inicializado. Contexto de memoria cargado.")
 
-    def stop_wakeword(self) -> None:
-        """Detiene el wake word detector. Llamar en app.aboutToQuit."""
-        if hasattr(self, "_wakeword"):
-            self._wakeword.stop()
-            logger.info("Wake word detector detenido.")
+    # ── Control del micrófono (para el saludo inicial) ───────────────────
 
-    # ── Triggers ───────────────────────────────────────────────────────────
+    def mute_mic(self) -> None:
+        if self._hub is not None:
+            self._hub.mute()
+
+    def unmute_mic(self) -> None:
+        if self._hub is not None:
+            self._hub.unmute()
+
+    def stop_audio(self) -> None:
+        """Detiene el hub. Llamar en app.aboutToQuit."""
+        if self._hub is not None:
+            self._hub.stop()
+            logger.info("AudioHub detenido.")
+
+    # ── Triggers ─────────────────────────────────────────────────────────
 
     def trigger(self) -> None:
-        """Activa ciclo desde Win+J — habla si no escucha nada."""
-        self._trigger_impl(source="hotkey")
+        """Win+J: si Jarvis está hablando, interrumpe; si no, captura comando."""
+        if self._processing:
+            voice.cancel_tts()
+            return
+        if self._hub is not None:
+            self._hub.trigger_command(source="hotkey")
 
-    def trigger_wakeword(self) -> None:
-        """Activa ciclo desde wake word — silencioso si no hay habla (Bug 7)."""
-        self._trigger_impl(source="wakeword")
+    # ── Callbacks del hub ────────────────────────────────────────────────
+    # _on_listening corre en el processor; _on_command en el command worker.
 
-    def _trigger_impl(self, source: str) -> None:
-        with self._lock:
-            if self._active:
-                voice.cancel_tts()
-                return
-            self._active = True
-        t = threading.Thread(target=self._cycle, args=(source,), daemon=True)
-        t.start()
+    def _on_listening(self) -> None:
+        self._bridge.listening_started.emit()
 
-    # ── Ciclo STT → Gemini → TTS ───────────────────────────────────────────
-
-    def _cycle(self, source: str = "hotkey") -> None:
-        # Bug 2 + 11: pausar wake word para ceder el mic y evitar auto-trigger
-        ww = getattr(self, "_wakeword", None)
-        if ww:
-            ww.pause()
+    def _on_command(self, pcm: bytes, source: str) -> None:
+        self._processing = True
         try:
             if self._agent is None:
                 voice.speak("Aun me estoy inicializando.")
                 self._bridge.speaking_done.emit()
                 return
 
-            self._bridge.listening_started.emit()
-            text = voice.listen()
+            if not pcm:
+                # wake word: falso positivo probable → silencio; Win+J: avisar
+                if source == "hotkey":
+                    voice.speak("No escuche nada, Senor Socrates.")
+                self._bridge.speaking_done.emit()
+                return
 
+            from jarvis import stt
+            text = stt.transcribe(pcm, samplerate=16000)
             if not text:
-                # Bug 7: Win+J → avisa; wake word → silencio (falso positivo probable)
                 if source == "hotkey":
                     voice.speak("No escuche nada, Senor Socrates.")
                 self._bridge.speaking_done.emit()
@@ -112,18 +121,16 @@ class JarvisHarness(QObject):
             self._bridge.speaking_done.emit()
 
             normalized = unicodedata.normalize("NFD", text.lower())
-            normalized = "".join(c for c in normalized if unicodedata.category(c) != "Mn")
-            if any(w in normalized for w in ("hasta luego", "apagate", "cierra", "apaga")):
+            normalized = "".join(c for c in normalized
+                                 if unicodedata.category(c) != "Mn")
+            if any(w in normalized for w in _SHUTDOWN_WORDS):
                 from PyQt6.QtCore import QTimer
                 from PyQt6.QtWidgets import QApplication
                 QTimer.singleShot(500, QApplication.quit)
 
         except Exception as e:
-            logger.error(f"Cycle error: {e}")
+            logger.error(f"Command error: {e}")
             voice.speak("Error inesperado.")
             self._bridge.speaking_done.emit()
         finally:
-            if ww:
-                ww.resume()   # devolver el mic al wake word
-            with self._lock:
-                self._active = False
+            self._processing = False

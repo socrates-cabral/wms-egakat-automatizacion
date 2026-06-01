@@ -136,3 +136,9 @@ test-results/
 # Tiene su propio .git y remoto github.com/socrates-cabral/finanzas-personales.
 # El monorepo ya no lo trackea — se desarrolla in-place pero versiona aparte.
 finanzas_personales/
+
+# Jarvis — binarios y estado runtime (no versionar)
+jarvis/*.exe
+jarvis/*.winmd
+jarvis/timers.json
+jarvis/notas.txt

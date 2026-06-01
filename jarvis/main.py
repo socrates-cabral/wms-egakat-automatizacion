@@ -24,8 +24,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-# Debug granular solo para wakeword — calibrar threshold sin flood de otros módulos
-logging.getLogger("jarvis.wakeword").setLevel(logging.DEBUG)
+# Silenciar el spam de faster_whisper ("Processing audio", "Detected language")
+logging.getLogger("faster_whisper").setLevel(logging.WARNING)
 logger = logging.getLogger("jarvis")
 
 
@@ -130,7 +130,7 @@ def main() -> None:
     bridge = get_bridge()
     overlay = JarvisOverlay(bridge)
     harness = JarvisHarness(bridge)
-    app.aboutToQuit.connect(harness.stop_wakeword)
+    app.aboutToQuit.connect(harness.stop_audio)
 
     def _quit():
         # [DIAG temporal] registrar QUIÉN pide salir
@@ -161,20 +161,24 @@ def main() -> None:
         fetch_t = threading.Thread(target=_fetch_clima, daemon=True)
         fetch_t.start()
 
-        voice.play_startup()          # bloquea hasta que startup.mp3 termina
+        # Silenciar el mic durante el saludo: el hub no debe oír a Jarvis a sí mismo
+        harness.mute_mic()
+        try:
+            voice.play_startup()          # bloquea hasta que startup.mp3 termina
+            fetch_t.join(timeout=4.0)     # espera clima (generalmente ya terminó)
 
-        fetch_t.join(timeout=4.0)     # espera clima (generalmente ya terminó)
-
-        estado = estado_holder[0]
-        hora = datetime.now(CL_TZ).strftime("%H:%M")
-        clima = estado.get("clima_santiago", "")
-        clima_str = f", {clima}" if clima and clima != "sin datos" else ""
-        saludo = (
-            f"Sistemas en linea. Son las {hora} en Santiago{clima_str}. "
-            f"A sus ordenes, Senor Socrates."
-        )
-        logger.info("JARVIS: %s", saludo)
-        voice.speak(saludo)
+            estado = estado_holder[0]
+            hora = datetime.now(CL_TZ).strftime("%H:%M")
+            clima = estado.get("clima_santiago", "")
+            clima_str = f", {clima}" if clima and clima != "sin datos" else ""
+            saludo = (
+                f"Sistemas en linea. Son las {hora} en Santiago{clima_str}. "
+                f"A sus ordenes, Senor Socrates."
+            )
+            logger.info("JARVIS: %s", saludo)
+            voice.speak(saludo)
+        finally:
+            harness.unmute_mic()          # recién ahora el hub empieza a escuchar
 
     threading.Thread(target=_startup_sequence, daemon=True).start()
 
