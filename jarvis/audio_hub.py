@@ -79,7 +79,9 @@ class AudioHub:
         on_listening: Callable[[], None],
         on_command:   Callable[[bytes, str], None],
         wake_phrases: tuple[str, ...] = (
-            "jarvis", "harvey", "jarvi", "harvi", "yarvi", "jervi", "garvi",
+            # español (whisper mapea "Jarvis" a estos fonemas) + inglés directo
+            "jarvis", "yarvis", "jarbis", "yarbis", "harvis",
+            "jarvi", "yarvi", "ya vis", "ya vi", "jarvys",
         ),
         cooldown: float = 2.0,
         wake_model_size: str = "base",
@@ -262,7 +264,9 @@ class AudioHub:
                 self._cmd_queue.put((pcm, source))
                 continue
 
-            # Modo WAKE: ventana rodante + detección.
+            # Modo WAKE: solo transcribir si hay VOZ en la ventana reciente.
+            # Crítico: whisper ALUCINA sobre silencio ("thanks for watching",
+            # "I hope you enjoyed this video"). Gating por energía lo evita.
             if wake_model is not None and self._mode == _WAKE:
                 rolling.append(chunk)
                 try:                       # vaciar backlog → quedarse con lo reciente
@@ -270,7 +274,7 @@ class AudioHub:
                         rolling.append(self._queue.get_nowait())
                 except queue.Empty:
                     pass
-                if len(rolling) >= 2:
+                if len(rolling) >= 2 and self._has_voice(rolling):
                     self._detect_wake(wake_model, rolling)
 
     def _command_loop(self) -> None:
@@ -298,15 +302,26 @@ class AudioHub:
             logger.error("Wake word desactivado (whisper no cargó: %s). Solo Win+J.", e)
             return None
 
+    def _has_voice(self, rolling: deque) -> bool:
+        """True si la ventana contiene energía de voz. Evita alucinaciones de
+        whisper sobre silencio/ruido (inventa frases de YouTube)."""
+        if not rolling:
+            return False
+        peak = max(int(np.abs(c).max()) for c in rolling)
+        return peak > self.SILENCE_THRESH
+
     def _detect_wake(self, model, rolling: deque) -> None:
         if not rolling:                    # Bug 9: guard concatenate vacío
             return
         audio = np.concatenate(list(rolling)).astype("float32") / 32768.0
         try:
-            # Inglés: "Jarvis" es nombre inglés. Forzar 'es' lo mapea a fonemas
-            # españoles ("ya vi", "ya véis"). 'en' lo transcribe más cerca del nombre.
-            segments, _ = model.transcribe(audio, language="en",
-                                           beam_size=1, vad_filter=True)
+            # language="es": el usuario habla español. no_speech_threshold alto +
+            # vad_filter descartan chunks dudosos (ya filtramos por energía en
+            # _has_voice, pero esto corta alucinaciones residuales).
+            segments, _ = model.transcribe(
+                audio, language="es", beam_size=1, vad_filter=True,
+                no_speech_threshold=0.5, condition_on_previous_text=False,
+            )
             text = " ".join(s.text for s in segments).strip()
         except Exception as e:
             logger.error("Wake transcribe error: %s", e)

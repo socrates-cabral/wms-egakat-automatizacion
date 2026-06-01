@@ -55,23 +55,25 @@ def test_normalize_strips_accents_and_punctuation():
 
 
 def test_wake_phrases_match_real_outputs():
-    """Las frases detectan 'Jarvis' pero no falsos positivos comunes."""
-    phrases = ["jarvis", "harvey", "jarvi", "harvi", "yarvi", "jervi", "garvi"]
-    phrases = [_normalize(p).strip() for p in phrases]
+    """Las frases por defecto del hub detectan 'Jarvis' sin falsos positivos comunes."""
+    hub = AudioHub(on_listening=lambda: None, on_command=lambda p, s: None)
+    phrases = hub._wake_phrases   # ya normalizadas en __init__
 
     def matches(text):
         norm = _normalize(text)
         return any(p in norm for p in phrases)
 
-    # Positivos (transcripciones plausibles de "Jarvis" en inglés)
+    # Positivos: variantes que whisper produce para "Jarvis" en español
     assert matches("Jarvis")
-    assert matches("Hey Jarvis")
-    assert matches("Harvey")
-    # Negativos (lo que whisper produjo con ruido/español)
+    assert matches("¡Jarvis!")
+    assert matches("Yarvis")
+    assert matches("Jarbis")
+    # Negativos: ruido/conversación que NO debe disparar
     assert not matches("hola")
     assert not matches("el mundo")
     assert not matches("gracias")
     assert not matches("no te cuitras")
+    assert not matches("dónde estás")
 
 
 def test_start_returns_false_when_mic_fails():
