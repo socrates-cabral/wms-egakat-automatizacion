@@ -30,9 +30,11 @@ NOTAS_PATH    = BASE_DIR / "jarvis" / "notas.txt"
 STARTUP_SOUND = BASE_DIR / "jarvis" / "sounds" / "startup.mp3"
 WMS_KPI_PATH  = BASE_DIR / "WMS_Automatizacion" / "kpi_ops_resumen.json"
 
-# Wake word (AudioHub — whisper base/inglés sobre mic compartido, sin cuenta ni API key)
-# Frases fuzzy: whisper transcribe "Jarvis" de formas variadas según el acento.
-WAKE_WORD_PHRASES  = ["jarvis", "harvey", "jarvi", "harvi", "yarvi", "jervi", "garvi"]
+# Wake word (AudioHub — whisper base/español sobre mic compartido, sin cuenta ni API key)
+# Frases calibradas con transcripciones REALES del log (acento chileno):
+# whisper-es transcribe "Jarvis" como "arví/arviz/oye arviz" — se come la J.
+WAKE_WORD_PHRASES  = ["jarvis", "yarvis", "jarbis", "yarbis", "harvis", "jarvys",
+                      "arvis", "arviz", "arvi", "arbiz", "arbis"]
 WAKE_WORD_COOLDOWN = 2.0
 
 # STT local (faster-whisper)
